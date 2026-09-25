@@ -467,7 +467,9 @@
   // Debug handle for the console / automated tests.
   CT.debug = { get battle() { return battle; }, renderer, ui };
 
-  // Draw the map behind the title screen.
-  battle = new CT.Battle(CT.MAP, CT.ROSTER);
-  showTitle();
+  // Decode sprite assets, then draw the map behind the title screen.
+  CT.loadAssets().then(() => {
+    battle = new CT.Battle(CT.MAP, CT.ROSTER);
+    showTitle();
+  });
 })();
