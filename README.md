@@ -8,9 +8,23 @@ riverbank against Magus, Ozzie, Slash, Flea and their Henches.
 
 ## Run it
 
-Open `index.html` in a browser. That's it — it works straight from the file system.
+Open `public/index.html` in a browser. That's it — it works straight from the file system.
 
-(Optionally serve it: `python3 -m http.server` then visit http://localhost:8000.)
+(Or run `npm install && npm run dev` to serve it locally with Wrangler.)
+
+## Deploy to Cloudflare
+
+The game is static files in `public/`, deployed as a Cloudflare Worker with static assets
+(config in `wrangler.jsonc`):
+
+```sh
+npm install
+npx wrangler login      # or set CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID
+npm run deploy          # prints https://chrono-tactics.<your-subdomain>.workers.dev
+```
+
+Alternatively, in the Cloudflare dashboard go to Workers & Pages → Create → Import a
+repository and pick this repo; Cloudflare will use `wrangler.jsonc` and redeploy on every push.
 
 ## How to play
 
@@ -32,11 +46,11 @@ Controls: mouse to select, **Q / E** rotate the camera, **Esc** or right-click t
 
 | File | Purpose |
 | --- | --- |
-| `js/sprites.js` | All pixel art (characters, trees, rocks) as palette-indexed character grids, rasterised to canvases at load. |
-| `js/data.js` | Map layout/heights, character stats, techs, starting roster. |
-| `js/battle.js` | Game rules: pathfinding, CT turn order, damage formulas, enemy AI. No rendering. |
-| `js/render.js` | Isometric renderer: camera rotation, depth sorting, tiles, units, effects. |
-| `js/main.js` | Turn flow, input, menus, HUD and animation sequencing. |
+| `public/js/sprites.js` | All pixel art (characters, trees, rocks) as palette-indexed character grids, rasterised to canvases at load. |
+| `public/js/data.js` | Map layout/heights, character stats, techs, starting roster. |
+| `public/js/battle.js` | Game rules: pathfinding, CT turn order, damage formulas, enemy AI. No rendering. |
+| `public/js/render.js` | Isometric renderer: camera rotation, depth sorting, tiles, units, effects. |
+| `public/js/main.js` | Turn flow, input, menus, HUD and animation sequencing. |
 
 The sprites are original pixel art drawn for this project, not ripped assets.
 Chrono Trigger characters are the property of Square Enix; this is a non-commercial fan project.

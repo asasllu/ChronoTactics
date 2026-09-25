@@ -1,0 +1,6 @@
+{
+  // Deploys the game as static assets on Cloudflare Workers: `npx wrangler deploy`
+  "name": "chrono-tactics",
+  "compatibility_date": "2026-09-01",
+  "assets": { "directory": "./public" }
+}
