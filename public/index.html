@@ -3,27 +3,47 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Chrono Tactics</title>
+    <title>Chrono Trigger: The Hollow Future</title>
+    <meta name="description" content="A fan-made tactics sequel to Chrono Trigger, with original pixel art, music and story." />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Cinzel:wght@500;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="css/style.css" />
   </head>
   <body>
     <div id="stage">
       <canvas id="cv" width="960" height="600"></canvas>
+      <div id="objective" class="panel hidden"></div>
+      <div id="turns" class="hidden"></div>
       <div id="banner"></div>
-      <div id="turns" class="panel"></div>
+      <div id="hint"></div>
+      <div id="prompt"></div>
       <div id="active" class="panel hidden"></div>
-      <div id="menu" class="panel hidden"></div>
       <div id="target" class="panel hidden"></div>
-      <div id="help">Q / E rotate &middot; Esc or right-click cancel</div>
-      <div id="overlay"></div>
+      <div id="dialogue" class="dlg"></div>
+      <div id="menu-layer"></div>
+      <div id="card"></div>
+      <div id="title"></div>
+      <div id="credits"></div>
+      <div id="loading">LOADING…</div>
+      <div id="help">Q / E rotate · Esc menu / cancel · Enter talk</div>
     </div>
     <script src="js/assets.js"></script>
+    <script src="js/pixel.js"></script>
     <script src="js/sprites.js"></script>
+    <script src="js/sprites_cast.js"></script>
+    <script src="js/portraits.js"></script>
+    <script src="js/terrain.js"></script>
+    <script src="js/terrain_ext.js"></script>
+    <script src="js/maps.js"></script>
+    <script src="js/audio.js"></script>
     <script src="js/data.js"></script>
+    <script src="js/story.js"></script>
+    <script src="js/game.js"></script>
     <script src="js/battle.js"></script>
     <script src="js/render.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/scene.js"></script>
+    <script src="js/battlectl.js"></script>
     <script src="js/main.js"></script>
   </body>
 </html>

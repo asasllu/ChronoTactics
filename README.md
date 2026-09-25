@@ -1,74 +1,109 @@
-# Chrono Tactics
+# Chrono Trigger: The Hollow Future
 
-A Final Fantasy Tactics–style isometric battle starring the cast of Chrono Trigger.
-It's plain HTML5 canvas and JavaScript, with no build step and no dependencies.
+A fan-made sequel to Chrono Trigger, played as a story-driven isometric tactics RPG
+in the style of Final Fantasy Tactics. Everything is original: the pixel art, the
+chiptune soundtrack, the code and the story script (`docs/SCRIPT.md`).
+It is plain HTML5 canvas and JavaScript, with no build step and no dependencies.
 
-The party (Crono, Marle, Lucca, Frog, Robo and Ayla, plus guest divers Dave and Mat)
-has to hold the Zenan riverbank against Magus, Ozzie, Slash, Flea, two Mystic Knights
-and three Henches.
+> Non-commercial fan project. Chrono Trigger and its characters belong to Square Enix.
 
-## Run it
+## The game
 
-Open `public/index.html` in a browser. That's it — it works straight from the file system.
+When Lavos died, the ruined future of 2300 A.D. should have stopped existing. Something
+in it refused. **The Curator**, an archive AI from the erased timeline, has opened grey
+rifts into history and is planting Lavos Seeds in three eras. Its Warden, **Iselle**, is
+a girl who is half porcelain. Crono, Frog, Ayla and Magus must pull the seeds up before
+they take root, and then walk into the Museum of Never itself.
 
-(Or run `npm install && npm run dev` to serve it locally with Wrangler.)
+- **Prologue, then four chapters, then an epilogue:** Leene Square (1000 A.D.), Denadoro
+  (600 A.D.), the Tyrano crater (65,000,000 B.C.), the wreck of Zeal (12,000 B.C.), and the
+  Hollow. The End of Time is the hub between chapters, with Gaspar, a Nu shop and Spekkio.
+- **Seven story battles plus an optional one.** Each has its own objectives:
+  - stop a seed carrier before it reaches the shrine;
+  - kill the feeders before the seed hatches;
+  - fight across a chasm that only Magus can float over;
+  - shatter a boss's own placards.
+- **Battles trigger dialogue as they unfold:** retreats, betrayals, reinforcements, tech
+  unlocks and choices.
+- **Cutscenes play on the same maps you explore and fight on.** The field turns into the
+  battle grid as the fight starts, just like Chrono Trigger.
+- **A single ending with three variations,** depending on how you played.
 
-## Deploy to Cloudflare
+## Play
 
-The game is static files in `public/`, deployed as a Cloudflare Worker with static assets
-(config in `wrangler.jsonc`):
+Open `public/index.html` in a browser (it works from the file system), or serve `public/`.
+Controls:
 
-```sh
-npm install
-npx wrangler login      # or set CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID
-npm run deploy          # prints https://chrono-tactics.<your-subdomain>.workers.dev
-```
+- **Mouse**: click tiles, units, menu entries. Right-click cancels in battle.
+- **Keyboard**: arrows / WASD to walk and navigate menus, Enter to talk or confirm,
+  Esc for the menu or to cancel, **Q / E to rotate the camera**.
 
-Alternatively, in the Cloudflare dashboard go to Workers & Pages → Create → Import a
-repository and pick this repo; Cloudflare will use `wrangler.jsonc` and redeploy on every push.
+The title screen also offers **Skirmish (Extra)**, a free battle on the Zenan
+riverbank with guest divers Dave and Mat.
 
-## How to play
+## Rules
 
-- **Turn order** follows FFT-style *Charge Time*: every tick each unit gains CT equal
-  to its Speed, and whoever reaches 100 first acts. The upcoming order is shown top-left.
-- On your turn you may **Move** once and **Act** once (Attack or Tech), in either order,
-  then **Wait**. Doing less on a turn costs less CT, so you'll act again sooner.
-- **Move**: blue tiles are reachable. Units can't climb more than their *Jump* height,
-  can walk through allies but not enemies, and trees/rocks/deep water block. (Frog can swim.)
-- **Attack / Tech**: red tiles are in range; the yellow area is what gets hit. Hover a
-  target to preview damage and hit chance.
-- **Flanking**: physical hits from the side do +25% (91% hit) and from behind +50% (100% hit).
-- **High ground**: +10% damage per height level above the target (−10% per level below).
-- Melee attacks can't reach targets more than 2 height levels away.
+The rules follow `docs/SCRIPT.md` §3.
 
-Controls: mouse to select, **Q / E** rotate the camera, **Esc** or right-click to cancel.
-
-## Character art (PixelLab exports)
-
-Any character can use detailed 8-directional sprites exported from PixelLab:
-
-1. Unzip the export into `assets/characters/<key>/` so it contains `metadata.json`
-   and `<State>/rotations/*.png`. `<key>` is the character id from `CHARACTERS`
-   in `public/js/data.js`, e.g. `crono`, `marle`, `lucca`, `robo`, `ozzie`.
-2. Run `npm run assets` (or `node tools/build-assets.mjs`). This bakes the PNGs into
-   `public/js/assets.js` so the game still runs straight from the file system.
-
-Characters without an export fall back to built-in sprites, drawn in
-`public/js/sprites.js` and finished with an automatic outline and shading pass.
-Frog, Ayla, Magus, Dave, Mat and the Mystic Knight use PixelLab exports (48×48, 8 directions,
-"low top-down" view). Crono is hand-built at the same 48×48 size with front and back views.
-The others still use the smaller built-in art; export them with the same settings to match.
+- **Charge Time turn order:** CT goes up by SPD each tick, and a unit acts at 100. Moving
+  and acting costs 100, doing only one of them costs 80, and waiting costs 60. The next 8
+  turns are shown at the top of the screen.
+- **On your turn:** Move, then act (Attack, Tech or Item), then **choose your facing**.
+  You can undo a move until you act.
+- **Damage:** `ATK × mult × 2 − DEF`. Attacks from the side do ×1.25 and from behind
+  ×1.5. Attacking from higher ground adds 10%, and ranged techs get +1 range from above.
+  There is evasion from the front, 8% critical hits, and elemental weaknesses and
+  resistances.
+- **Statuses:** Stun, Slow, Burn, Haste, Stasis, Catalogued (+50% damage taken) and
+  MAG↓.
+- **Combo techs:** dual techs (X-Strike, Beast Toss, Shadow Cyclone, …) and the triple
+  tech **Eclipse Blade** appear when your partners have at least 50 CT and are within
+  3 tiles.
+- **Terrain:** Rollo Kick can push enemies off ledges or into the void. Magus floats
+  over water and chasms, and Frog swims.
+- **Progression:** the party shares XP and learns techs as it levels. There are shops
+  in every era, equipment that auto-equips, save points and an autosave before every
+  battle.
 
 ## Project layout
 
-| File | Purpose |
+| Path | What it is |
 | --- | --- |
-| `public/js/sprites.js` | Sprite loading (PixelLab assets) plus built-in character, tree and rock art with automatic outline and cel shading. |
-| `public/js/assets.js` | Generated by `tools/build-assets.mjs` from `assets/characters/`. |
-| `public/js/data.js` | Map layout/heights, character stats, techs, starting roster. |
-| `public/js/battle.js` | Game rules: pathfinding, CT turn order, damage formulas, enemy AI. No rendering. |
-| `public/js/render.js` | Isometric renderer: per-pixel procedural terrain, sky and parallax, depth sorting, units and effects. |
-| `public/js/main.js` | Turn flow, input, menus, HUD and animation sequencing. |
+| `docs/SCRIPT.md` | The game bible: story, characters, rules, every scene and battle. |
+| `docs/ENGINE_SPEC.md` | The data contract between the engine and the content modules. |
+| `public/js/pixel.js` | Pixel-art toolkit: letter grids, outline and cel-shading pass, Echo effect. |
+| `public/js/sprites.js`, `sprites_cast.js` | Character, enemy, NPC and prop sprites (plus PixelLab exports). |
+| `public/js/portraits.js` | 64×64 dialogue portraits for 17 characters, with 6 emotions each. |
+| `public/js/terrain.js`, `terrain_ext.js` | Terrain materials (pixel-shaded per tile) and decoration art. |
+| `public/js/maps.js` | All maps: heights, terrain, decor, zones and markers. |
+| `public/js/audio.js` | WebAudio chiptune synth: 21 original tracks and 40 sound effects. |
+| `public/js/data.js` | Heroes, growth, techs, enemies, items, equipment, shops and balance knobs. |
+| `public/js/story.js` | Every scene, battle, trigger and the credits, as data. |
+| `public/js/battle.js` | Tactics rules: pathfinding, CT, damage, statuses, special techs, AI. |
+| `public/js/battlectl.js` | Battle flow: input, animation and the mid-battle trigger engine. |
+| `public/js/scene.js` | Cutscene runner and field exploration. |
+| `public/js/render.js` | Isometric renderer: themes, lighting, weather, effects and camera. |
+| `public/js/ui.js`, `main.js` | Dialogue, menus, HUD, title and credits; boot and input. |
+| `tools/dev.html` | Previews maps, sprites, portraits, decor and audio in isolation. |
+| `tools/balance.js` | Batch battle simulator used to tune difficulty. |
+| `tools/build-assets.mjs` | Bakes PixelLab exports from `assets/characters/` into `public/js/assets.js`. |
 
-The built-in sprites are original pixel art drawn for this project, not ripped assets.
-Chrono Trigger characters are the property of Square Enix; this is a non-commercial fan project.
+### Testing hooks
+
+`index.html?test&autoplay&scene=0.2` plays the whole story by itself: the AI controls the
+party, dialogue auto-advances, and in fields it talks to every NPC, buys gear and takes
+the exits. `?debug` adds a "jump to scene or battle" entry on the title screen.
+`PW=$(npm root -g)/playwright node tools/balance.js B1,B2 6 3` runs each battle 6 times,
+3 at a time, and reports win rates.
+
+## Deploy
+
+The game is the static files in `public/`, deployed as a Cloudflare Worker with static
+assets (see `wrangler.jsonc`): run `npm install && npx wrangler login && npm run deploy`, or
+connect the repo in the Cloudflare dashboard so every push to `main` redeploys.
+
+## Character art (PixelLab exports)
+
+Frog, Ayla, Magus, Dave, Mat and the Mystic Knight use 48×48, 8-direction PixelLab
+exports. To replace any other character, unzip an export into `assets/characters/<id>/`
+and run `npm run assets`.

@@ -1,0 +1,160 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Chrono Tactics dev harness</title>
+    <style>
+      body { margin: 0; background: #223; color: #eee; font: 12px monospace; }
+      #bar { padding: 6px; background: #112; }
+      #bar a { color: #9cf; margin-right: 10px; }
+      canvas { image-rendering: pixelated; }
+      .cell { display: inline-block; margin: 4px; text-align: center; vertical-align: bottom; }
+      #out { padding: 8px; }
+    </style>
+  </head>
+  <body>
+    <div id="bar">
+      Modes: <a href="#map=zenan">#map=&lt;id&gt;</a> <a href="#sprites">#sprites</a> <a href="#portraits">#portraits</a>
+      <a href="#decor">#decor</a> <a href="#audio">#audio</a> — map mode: Q/E rotate, M toggle markers/zones.
+    </div>
+    <div id="out"></div>
+    <script src="../public/js/assets.js"></script>
+    <script src="../public/js/pixel.js"></script>
+    <script src="../public/js/sprites.js"></script>
+    <script src="../public/js/sprites_cast.js"></script>
+    <script src="../public/js/portraits.js"></script>
+    <script src="../public/js/terrain.js"></script>
+    <script src="../public/js/terrain_ext.js"></script>
+    <script src="../public/js/maps.js"></script>
+    <script src="../public/js/audio.js"></script>
+    <script src="../public/js/data.js"></script>
+    <script src="../public/js/render.js"></script>
+    <script>
+      // Harness for previewing content modules in isolation.
+      // #map=<id>&rot=<0-3>&scale=<n>   #sprites[=key,key]&scale=n   #portraits   #decor   #audio
+      const out = document.getElementById('out');
+      const params = new URLSearchParams(location.hash.slice(1));
+      const scale = +(params.get('scale') || 1);
+      window.DEV_ERRORS = [];
+      window.addEventListener('error', (e) => window.DEV_ERRORS.push(e.message));
+      function show(cv, label, s = scale) {
+        const d = document.createElement('div');
+        d.className = 'cell';
+        const c = document.createElement('canvas');
+        c.width = cv.width * s;
+        c.height = cv.height * s;
+        const g = c.getContext('2d');
+        g.imageSmoothingEnabled = false;
+        g.drawImage(cv, 0, 0, c.width, c.height);
+        d.appendChild(c);
+        d.appendChild(document.createElement('br'));
+        d.appendChild(document.createTextNode(label));
+        out.appendChild(d);
+      }
+      (async () => {
+        await CT.loadAssets();
+        if (params.has('map')) {
+          const id = params.get('map');
+          const map = CT.prepareMap({ id, ...CT.MAPS[id] });
+          const cv = document.createElement('canvas');
+          cv.width = 960;
+          cv.height = 600;
+          out.appendChild(cv);
+          const r = new CT.Renderer(cv);
+          r.rot = +(params.get('rot') || 0);
+          const units = [];
+          let showMarks = params.get('marks') !== '0';
+          for (const [name, [x, y]] of Object.entries(map.markers || {})) {
+            const t = map.tiles[y] && map.tiles[y][x];
+            if (!t) { DEV_ERRORS.push('marker off map ' + name); continue; }
+            const T = CT.TERRAIN[t.t];
+            if (!T.walk && !T.swim) DEV_ERRORS.push('marker on non-walkable ' + name);
+            if (map.decorAt.get(`${x},${y}`) && CT.DECOR[map.decorAt.get(`${x},${y}`).kind]?.blocks) DEV_ERRORS.push('marker on blocking decor ' + name);
+          }
+          const sprites = (params.get('units') || '').split(',').filter(Boolean);
+          sprites.forEach((s, i) => {
+            const [key, mk] = s.split('@');
+            const [x, y] = map.markers[mk] || [i, 0];
+            units.push({ id: i, key, x, y, rx: x, ry: y, rh: r.tileHeight(map.tiles[y][x]), ox: 0, oy: 0, alpha: 1, face: 1, alive: true, team: 0 });
+          });
+          r.setWorld({ map, units });
+          r.focusMap(true);
+          const ui = { grid: params.get('grid') === '1', highlights: new Map() };
+          const zoneCols = ['zone', 'move', 'aoe', 'range'];
+          Object.values(map.zones).forEach((set, i) => set.forEach((k) => ui.highlights.set(k, zoneCols[i % 4])));
+          const loop = (now) => {
+            r.draw(showMarks ? ui : { grid: ui.grid }, now);
+            if (showMarks) {
+              const g = r.ctx;
+              g.font = '9px monospace';
+              g.textAlign = 'center';
+              for (const [name, [x, y]] of Object.entries(map.markers || {})) {
+                const t = map.tiles[y] && map.tiles[y][x];
+                if (!t) continue;
+                const [sx, sy] = r.project(x, y, r.tileHeight(t));
+                g.fillStyle = '#000';
+                g.fillText(name, sx + 1, sy + 1);
+                g.fillStyle = '#ff0';
+                g.fillText(name, sx, sy);
+              }
+            }
+            requestAnimationFrame(loop);
+          };
+          requestAnimationFrame(loop);
+          window.addEventListener('keydown', (e) => {
+            if (e.key === 'q') r.rot = r.rot + 3;
+            if (e.key === 'e') r.rot = r.rot + 1;
+            if (e.key === 'm') showMarks = !showMarks;
+          });
+          window.DEV_READY = true;
+        } else if (params.has('sprites')) {
+          const keys = params.get('sprites') ? params.get('sprites').split(',') : Object.keys(CT.SPRITE_BUILDERS);
+          for (const k of keys) {
+            const s = CT.getSprite(k);
+            show(s.frames['south-east'].img, k + ' se', scale || 3);
+            show(s.frames['north-east'].img, k + ' ne', scale || 3);
+          }
+          window.DEV_READY = true;
+        } else if (params.has('portraits')) {
+          const ids = 'crono frog ayla magus marle lucca robo king leene kino elder gaspar spekkio iselle curator nu corin'.split(' ');
+          const emos = 'neutral happy angry sad surprised determined broken'.split(' ');
+          for (const id of ids) {
+            const row = document.createElement('div');
+            out.appendChild(row);
+            for (const e of emos) {
+              if (e === 'broken' && id !== 'iselle') continue;
+              show(CT.getPortrait(id, e), id + ' ' + e, scale || 2);
+            }
+            out.appendChild(document.createElement('br'));
+          }
+          window.DEV_READY = true;
+        } else if (params.has('decor')) {
+          for (const [k, def] of Object.entries(CT.DECOR)) for (let v = 0; v < (def.variants || 1); v++) show(CT.getDecor(k, v), k + ':' + v, scale || 2);
+          window.DEV_READY = true;
+        } else if (params.has('audio')) {
+          out.innerHTML = '<p>Click a track to play (audio unlocks on click).</p>';
+          const ids = (CT.audio && CT.audio.tracks) ? CT.audio.tracks() : [];
+          const sfx = (CT.audio && CT.audio.sfxList) ? CT.audio.sfxList() : [];
+          for (const id of ids) {
+            const b = document.createElement('button');
+            b.textContent = id;
+            b.onclick = () => { CT.audio.unlock(); CT.audio.playMusic(id); };
+            out.appendChild(b);
+          }
+          out.appendChild(document.createElement('hr'));
+          for (const id of sfx) {
+            const b = document.createElement('button');
+            b.textContent = id;
+            b.onclick = () => { CT.audio.unlock(); CT.audio.sfx(id); };
+            out.appendChild(b);
+          }
+          const stop = document.createElement('button');
+          stop.textContent = 'STOP';
+          stop.onclick = () => CT.audio.stopMusic(300);
+          out.appendChild(stop);
+          window.DEV_READY = true;
+        }
+      })().catch((e) => { DEV_ERRORS.push(String(e && e.stack || e)); window.DEV_READY = true; });
+    </script>
+  </body>
+</html>

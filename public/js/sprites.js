@@ -10,152 +10,7 @@
 (function () {
   const CT = (window.CT = window.CT || {});
 
-  const OUTLINE = [28, 16, 36];
-  const SHADOW = [42, 24, 64];
-  const LIGHT = [255, 244, 216];
-
-  // ---- Colour helpers --------------------------------------------------------
-  const hex = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
-  const mix = (a, b, t) => a.map((v, i) => Math.round(v + (b[i] - v) * t));
-
-  // ---- Letter grid -----------------------------------------------------------
-  class Grid {
-    constructor(w, h) {
-      this.w = w;
-      this.h = h;
-      this.a = Array.from({ length: h }, () => Array(w).fill('.'));
-    }
-    px(x, y, c) {
-      x = Math.round(x);
-      y = Math.round(y);
-      if (x >= 0 && y >= 0 && x < this.w && y < this.h) this.a[y][x] = c;
-    }
-    rect(x0, y0, x1, y1, c) {
-      for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) this.px(x, y, c);
-    }
-    ell(cx, cy, rx, ry, c) {
-      for (let y = Math.floor(cy - ry); y <= Math.ceil(cy + ry); y++)
-        for (let x = Math.floor(cx - rx); x <= Math.ceil(cx + rx); x++) {
-          const dx = (x - cx) / (rx + 0.35);
-          const dy = (y - cy) / (ry + 0.35);
-          if (dx * dx + dy * dy <= 1) this.px(x, y, c);
-        }
-    }
-    line(x0, y0, x1, y1, c, w = 1) {
-      const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0), 1);
-      for (let i = 0; i <= n; i++) {
-        const x = x0 + ((x1 - x0) * i) / n;
-        const y = y0 + ((y1 - y0) * i) / n;
-        for (let k = 0; k < w; k++) this.px(x + k, y, c);
-      }
-    }
-    tri(ax, ay, bx, by, cx, cy, c) {
-      const side = (x0, y0, x1, y1, x, y) => (x1 - x0) * (y - y0) - (y1 - y0) * (x - x0);
-      for (let y = Math.floor(Math.min(ay, by, cy)); y <= Math.ceil(Math.max(ay, by, cy)); y++)
-        for (let x = Math.floor(Math.min(ax, bx, cx)); x <= Math.ceil(Math.max(ax, bx, cx)); x++) {
-          const px = x + 0.5;
-          const py = y + 0.5;
-          const d1 = side(ax, ay, bx, by, px, py);
-          const d2 = side(bx, by, cx, cy, px, py);
-          const d3 = side(cx, cy, ax, ay, px, py);
-          if (!((d1 < 0 || d2 < 0 || d3 < 0) && (d1 > 0 || d2 > 0 || d3 > 0))) this.px(x, y, c);
-        }
-    }
-    // Tapered spike from a base centred on (x0,y0), w wide, to a tip (x1,y1).
-    spike(x0, y0, x1, y1, w, c) {
-      const len = Math.hypot(x1 - x0, y1 - y0) || 1;
-      const px = (-(y1 - y0) / len) * (w / 2);
-      const py = ((x1 - x0) / len) * (w / 2);
-      this.tri(x0 + px, y0 + py, x0 - px, y0 - py, x1, y1, c);
-    }
-    // Overlay text rows; '.' and ' ' are transparent.
-    text(ox, oy, rows) {
-      rows.forEach((r, y) => [...r].forEach((c, x) => c !== '.' && c !== ' ' && this.px(ox + x, oy + y, c)));
-    }
-  }
-
-  // Outline + cel shading. `detail` letters (eyes, strands) are drawn flat and
-  // don't split the region they sit in.
-  function shadeGrid(g, pal, detail = '', hi = false) {
-    const P = 1; // padding for the outline
-    const W = g.w + P * 2;
-    const H = g.h + P * 2;
-    const cv = document.createElement('canvas');
-    cv.width = W;
-    cv.height = H;
-    const ctx = cv.getContext('2d');
-    const img = ctx.createImageData(W, H);
-    const at = (x, y) => (x < 0 || y < 0 || x >= g.w || y >= g.h ? '.' : g.a[y][x]);
-    const isDetail = (c) => detail.includes(c);
-    const same = (x, y, c) => {
-      const d = at(x, y);
-      return d === c || (d !== '.' && isDetail(d));
-    };
-    const cols = {};
-    for (const k in pal) cols[k] = hex(pal[k]);
-    const put = (x, y, rgb) => {
-      const i = ((y + P) * W + (x + P)) * 4;
-      img.data[i] = rgb[0];
-      img.data[i + 1] = rgb[1];
-      img.data[i + 2] = rgb[2];
-      img.data[i + 3] = 255;
-    };
-    // Per-letter bounding boxes, for a top-left-lit gradient across regions.
-    const boxes = {};
-    if (hi)
-      for (let y = 0; y < g.h; y++)
-        for (let x = 0; x < g.w; x++) {
-          const c = g.a[y][x];
-          const b = (boxes[c] = boxes[c] || [x, y, x, y]);
-          b[0] = Math.min(b[0], x);
-          b[1] = Math.min(b[1], y);
-          b[2] = Math.max(b[2], x);
-          b[3] = Math.max(b[3], y);
-        }
-    for (let y = -P; y < g.h + P; y++)
-      for (let x = -P; x < g.w + P; x++) {
-        const c = at(x, y);
-        if (c === '.') {
-          if (at(x + 1, y) !== '.' || at(x - 1, y) !== '.' || at(x, y + 1) !== '.' || at(x, y - 1) !== '.') put(x, y, OUTLINE);
-          continue;
-        }
-        const base = c === 'k' ? OUTLINE : cols[c] || OUTLINE;
-        if (c === 'k' || isDetail(c)) {
-          put(x, y, base);
-          continue;
-        }
-        const r1 = !same(x + 1, y, c) || !same(x, y + 1, c);
-        const r2 = !same(x + 2, y, c) || !same(x, y + 2, c) || !same(x + 1, y + 1, c);
-        const l1 = !same(x - 1, y, c) || !same(x, y - 1, c);
-        let rgb = base;
-        if (hi) {
-          // Three shade bands + two highlight bands for 48px art.
-          const r3 = !same(x + 3, y, c) || !same(x, y + 3, c) || !same(x + 2, y + 2, c);
-          const l2 = !same(x - 2, y, c) || !same(x, y - 2, c);
-          const seam = [[1, 0], [0, 1]].some(([dx, dy]) => {
-            const d = at(x + dx, y + dy);
-            return d !== '.' && d !== c && !isDetail(d);
-          });
-          const b = boxes[c];
-          const gx = (x - b[0]) / Math.max(1, b[2] - b[0]);
-          const gy = (y - b[1]) / Math.max(1, b[3] - b[1]);
-          const grad = 0.16 * gx + 0.12 * gy - 0.1;
-          const lit = grad > 0 ? mix(base, SHADOW, grad) : mix(base, LIGHT, -grad);
-          rgb = lit;
-          if (seam) rgb = mix(base, OUTLINE, 0.55);
-          else if (r1) rgb = mix(lit, SHADOW, 0.42);
-          else if (r2) rgb = mix(lit, SHADOW, 0.24);
-          else if (r3) rgb = mix(lit, SHADOW, 0.1);
-          else if (l1) rgb = mix(lit, LIGHT, 0.34);
-          else if (l2) rgb = mix(lit, LIGHT, 0.14);
-        } else if (r1) rgb = mix(base, SHADOW, 0.34);
-        else if (r2) rgb = mix(base, SHADOW, 0.15);
-        else if (l1) rgb = mix(base, LIGHT, 0.24);
-        put(x, y, rgb);
-      }
-    ctx.putImageData(img, 0, 0);
-    return cv;
-  }
+  const { Grid, shadeGrid, flashOf, mirror, bbox, frameOf } = CT.PX;
 
   // ---- Humanoid template (3/4 view facing screen-right) ------------------------
   // 32x44 grid. Letters: s head skin, A arm skin, n neck, t torso skin,
@@ -587,48 +442,18 @@
   };
 
   // ---- Sprite registry ------------------------------------------------------------
-  function flashOf(src) {
-    const cv = document.createElement('canvas');
-    cv.width = src.width;
-    cv.height = src.height;
-    const g = cv.getContext('2d');
-    g.drawImage(src, 0, 0);
-    g.globalCompositeOperation = 'source-in';
-    g.fillStyle = '#ffffff';
-    g.fillRect(0, 0, cv.width, cv.height);
-    return cv;
-  }
-  function mirror(src) {
-    const cv = document.createElement('canvas');
-    cv.width = src.width;
-    cv.height = src.height;
-    const g = cv.getContext('2d');
-    g.translate(src.width, 0);
-    g.scale(-1, 1);
-    g.drawImage(src, 0, 0);
-    return cv;
-  }
-  // Opaque bounding box, used to anchor sprites by their feet.
-  function bbox(cv) {
-    const d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data;
-    let x0 = cv.width, y0 = cv.height, x1 = -1, y1 = -1;
-    for (let y = 0; y < cv.height; y++)
-      for (let x = 0; x < cv.width; x++)
-        if (d[(y * cv.width + x) * 4 + 3] > 20) {
-          if (x < x0) x0 = x;
-          if (x > x1) x1 = x;
-          if (y < y0) y0 = y;
-          if (y > y1) y1 = y;
-        }
-    return { x0, y0, x1, y1 };
-  }
-  function frameOf(cv) {
-    const b = bbox(cv);
-    return { img: cv, flash: flashOf(cv), footY: b.y1 + 1, top: b.y0, cx: cv.width / 2, box: b };
-  }
-
+  // ---- Registry -------------------------------------------------------------------
+  // Other modules add builders with CT.registerSprite(key, fn). A builder returns
+  // a canvas (front view, mirrored for the other side), { se, ne } front & back
+  // views, or all four { se, sw, ne, nw }. 'echo_<key>' is derived automatically.
   const cache = {};
   const DIRS = ['south-east', 'south-west', 'north-east', 'north-west', 'south'];
+  CT.SPRITE_BUILDERS = Object.assign(CT.SPRITE_BUILDERS || {}, BUILDERS);
+  CT.registerSprite = (key, fn) => {
+    CT.SPRITE_BUILDERS[key] = fn;
+    delete cache[key];
+  };
+  CT.hasSprite = (key) => !!(cache[key] || CT.SPRITE_BUILDERS[key] || (CT.ASSETS && CT.ASSETS[key]) || (key.startsWith('echo_') && CT.hasSprite(key.slice(5))));
 
   function loadImage(src) {
     return new Promise((res, rej) => {
@@ -658,84 +483,55 @@
     }
   };
 
+  function placeholder() {
+    return CT.PX.canvas(24, 40, (g) => {
+      g.fillStyle = '#f0f';
+      g.fillRect(2, 2, 20, 36);
+    });
+  }
+
   CT.getSprite = function (key) {
-    if (!cache[key]) {
-      const built = BUILDERS[key]();
-      // Builders return one front-facing canvas, or { se, ne } front & back views.
-      const se = built.se || built;
-      const ne = built.ne || se;
-      const r = frameOf(se);
-      const br = frameOf(ne);
-      cache[key] = {
-        frames: { 'south-east': r, 'south-west': frameOf(mirror(se)), 'north-east': br, 'north-west': frameOf(mirror(ne)), south: r },
-      };
+    if (cache[key]) return cache[key];
+    if (key.startsWith('echo_') && !CT.SPRITE_BUILDERS[key]) {
+      const base = CT.getSprite(key.slice(5));
+      const frames = {};
+      for (const d in base.frames) frames[d] = frameOf(CT.PX.echoify(base.frames[d].img));
+      return (cache[key] = { frames, hiRes: base.hiRes, echo: true });
     }
+    const fn = CT.SPRITE_BUILDERS[key];
+    if (!fn) console.warn('missing sprite', key);
+    const built = fn ? fn() : placeholder();
+    const se = built.se || built;
+    const ne = built.ne || se;
+    const sw = built.sw || mirror(se);
+    const nw = built.nw || (built.ne ? mirror(ne) : sw);
+    const r = frameOf(se);
+    cache[key] = { frames: { 'south-east': r, 'south-west': frameOf(sw), 'north-east': frameOf(ne), 'north-west': frameOf(nw), south: r } };
     return cache[key];
   };
 
-  // Head-and-shoulders portrait for the HUD, as a data URL.
+  // Small sprite-based portrait for HUD lists (turn bar), as a data URL.
   const portraitCache = {};
   CT.portrait = function (key) {
     if (!portraitCache[key]) {
-      const f = CT.getSprite(key).frames.south || CT.getSprite(key).frames['south-east'];
+      const spr = CT.getSprite(key);
+      const f = spr.frames.south || spr.frames['south-east'];
       const size = 30;
       const scale = 4;
-      const cv = document.createElement('canvas');
-      cv.width = size * scale;
-      cv.height = size * scale;
-      const g = cv.getContext('2d');
-      g.imageSmoothingEnabled = false;
-      if (CT.getSprite(key).hiRes) {
-        // Detailed art: frame the whole figure rather than cropping the head.
-        const b = f.box;
-        const side = Math.max(b.x1 - b.x0, b.y1 - b.y0) + 3;
-        const cx = (b.x0 + b.x1 + 1) / 2;
-        const cy = (b.y0 + b.y1 + 1) / 2;
-        g.drawImage(f.img, Math.round(cx - side / 2), Math.round(cy - side / 2), side, side, 0, 0, size * scale, size * scale);
-      } else {
-        const sx = Math.round(f.cx - size / 2);
-        const sy = Math.max(0, f.top - 1);
-        g.drawImage(f.img, sx, sy, size, size, 0, 0, size * scale, size * scale);
-      }
+      const cv = CT.PX.canvas(size * scale, size * scale, (g) => {
+        if (spr.hiRes || f.img.width > 40) {
+          // Detailed art: frame the whole figure rather than cropping the head.
+          const b = f.box;
+          const side = Math.max(b.x1 - b.x0, b.y1 - b.y0) + 3;
+          const cx = (b.x0 + b.x1 + 1) / 2;
+          const cy = (b.y0 + b.y1 + 1) / 2;
+          g.drawImage(f.img, Math.round(cx - side / 2), Math.round(cy - side / 2), side, side, 0, 0, size * scale, size * scale);
+        } else {
+          g.drawImage(f.img, Math.round(f.cx - size / 2), Math.max(0, f.top - 1), size, size, 0, 0, size * scale, size * scale);
+        }
+      });
       portraitCache[key] = cv.toDataURL();
     }
     return portraitCache[key];
-  };
-
-  // ---- Decorations -------------------------------------------------------------------
-  function buildTree(seed) {
-    const g = new Grid(44, 58);
-    const rnd = (() => {
-      let s = seed * 9301 + 49297;
-      return () => ((s = (s * 9301 + 49297) % 233280) / 233280);
-    })();
-    g.rect(19, 38, 24, 55, 't');
-    g.rect(16, 53, 27, 56, 't');
-    g.line(21, 42, 13, 34, 't', 2);
-    g.line(23, 40, 30, 33, 't', 2);
-    const blobs = [[22, 22, 15, 14, 'a']];
-    for (let i = 0; i < 9; i++) {
-      const a = (i / 9) * Math.PI * 2 + rnd();
-      blobs.push([22 + Math.cos(a) * 11, 22 + Math.sin(a) * 10 - 2, 6 + rnd() * 4, 5 + rnd() * 3, 'abcd'[i % 4]]);
-    }
-    blobs.push([18, 13, 7, 6, 'b'], [26, 12, 6, 5, 'c']);
-    for (const [x, y, rx, ry, c] of blobs) g.ell(x, y, rx, ry, c);
-    for (let i = 0; i < 14; i++) g.px(10 + rnd() * 24, 8 + rnd() * 26, 'L');
-    return shadeGrid(g, { t: '#7c5030', a: '#3c8c3c', b: '#46a044', c: '#3c8c3c', d: '#347c38', L: '#8cd070' }, 'L');
-  }
-  function buildRock() {
-    const g = new Grid(28, 18);
-    g.ell(13, 10, 12, 7, 'r');
-    g.ell(9, 8, 6, 4, 'q');
-    g.ell(19, 11, 6, 5, 's');
-    g.px(12, 6, 'L');
-    g.px(7, 7, 'L');
-    return shadeGrid(g, { r: '#9c9ca8', q: '#b4b4c0', s: '#8c8c98', L: '#e0e0e8' }, 'L');
-  }
-  const decorCache = {};
-  CT.getDecor = function (key, variant = 0) {
-    const k = key + variant;
-    if (!decorCache[k]) decorCache[k] = key === 'tree' ? buildTree(variant + 1) : buildRock();
-    return decorCache[k];
   };
 })();
