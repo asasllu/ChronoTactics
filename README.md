@@ -3,8 +3,9 @@
 A Final Fantasy Tactics–style isometric battle starring the cast of Chrono Trigger.
 It's plain HTML5 canvas and JavaScript, with no build step and no dependencies.
 
-The party (Crono, Marle, Lucca, Frog, Robo and Ayla) has to hold the Zenan
-riverbank against Magus, Ozzie, Slash, Flea and their Henches.
+The party (Crono, Marle, Lucca, Frog, Robo and Ayla, plus guest divers Dave and Mat)
+has to hold the Zenan riverbank against Magus, Ozzie, Slash, Flea, two Mystic Knights
+and three Henches.
 
 ## Run it
 
@@ -47,15 +48,16 @@ Controls: mouse to select, **Q / E** rotate the camera, **Esc** or right-click t
 Any character can use detailed 8-directional sprites exported from PixelLab:
 
 1. Unzip the export into `assets/characters/<key>/` so it contains `metadata.json`
-   and `<State>/rotations/*.png`. `<key>` is the character id: `crono`, `marle`,
-   `lucca`, `frog`, `robo`, `ayla`, `magus`, `ozzie`, `slash`, `flea` or `hench`.
+   and `<State>/rotations/*.png`. `<key>` is the character id from `CHARACTERS`
+   in `public/js/data.js`, e.g. `crono`, `marle`, `lucca`, `robo`, `ozzie`.
 2. Run `npm run assets` (or `node tools/build-assets.mjs`). This bakes the PNGs into
    `public/js/assets.js` so the game still runs straight from the file system.
 
 Characters without an export fall back to built-in sprites, drawn in
 `public/js/sprites.js` and finished with an automatic outline and shading pass.
-Frog currently uses a PixelLab export: 48×48 pixels, 8 directions, "low top-down" view.
-Use the same settings for the rest of the cast so they match.
+Frog, Ayla, Magus, Dave, Mat and the Mystic Knight use PixelLab exports (48×48, 8 directions,
+"low top-down" view). Crono is hand-built at the same 48×48 size with front and back views.
+The others still use the smaller built-in art; export them with the same settings to match.
 
 ## Project layout
 

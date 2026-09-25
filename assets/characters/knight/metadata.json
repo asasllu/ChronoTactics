@@ -1,0 +1,36 @@
+{
+  "group_id": "d00366b3-5fa4-43ce-9268-817ac40e39e6",
+  "states": [
+    {
+      "character": {
+        "id": "9a3805d2-13db-4aee-a645-a9ca3b33f1bb",
+        "name": "Idle",
+        "prompt": "medieval warrior with robe and staff",
+        "size": {
+          "width": 48,
+          "height": 48
+        },
+        "template_id": "mannequin",
+        "directions": 8,
+        "view": "low top-down",
+        "created_at": "2026-09-25T21:40:19.411984+00:00"
+      },
+      "folder": "Idle",
+      "frames": {
+        "rotations": {
+          "south": "Idle/rotations/south.png",
+          "south-east": "Idle/rotations/south-east.png",
+          "east": "Idle/rotations/east.png",
+          "north-east": "Idle/rotations/north-east.png",
+          "north": "Idle/rotations/north.png",
+          "north-west": "Idle/rotations/north-west.png",
+          "west": "Idle/rotations/west.png",
+          "south-west": "Idle/rotations/south-west.png"
+        },
+        "animations": {}
+      }
+    }
+  ],
+  "export_version": "3.1",
+  "export_date": "2026-09-25T21:45:09.262748"
+}

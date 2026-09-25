@@ -364,8 +364,8 @@
   }
 
   function showTitle() {
-    const party = ['crono', 'marle', 'lucca', 'frog', 'robo', 'ayla'].map((k) => `<img src="${CT.portrait(k)}">`).join('');
-    const foes = ['magus', 'ozzie', 'slash', 'flea', 'hench'].map((k) => `<img src="${CT.portrait(k)}">`).join('');
+    const party = ['crono', 'marle', 'lucca', 'frog', 'robo', 'ayla', 'dave', 'mat'].map((k) => `<img src="${CT.portrait(k)}">`).join('');
+    const foes = ['magus', 'ozzie', 'slash', 'flea', 'knight', 'hench'].map((k) => `<img src="${CT.portrait(k)}">`).join('');
     $('turns').classList.add('hidden');
     overlay(
       `<h1>CHRONO TACTICS</h1>

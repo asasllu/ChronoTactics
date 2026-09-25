@@ -79,6 +79,11 @@
     flame:     { name: 'Flame',       mp: 5, range: [1, 3], aoe: 1, kind: 'dmg',  stat: 'mag', power: 2.0, elem: 'fire' },
     slashwave: { name: 'Slash Wave',  mp: 4, range: [1, 3], aoe: 0, kind: 'dmg',  stat: 'atk', power: 1.2, elem: 'slash' },
     prism:     { name: 'Prism Beam',  mp: 5, range: [2, 4], aoe: 0, kind: 'dmg',  stat: 'mag', power: 2.6, elem: 'laser' },
+    spear:     { name: 'Spear Gun',   mp: 3, range: [2, 5], aoe: 0, kind: 'dmg',  stat: 'atk', power: 1.3, elem: 'slash' },
+    sushi:     { name: 'Sushi',       mp: 3, range: [0, 1], aoe: 0, kind: 'heal', stat: 'mag', power: 5.0, elem: 'heal' },
+    bubblejet: { name: 'Bubble Jet',  mp: 5, range: [2, 4], aoe: 1, kind: 'dmg',  stat: 'mag', power: 1.5, elem: 'water' },
+    depthcharge:{ name: 'Depth Charge', mp: 8, range: [1, 3], aoe: 1, kind: 'dmg', stat: 'atk', power: 0.8, elem: 'fire' },
+    darkstaff: { name: 'Dark Staff',  mp: 5, range: [1, 3], aoe: 1, kind: 'dmg',  stat: 'mag', power: 1.9, elem: 'dark' },
     healwave:  { name: 'Heal Wave',   mp: 8, range: [0, 3], aoe: 1, kind: 'heal', stat: 'mag', power: 1.5, elem: 'heal' },
   };
 
@@ -89,13 +94,16 @@
     lucca: { name: 'Lucca', hp: 130, mp: 30, atk: 20, def: 10, mag: 22, mdef: 16, spd: 10, move: 4, jump: 2, range: [1, 3], proj: 'shot', weapon: 'Air Gun', techs: ['flametoss', 'fire'] },
     frog:  { name: 'Frog',  hp: 170, mp: 20, atk: 28, def: 16, mag: 14, mdef: 12, spd: 11, move: 4, jump: 3, range: [1, 1], weapon: 'Broadsword', swim: true, techs: ['slurp', 'water'] },
     robo:  { name: 'Robo',  hp: 230, mp: 15, atk: 32, def: 24, mag: 8,  mdef: 8,  spd: 8,  move: 3, jump: 1, range: [1, 1], weapon: 'Tin Arm', techs: ['laserspin', 'curebeam'] },
+    dave:  { name: 'Dave',  hp: 160, mp: 16, atk: 26, def: 14, mag: 10, mdef: 10, spd: 10, move: 4, jump: 2, range: [1, 3], proj: 'harpoon', weapon: 'Harpoon Gun', swim: true, techs: ['spear', 'sushi'] },
+    mat:   { name: 'Mat',   hp: 150, mp: 24, atk: 24, def: 12, mag: 18, mdef: 14, spd: 11, move: 4, jump: 2, range: [1, 3], proj: 'harpoon', weapon: 'Harpoon', swim: true, techs: ['bubblejet', 'depthcharge'] },
     ayla:  { name: 'Ayla',  hp: 175, mp: 12, atk: 36, def: 12, mag: 6,  mdef: 8,  spd: 13, move: 5, jump: 3, range: [1, 1], weapon: 'Fist', techs: ['rollokick', 'kiss'] },
 
     magus: { name: 'Magus', hp: 300, mp: 40, atk: 28, def: 18, mag: 24, mdef: 26, spd: 12, move: 4, jump: 3, range: [1, 1], weapon: 'Doomsickle', techs: ['darkbomb', 'lightning2'] },
     ozzie: { name: 'Ozzie', hp: 260, mp: 30, atk: 22, def: 24, mag: 20, mdef: 20, spd: 7,  move: 3, jump: 1, range: [1, 1], weapon: 'Belly', techs: ['flame'] },
     slash: { name: 'Slash', hp: 220, mp: 20, atk: 32, def: 16, mag: 10, mdef: 10, spd: 12, move: 4, jump: 3, range: [1, 1], weapon: 'Slasher', techs: ['slashwave'] },
     flea:  { name: 'Flea',  hp: 180, mp: 40, atk: 16, def: 10, mag: 24, mdef: 22, spd: 11, move: 4, jump: 2, range: [1, 1], weapon: 'Whip', techs: ['prism', 'healwave'] },
-    hench: { name: 'Hench', hp: 100, mp: 0,  atk: 22, def: 12, mag: 6,  mdef: 8,  spd: 9,  move: 4, jump: 2, range: [1, 1], weapon: 'Axe', techs: [] },
+    knight:{ name: 'Mystic Knight', hp: 210, mp: 25, atk: 30, def: 22, mag: 16, mdef: 14, spd: 9, move: 3, jump: 2, range: [1, 1], weapon: 'Iron Staff', techs: ['darkstaff'] },
+    hench: { name: 'Hench', hp: 130, mp: 0,  atk: 26, def: 12, mag: 6,  mdef: 8,  spd: 9,  move: 4, jump: 2, range: [1, 1], weapon: 'Axe', techs: [] },
   };
 
   // Facing: 0 = +x (east), 1 = +y (south), 2 = -x (west), 3 = -y (north).
@@ -106,12 +114,16 @@
     { key: 'frog',  team: 0, x: 3, y: 7, face: 0 },
     { key: 'robo',  team: 0, x: 2, y: 8, face: 0 },
     { key: 'ayla',  team: 0, x: 3, y: 2, face: 0 },
+    { key: 'dave',  team: 0, x: 3, y: 9, face: 0 },
+    { key: 'mat',   team: 0, x: 0, y: 4, face: 0 },
 
     { key: 'magus', team: 1, x: 11, y: 1, face: 2 },
     { key: 'ozzie', team: 1, x: 10, y: 3, face: 2 },
     { key: 'slash', team: 1, x: 9,  y: 5, face: 2 },
     { key: 'flea',  team: 1, x: 10, y: 0, face: 2 },
+    { key: 'knight', team: 1, x: 10, y: 6, face: 2 },
     { key: 'hench', team: 1, x: 9,  y: 8, face: 2 },
     { key: 'hench', team: 1, x: 9,  y: 2, face: 2 },
+    { key: 'hench', team: 1, x: 11, y: 4, face: 2 },
   ];
 })();
