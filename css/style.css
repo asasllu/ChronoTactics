@@ -1,0 +1,181 @@
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  height: 100%;
+  background: #05060c;
+  overflow: hidden;
+  font-family: 'Press Start 2P', monospace;
+  color: #f0f0f8;
+  user-select: none;
+}
+
+#stage {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 960px;
+  height: 600px;
+  transform-origin: 0 0;
+}
+#cv {
+  display: block;
+  image-rendering: pixelated;
+  cursor: pointer;
+}
+
+.hidden { display: none !important; }
+
+/* SNES-style blue windows */
+.panel {
+  position: absolute;
+  background: linear-gradient(180deg, #3050b8 0%, #182c78 100%);
+  border: 3px solid #e8e8f0;
+  border-radius: 6px;
+  box-shadow: 0 0 0 2px #101018, inset 0 0 0 2px #101830, 3px 3px 0 2px rgba(0, 0, 0, 0.5);
+  padding: 8px 10px;
+  font-size: 9px;
+  line-height: 1.6;
+  text-shadow: 1px 1px 0 #101018;
+}
+
+#banner {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 12px;
+  padding: 8px 16px;
+  background: rgba(16, 16, 40, 0.85);
+  border: 2px solid #e8e8f0;
+  border-radius: 4px;
+  opacity: 0;
+  transition: opacity 0.25s;
+  white-space: nowrap;
+  text-shadow: 2px 2px 0 #101018;
+  pointer-events: none;
+}
+#banner.show { opacity: 1; }
+
+#turns {
+  top: 10px;
+  left: 10px;
+  width: 132px;
+  padding: 6px 6px;
+}
+#turns h3 { margin: 0 0 4px; font-size: 8px; color: #f8d848; font-weight: normal; }
+.turn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  font-size: 8px;
+}
+.turn img { width: 20px; height: 20px; image-rendering: pixelated; }
+.turn.t1 { color: #ffa0a0; }
+.turn.t0 { color: #b0e0ff; }
+.turn:first-of-type { background: rgba(255, 255, 255, 0.12); border-radius: 3px; }
+
+#active, #target {
+  bottom: 10px;
+  width: 290px;
+  display: flex;
+  gap: 8px;
+}
+#active { left: 10px; }
+#target { right: 10px; }
+.portrait {
+  width: 64px;
+  height: 64px;
+  image-rendering: pixelated;
+  background: rgba(0, 0, 0, 0.3);
+  border: 2px solid #101830;
+  border-radius: 4px;
+  flex: none;
+}
+.info { flex: 1; min-width: 0; }
+.name { font-size: 10px; margin-bottom: 4px; }
+.name .team0 { color: #b0e0ff; }
+.name .team1 { color: #ffa0a0; }
+.bar-row { display: flex; align-items: center; gap: 4px; }
+.bar-row b { width: 18px; font-weight: normal; color: #f8d848; }
+.bar {
+  flex: 1;
+  height: 6px;
+  background: #101018;
+  border: 1px solid #101018;
+}
+.bar i { display: block; height: 100%; }
+.bar.hp i { background: linear-gradient(#80f090, #30b050); }
+.bar.mp i { background: linear-gradient(#80c8ff, #3070e0); }
+.bar-row span { width: 66px; text-align: right; }
+.stats { color: #c8d0f0; margin-top: 2px; font-size: 8px; }
+.preview { margin-top: 4px; color: #f8d848; }
+.preview.heal { color: #90ffa0; }
+
+#menu {
+  left: 318px;
+  bottom: 10px;
+  min-width: 150px;
+  padding: 6px 4px;
+}
+#menu button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  font-size: 10px;
+  color: #f0f0f8;
+  background: none;
+  border: none;
+  padding: 4px 8px 4px 20px;
+  cursor: pointer;
+  position: relative;
+  text-shadow: 1px 1px 0 #101018;
+}
+#menu button small { float: right; color: #a0c0ff; font-size: 8px; margin-left: 10px; }
+#menu button:disabled { color: #7080b0; cursor: default; }
+#menu button:not(:disabled):hover::before,
+#menu button.sel::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 5px;
+  border: 5px solid transparent;
+  border-left: 8px solid #fff;
+}
+#menu .title { font-size: 8px; color: #f8d848; padding: 2px 8px 4px; }
+
+#help {
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  font-size: 8px;
+  color: rgba(255, 255, 255, 0.55);
+  text-shadow: 1px 1px 0 #000;
+}
+
+#overlay {
+  position: absolute;
+  inset: 0;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(5, 6, 20, 0.78);
+  text-align: center;
+  gap: 18px;
+}
+#overlay.show { display: flex; }
+#overlay h1 {
+  margin: 0;
+  font-size: 34px;
+  font-weight: normal;
+  color: #f8d848;
+  text-shadow: 4px 4px 0 #a03010, 6px 6px 0 #101018;
+  letter-spacing: 2px;
+}
+#overlay p { margin: 0; font-size: 10px; line-height: 2; color: #c8d0f0; max-width: 620px; }
+#overlay .blink { animation: blink 1s steps(2) infinite; color: #fff; font-size: 12px; }
+#overlay .party { display: flex; gap: 6px; }
+#overlay .party img { width: 52px; height: 52px; image-rendering: pixelated; }
+@keyframes blink { 50% { opacity: 0; } }
