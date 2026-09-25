@@ -472,7 +472,7 @@
       const set = new Set(tiles.map((t) => key(t.x, t.y)));
       return this.living().filter((v) => {
         if (!set.has(key(v.x, v.y))) return false;
-        if (v === u && tech.target !== 'ally' && tech.target !== 'self') return false;
+        if (v === u && ((tech.target !== 'ally' && tech.target !== 'self') || tech.noSelf)) return false;
         if (tech.target === 'enemy') return this.hostile(u, v);
         if (tech.target === 'ally') return !this.hostile(u, v) && v.team !== 2 || v === u;
         return true;

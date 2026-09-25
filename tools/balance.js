@@ -7,11 +7,11 @@ const url = 'file://' + path.resolve(__dirname, '../public/index.html') + '?sim&
 const SETUP = {
   B0: { level: 1, party: ['crono', 'frog'], gear: [] },
   B1: { level: 5, party: ['crono', 'frog'], gear: [] },
-  B2: { level: 9, party: ['crono', 'frog', 'ayla'], gear: ['steel_saber', 'iron_sword', 'bronze_mail', 'iron_helm'] },
-  B3: { level: 14, party: ['crono', 'frog', 'ayla', 'magus'], gear: ['steel_saber', 'iron_sword', 'bone_guard', 'fang_helm', 'fist_2', 'doomsickle'] },
+  B2: { level: 9, party: ['crono', 'frog', 'ayla'], gear: ['steel_saber', 'iron_sword'] },
+  B3: { level: 14, party: ['crono', 'frog', 'ayla', 'magus'], gear: ['steel_saber', 'iron_sword', 'bone_guard', 'fist_2'] },
   B4A: { level: 20, party: ['crono', 'frog', 'ayla', 'magus'], gear: ['rainbow', 'brave_sword', 'giants_hand', 'dark_scythe', 'lumin_robe', 'beret'], guests: ['iselle'] },
-  B4B: { level: 22, party: ['crono', 'frog', 'ayla', 'magus'], gear: ['rainbow', 'brave_sword', 'giants_hand', 'dark_scythe', 'lumin_robe', 'beret'], guests: ['iselle'] },
-  B5: { level: 23, party: ['crono', 'frog', 'ayla', 'magus'], gear: ['rainbow', 'brave_sword', 'giants_hand', 'dark_scythe', 'lumin_robe', 'beret', 'speed_belt'] },
+  B4B: { level: 22, party: ['crono', 'frog', 'ayla', 'magus'], gear: ['steel_saber', 'iron_sword', 'bone_guard', 'fist_2', 'rainbow', 'lumin_robe', 'brave_sword'], guests: ['iselle'] },
+  B5: { level: 23, party: ['crono', 'frog', 'ayla', 'magus'], gear: ['steel_saber', 'iron_sword', 'bone_guard', 'fist_2', 'rainbow', 'lumin_robe', 'brave_sword', 'dark_scythe'] },
   OPT1: { level: 10, party: ['crono', 'frog', 'ayla', 'magus'], gear: [] },
 };
 async function runOne(browser, id, tune) {

@@ -58,9 +58,9 @@
     B0: { atk: 0.75 },
     B1: { atk: 0.72, def: 0.55, hp: 0.9 },
     B4A: { hp: 1.6, atk: 0.75 },
-    B2: { atk: 0.82 },
+    B2: { atk: 0.76 },
     B5: { atk: 0.8, hp: 0.85 },
-    B4B: { atk: 1.7, hp: 1.6 },
+    B4B: { atk: 1.7, hp: 1.3 },
   };
   CT.LEVEL_CAP = 30;
 
@@ -122,7 +122,7 @@
     claw: T({ name: 'Claw', mp: 0, mult: 1.0, vfx: 'hit', sfx: 'sfx_sword_hit' }),
     imp_jab: T({ name: 'Echo Jab', mp: 0, range: [1, 2], mult: 1.1, vfx: 'hit', sfx: 'sfx_kick' }),
     hench_axe: T({ name: 'Hollow Axe', mp: 0, mult: 1.3, vfx: 'slash', sfx: 'sfx_sword_hit' }),
-    re_file: T({ name: 'Re-file', mp: 0, range: [0, 3], kind: 'heal', stat: 'mag', mult: 0.8, target: 'ally', vfx: 'heal', sfx: 'sfx_heal_chime', desc: 'Restores an archived ally.' }),
+    re_file: T({ name: 'Re-file', mp: 0, range: [1, 3], noSelf: true, kind: 'heal', stat: 'mag', mult: 0.45, target: 'ally', vfx: 'heal', sfx: 'sfx_heal_chime', desc: 'Restores an archived ally.' }),
     rock_toss: T({ name: 'Rock Toss', mp: 0, range: [2, 3], mult: 0.9, vfx: 'hit', sfx: 'sfx_kick' }),
     roll: T({ name: 'Roll', mp: 0, range: [1, 1], mult: 1.3, vfx: 'hit', sfx: 'sfx_kick' }),
     fire_breath: T({ name: 'Fire Breath', mp: 0, range: [1, 1], shape: 'cone', r: 3, kind: 'mag', stat: 'mag', mult: 1.5, elem: 'fire', status: ['burn', 0.4, 3], vfx: 'fire', sfx: 'sfx_fire' }),
