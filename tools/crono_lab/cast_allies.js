@@ -24,7 +24,7 @@
     K: '#0c0810', B: '#3a2c3c', m: '#5e4a5e', M: '#8a7088',
   };
   CAST.iselle = {
-    name: 'Iselle', group: 'allies', w: 28, h: 47, pal: ISELLE_PAL,
+    name: 'Iselle', group: 'allies', w: 28, h: 46, pal: ISELLE_PAL,
     rows: [
       '...a',
       '..aXa',
@@ -78,7 +78,7 @@
   // Broken: after the vitrine cracks. Head bowed, seams dimmed, porcelain chipped,
   // the halberd snapped (the glass head lies shattered by her boot).
   CAST.iselle_broken = {
-    name: 'Iselle (broken)', group: 'allies', w: 28, h: 47,
+    name: 'Iselle (broken)', group: 'allies', w: 28, h: 46,
     pal: Object.assign({}, ISELLE_PAL, { g: '#3a6cb0', G: '#6c9ad4', X: '#e8f0fa', x: '#a8c8e8', Z: '#7aa6d8', z: '#4a78b8' }),
     rows: [
       '',
@@ -134,7 +134,7 @@
   // Steel plate with gold trim, closed great helm with a violet glow behind the visor,
   // dark plume, navy cape and tabard, runed greatsword planted point-down.
   CAST.knight = {
-    name: 'Mystic Knight', group: 'allies', w: 30, h: 48,
+    name: 'Mystic Knight', group: 'allies', w: 30, h: 46,
     pal: {
       // steel: outline, dark, mid, light, highlight
       K: '#0e0e1c', D: '#3a3e5a', M: '#6c7290', L: '#a8aec8', W: '#e8ecf8',
@@ -203,7 +203,7 @@
   // Dave: olive camo suit, gunmetal helmet with a brass-rimmed porthole, masked face
   // (dark goggles and a regulator behind the glass), teal back tanks, long speargun.
   CAST.dave = {
-    name: 'Dave', group: 'allies', w: 30, h: 44,
+    name: 'Dave', group: 'allies', w: 30, h: 43,
     pal: {
       // outline, gunmetal dark/mid/light/highlight
       K: '#0e1014', D: '#343c4c', M: '#56627a', L: '#8c98ae', W: '#d4dce8',
@@ -270,7 +270,7 @@
   // Mat: red suit with silver pads, polished steel helmet with a red crown, face visible
   // behind the glass, one big yellow tank, stubby grapnel launcher (muzzle toward us).
   CAST.mat = {
-    name: 'Mat', group: 'allies', w: 30, h: 44,
+    name: 'Mat', group: 'allies', w: 29, h: 42,
     pal: {
       // outline, steel dark/mid/light/highlight
       K: '#12141e', D: '#4c5670', M: '#8892ac', L: '#c4ccdc', W: '#f4f8ff',
@@ -335,7 +335,7 @@
   // Round pink spirit: cream horns, purple tuft, floppy ears, beady eyes, wide grin,
   // cream belly, stubby arms and feet.
   CAST.spekkio = {
-    name: 'Spekkio', group: 'allies', w: 27, h: 28,
+    name: 'Spekkio', group: 'allies', w: 27, h: 27,
     pal: {
       // pink: outline, dark shade, shade, mid, light, highlight
       P: '#5a1a40', u: '#a8386e', q: '#dc6e9c', p: '#f294bc', L: '#fcbcd4', W: '#fff0f6',
