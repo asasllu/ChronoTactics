@@ -15,6 +15,58 @@
 
   const UI = {};
   CT.UI = UI;
+
+  // ---- Pixel assets for the window skin ----------------------------------------------
+  // Tiny palette-exact images (1 image px = 1 game px), handed to style.css as --ui-*
+  // custom properties and shown at 2x with image-rendering: pixelated.
+  const R = CT.PAL.RAMPS;
+  const INK = R.ink[0];
+  function pixURL(rows, map) {
+    const cv = document.createElement('canvas');
+    cv.width = rows[0].length;
+    cv.height = rows.length;
+    const g = cv.getContext('2d');
+    rows.forEach((r, y) => [...r].forEach((ch, x) => {
+      if (!map[ch]) return;
+      g.fillStyle = map[ch];
+      g.fillRect(x, y, 1, 1);
+    }));
+    return cv.toDataURL();
+  }
+  // Ordered-dither band: each level (fraction of colour b over a) spans two rows.
+  const BAYER2 = [[0.125, 0.625], [0.875, 0.375]];
+  function bandURL(levels, a, b) {
+    const rows = [];
+    for (const f of levels) for (let y = 0; y < 2; y++) rows.push([0, 1].map((x) => (f > BAYER2[y][x] ? 'b' : a ? 'a' : '.')).join(''));
+    return pixURL(rows, { a, b });
+  }
+  const HAND = [
+    '..kkkk........',
+    '.kwwwwkkkkkkk.',
+    'kwwwwwwwwwwwwk',
+    'kwwwwwkkkkkkk.',
+    'kgwwwwwwk.....',
+    'kgwwwwkk......',
+    'kggwwwwwk.....',
+    '.kgggggk......',
+    '..kkkkk.......',
+  ];
+  const MORE = ['kkkkkkk', 'kwwwwwk', '.kwwwk.', '..kgk..', '...k...'];
+  const GEM = ['...k...', '..kYk..', '.kyWyk.', 'kYWWWYk', '.kyWyk.', '..kYk..', '...k...'];
+  const vars = {
+    '--ui-hand': pixURL(HAND, { k: INK, w: R.white[0], g: R.slate[3] }),
+    '--ui-more': pixURL(MORE, { k: INK, w: R.gold[3], g: R.gold[1] }),
+    '--ui-more-blue': pixURL(MORE, { k: R.blue[1], w: R.blue[4], g: R.blue[3] }),
+    '--ui-gem': pixURL(GEM, { k: INK, y: R.gold[1], Y: R.gold[3], W: R.white[0] }),
+    '--ui-win-top': bandURL([1, 0.75, 0.5, 0.25], R.blue[2], R.blue[3]),
+    '--ui-win-bot': bandURL([0.25, 0.5, 0.75, 1], R.blue[2], R.blue[1]),
+    '--ui-warn-top': bandURL([1, 0.75, 0.5, 0.25], R.red[2], R.red[3]),
+    '--ui-warn-bot': bandURL([0.25, 0.5, 0.75, 1], R.red[2], R.red[1]),
+    '--ui-cur-top': bandURL([1, 0.75, 0.5, 0.25], R.slate[5], R.white[0]),
+    '--ui-scan': pixURL(['k.', '..', '..', '..'], { k: R.blue[1] }),
+    '--ui-veil': pixURL(['k.', '..'], { k: INK }),
+  };
+  for (const k in vars) document.documentElement.style.setProperty(k, `url(${vars[k]})`);
   const openMenus = new Set();
 
   // Global key routing: the top-most modal handler gets keys first.
@@ -35,16 +87,52 @@
   UI.modalOpen = () => keyStack.length > 0;
 
   // ---- Dialogue --------------------------------------------------------------------
+  // Portraits are 64x64 palette-snapped canvases, shown at 2 stage px per pixel.
+  // The radio variant is remapped onto the blue ramp by brightness (still palette-exact).
   const portraitURL = {};
-  function portrait(who, emotion) {
+  function portrait(who, emotion, radio) {
     if (!CT.getPortrait || !who || who === 'narrator') return null;
-    const k = who + ':' + emotion;
+    const k = who + ':' + emotion + (radio ? ':radio' : '');
     if (!portraitURL[k]) {
-      const cv = CT.getPortrait(who, emotion || 'neutral');
+      let cv = CT.getPortrait(who, emotion || 'neutral');
+      if (radio) cv = tintRadio(cv);
       portraitURL[k] = cv.toDataURL();
     }
     return portraitURL[k];
   }
+  function tintRadio(src) {
+    const cv = document.createElement('canvas');
+    cv.width = src.width;
+    cv.height = src.height;
+    const g = cv.getContext('2d', { willReadFrequently: true });
+    g.drawImage(src, 0, 0);
+    const img = g.getImageData(0, 0, cv.width, cv.height);
+    const d = img.data;
+    const ramp = [R.ink[0], ...R.blue.slice(0, 6)].map(CT.PAL.hex);
+    for (let i = 0; i < d.length; i += 4) {
+      if (!d[i + 3]) continue;
+      const l = (d[i] * 0.3 + d[i + 1] * 0.55 + d[i + 2] * 0.15) / 255;
+      const c = ramp[Math.min(ramp.length - 1, Math.floor(l * ramp.length * 0.98))];
+      d[i] = c[0]; d[i + 1] = c[1]; d[i + 2] = c[2];
+    }
+    g.putImageData(img, 0, 0);
+    return cv;
+  }
+  // A 40x40 crop around the face (for HUD panels and the party screen, shown at 2x).
+  const FACE = { frog: [12, 10], robo: [12, 8], nu: [12, 14], spekkio: [12, 12], curator: [12, 8] };
+  const faceURL = {};
+  UI.faceURL = function (who, emotion = 'neutral') {
+    const k = who + ':' + emotion;
+    if (!faceURL[k]) {
+      const src = CT.getPortrait(who, emotion);
+      const [x, y] = FACE[who] || [12, 8];
+      const cv = document.createElement('canvas');
+      cv.width = cv.height = 40;
+      cv.getContext('2d').drawImage(src, x, y, 40, 40, 0, 0, 40, 40);
+      faceURL[k] = cv.toDataURL();
+    }
+    return faceURL[k];
+  };
   UI.speakerName = (who) => (CT.SPEAKERS && CT.SPEAKERS[who] != null ? CT.SPEAKERS[who] : who ? who[0].toUpperCase() + who.slice(1) : '');
 
   // Shows one line; resolves when the player advances.
@@ -52,7 +140,7 @@
     const box = $('dialogue');
     const curator = who === 'curator';
     box.className = 'dlg' + (curator ? ' curator' : '') + (opts.radio ? ' radio' : '') + (who === 'narrator' ? ' narrator' : '');
-    const url = portrait(who, emotion);
+    const url = portrait(who, emotion, opts.radio);
     const name = opts.name || UI.speakerName(who);
     box.innerHTML = '';
     if (url) {
@@ -131,7 +219,8 @@
     const hint = el('div', 'menu-hint');
     let sel = Math.max(0, items.findIndex((it) => !it.disabled));
     const btns = items.map((it, i) => {
-      const b = el('button', 'mi' + (it.cls ? ' ' + it.cls : ''), `<span>${it.label}</span>${it.note != null ? `<small>${it.note}</small>` : ''}`);
+      const label = String(it.label).replace(/^✦ /, '<i class="gem"></i>');
+      const b = el('button', 'mi' + (it.cls ? ' ' + it.cls : ''), `<span>${label}</span>${it.note != null ? `<small>${it.note}</small>` : ''}`);
       b.disabled = !!it.disabled;
       b.onmouseenter = () => {
         if (!it.disabled) setSel(i);
@@ -198,7 +287,7 @@
   };
 
   UI.choice = async function (options, opts = {}) {
-    const items = options.map((o, i) => ({ label: '☛ ' + esc(o), value: i }));
+    const items = options.map((o, i) => ({ label: esc(o), value: i }));
     const r = await UI.menu(items, { cls: 'choice', noCancel: true, ...opts });
     return r == null ? 0 : r;
   };
@@ -236,7 +325,7 @@
 
   UI.chapterCard = async function (title, sub) {
     const c = $('card');
-    c.innerHTML = `<div class="card-title">${esc(title)}</div>${sub ? `<div class="card-sub">${esc(sub)}</div>` : ''}`;
+    c.innerHTML = `<div class="card-rule"></div><div class="card-title">${esc(title)}</div>${sub ? `<div class="card-sub">${esc(sub)}</div>` : ''}<div class="card-rule"></div>`;
     c.className = 'show';
     sfx('sfx_leene_bell');
     await wait(UI.autoAdvance ? 20 : 2600);
@@ -288,13 +377,13 @@
     const hp = (u.hp / u.maxHp) * 100;
     const mp = u.maxMp && u.maxMp < 999 ? (u.mp / u.maxMp) * 100 : 0;
     const st = Object.keys(u.status || {}).map((s) => `<span class="st st-${s}">${STATUS_NAMES[s] || s}</span>`).join('');
-    const img = CT.getPortrait && (u.hero || ['iselle', 'curator', 'curator_core', 'spekkio', 'echo_nu'].includes(u.key)) ? CT.getPortrait(u.hero ? u.id : u.key === 'curator_core' ? 'curator' : u.key === 'echo_nu' ? 'nu' : u.key, 'neutral').toDataURL() : CT.portrait(u.sprite || u.key);
+    const img = CT.getPortrait && (u.hero || ['iselle', 'curator', 'curator_core', 'spekkio', 'echo_nu'].includes(u.key)) ? UI.faceURL(u.hero ? u.id : u.key === 'curator_core' ? 'curator' : u.key === 'echo_nu' ? 'nu' : u.key) : CT.portrait(u.sprite || u.key);
     e.innerHTML = `
       <img class="portrait" src="${img}">
       <div class="info">
         <div class="name"><span class="team${u.guest ? 'g' : u.team}">${esc(u.name)}</span>${u.level ? ` <small>Lv${u.level}</small>` : ''}</div>
-        <div class="bar-row"><b>HP</b><div class="bar hp"><i style="width:${hp}%"></i></div><span>${u.hp}/${u.maxHp}</span></div>
-        ${u.maxMp && u.maxMp < 999 ? `<div class="bar-row"><b>MP</b><div class="bar mp"><i style="width:${mp}%"></i></div><span>${u.mp}/${u.maxMp}</span></div>` : ''}
+        <div class="bar-row"><b>HP</b><div class="bar hp"><i style="width:${hp}%"></i></div><span>${u.hp}<small>/${u.maxHp}</small></span></div>
+        ${u.maxMp && u.maxMp < 999 ? `<div class="bar-row"><b>MP</b><div class="bar mp"><i style="width:${mp}%"></i></div><span>${u.mp}<small>/${u.maxMp}</small></span></div>` : ''}
         <div class="stats">ATK${u.atk} DEF${u.def} MAG${u.mag} MDF${u.mdef} SPD${u.spd}</div>
         <div class="stats">Mv${u.move} ${u.float ? 'Float' : 'Jp' + u.jump} · CT${Math.min(100, Math.floor(u.ct))} · H${t ? t.h : '?'} ${t ? CT.TERRAIN[t.t].name : ''}</div>
         ${st ? `<div class="stline">${st}</div>` : ''}
@@ -380,7 +469,7 @@
       const s = CT.heroStats(m);
       const eq = ['weapon', 'armor', 'helmet', 'accessory'].map((sl) => (m.equip[sl] ? CT.EQUIPMENT[m.equip[sl]].name : '—')).join(' / ');
       const techs = CT.heroTechs(m).map((t) => CT.TECHS[t].name).join(', ');
-      return `<div class="ps-row"><img src="${CT.getPortrait ? CT.getPortrait(id, 'neutral').toDataURL() : CT.portrait(id)}"><div>
+      return `<div class="ps-row"><img src="${CT.getPortrait ? UI.faceURL(id) : CT.portrait(id)}"><div>
         <div class="name">${CT.HEROES[id].name} <small>Lv${m.level}</small> <small class="xp">EXP ${m.xp}/${CT.xpToNext(m.level)}</small></div>
         <div class="stats">HP ${m.hp}/${s.hp} · MP ${m.mp}/${s.mp} · ATK ${s.atk} DEF ${s.def} MAG ${s.mag} MDEF ${s.mdef} SPD ${s.spd}</div>
         <div class="stats">${esc(eq)}</div><div class="stats techs">${esc(techs)}</div></div></div>`;
@@ -443,17 +532,96 @@
   };
 
   // ---- Title & credits --------------------------------------------------------------------
+  // Pixel-art logo: CT.PXD bitmap letters with a bevelled gold face, a stepped extrusion
+  // and an ink outline, over a clock ring whose hands creep round. 1 canvas px = 1 game px.
+  const LW = 352, LH = 124;
+  function wordArt(str, scale, adv, face, bevel, depth) {
+    const w = str.length * adv, h = 7 * scale;
+    const src = document.createElement('canvas');
+    src.width = w;
+    src.height = h;
+    const sg = src.getContext('2d', { willReadFrequently: true });
+    [...str].forEach((ch, i) => CT.PXD.text(sg, ch, i * adv, 0, '#ffffff', { scale, outline: false }));
+    const m = sg.getImageData(0, 0, w, h).data;
+    const on = (x, y) => x >= 0 && y >= 0 && x < w && y < h && m[(y * w + x) * 4 + 3] > 0;
+    const pad = 1, W = w + pad * 2, H = h + pad * 2 + depth.length;
+    const cv = document.createElement('canvas');
+    cv.width = W;
+    cv.height = H;
+    const g = cv.getContext('2d');
+    const grid = Array.from({ length: H }, () => Array(W).fill(null));
+    for (let d = depth.length; d >= 1; d--)
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (on(x, y)) grid[y + pad + d][x + pad] = depth[d - 1];
+    for (let y = 0; y < h; y++)
+      for (let x = 0; x < w; x++) {
+        if (!on(x, y)) continue;
+        let c = face[Math.min(face.length - 1, Math.floor((y / h) * face.length))];
+        if (!on(x, y - 1) || !on(x - 1, y)) c = bevel[0];
+        else if (!on(x, y + 1) || !on(x + 1, y)) c = bevel[1];
+        grid[y + pad][x + pad] = c;
+      }
+    for (let y = 0; y < H; y++)
+      for (let x = 0; x < W; x++) {
+        let c = grid[y][x];
+        if (!c) {
+          let n = false;
+          for (let dy = -1; dy <= 1 && !n; dy++) for (let dx = -1; dx <= 1; dx++) if (grid[y + dy] && grid[y + dy][x + dx]) n = true;
+          if (!n) continue;
+          c = INK;
+        }
+        g.fillStyle = c;
+        g.fillRect(x, y, 1, 1);
+      }
+    return cv;
+  }
+  let logoArt = null;
+  function drawLogo(cv) {
+    const g = cv.getContext('2d');
+    if (!logoArt) {
+      logoArt = {
+        main: wordArt('CHRONO TRIGGER', 4, 24, [R.gold[4], R.gold[3], R.gold[3], R.gold[2], R.gold[2], R.gold[1]], [R.gold[4], R.gold[0]], [R.gold[0], R.gold[0], R.red[1], R.red[1]]),
+        sub: wordArt('THE HOLLOW FUTURE', 2, 16, [R.blue[6], R.blue[5]], [R.white[0], R.blue[4]], [R.blue[1], R.blue[1]]),
+        note: wordArt('A FAN-MADE TACTICS SEQUEL', 1, 7, [R.slate[4]], [R.slate[4], R.slate[3]], []),
+      };
+    }
+    g.clearRect(0, 0, LW, LH);
+    // Clock ring.
+    const cx = LW / 2, cy = 52, P = CT.PXD;
+    g.fillStyle = R.wood[2];
+    P.ellipseRing(g, cx, cy, 50, 50);
+    P.ellipseRing(g, cx, cy, 49, 49);
+    g.fillStyle = R.wood[1];
+    P.ellipseRing(g, cx, cy, 45, 45);
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 12) * Math.PI * 2;
+      const big = i % 3 === 0;
+      g.fillStyle = big ? R.gold[0] : R.wood[3];
+      const s = big ? 3 : 2;
+      g.fillRect(Math.round(cx + Math.sin(a) * 41 - s / 2), Math.round(cy - Math.cos(a) * 41 - s / 2), s, s);
+    }
+    const t = Date.now() / 1000;
+    const hand = (a, len, w, col) => {
+      g.fillStyle = col;
+      P.line(g, cx, cy, cx + Math.sin(a) * len, cy - Math.cos(a) * len, w);
+    };
+    hand(((t / 60) % 1) * Math.PI * 2 + 2.8, 38, 2, R.wood[3]);
+    hand(4.36 + ((t / 720) % 1) * Math.PI * 2, 26, 2, R.wood[4]);
+    g.fillStyle = R.gold[1];
+    g.fillRect(cx - 2, cy - 2, 4, 4);
+    // Words.
+    const put = (art, y) => g.drawImage(art, Math.round((LW - art.width) / 2), y);
+    put(logoArt.main, 32);
+    put(logoArt.sub, 78);
+    put(logoArt.note, 106);
+  }
+  let logoTimer = null;
+
   UI.title = function () {
     const t = $('title');
     t.classList.add('show');
     const has = CT.Game.anySave();
     t.innerHTML = `
-      <div class="logo">
-        <div class="logo-clock"></div>
-        <div class="logo-main">CHRONO&nbsp;TRIGGER</div>
-        <div class="logo-sub">THE HOLLOW FUTURE</div>
-        <div class="logo-note">a fan-made tactics sequel</div>
-      </div>
+      <div class="logo" role="img" aria-label="Chrono Trigger: The Hollow Future. A fan-made tactics sequel."><canvas class="logo-art" width="${LW}" height="${LH}" style="width:${LW * 2}px;height:${LH * 2}px"></canvas></div>
       <div id="title-menu"></div>
       <div class="legal">Non-commercial fan project. Chrono Trigger © Square Enix. Original art, music & code.</div>`;
     const items = [
@@ -463,6 +631,13 @@
       { label: 'Options', value: 'options' },
     ];
     if (CT.DEBUG) items.push({ label: 'Debug: jump to…', value: 'debug' });
+    const art = t.querySelector('.logo-art');
+    drawLogo(art);
+    clearInterval(logoTimer);
+    logoTimer = setInterval(() => {
+      if (!t.classList.contains('show') || !art.isConnected) return clearInterval(logoTimer);
+      drawLogo(art);
+    }, 250);
     return UI.menu(items, { host: $('title-menu'), cls: 'title-menu', noCancel: true }).then((v) => v);
   };
   UI.hideTitle = () => $('title').classList.remove('show');

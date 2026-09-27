@@ -115,7 +115,7 @@ CT.RIG.define('key', {
   double scale for legacy materials. Design for chunky 16-bit legibility: bold 2–3 tone
   patterns, 2×2 to 4×4 features, a clear top edge, and brick courses 4 px tall.
 - Decor defs gain `native: true`. Native decor is drawn 1:1, and offsets (`xOff yOff shadow
-  light.radius light.dy`) are in logical px. Decor without `native` is legacy: it is
+  light.radius light.dx light.dy`, where `dx`/`dy` place the light source relative to the sprite) are in logical px. Decor without `native` is legacy: it is
   halved automatically and its offsets are halved.
 
 ## Rules for parallel work

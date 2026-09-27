@@ -396,7 +396,7 @@
   SPECS.crono = {
     pal: Object.assign({}, SKIN_LIGHT, {
       h: '#dc4430', H: '#8c2014', R: '#ff9a60', b: '#8c2014', i: '#8a4020', I: '#d08040', j: '#2a1008',
-      x: '#f4f0e8', X: '#b8aca0', c: '#2f6fc0', C: '#1c4a8c', v: '#8cc0f0', l: '#8a5a2c', a: '#e0b050',
+      x: '#e4e8f0', X: '#9294b0', c: '#2f6fc0', C: '#1c4a8c', v: '#8cc0f0', l: '#8a5a2c', a: '#e0b050',
     }),
     browThick: 2,
     back(g) {
@@ -442,7 +442,7 @@
   SPECS.marle = {
     pal: Object.assign({}, SKIN_LIGHT, {
       f: '#fad4b0', h: '#f4cc58', g: '#e0b040', H: '#b0802a', R: '#fff0a8', b: '#b0802a', i: '#2f6ad0', I: '#7ab8ff', j: '#141a48',
-      c: '#f4f2ec', C: '#b8c0d8', d: '#3a68c0', a: '#f0c040', o: '#7ad0ff', x: '#ffffff', X: '#c8c8d8', p: '#f07a50',
+      c: '#e4e8f0', C: '#9294b0', d: '#3a68c0', a: '#f0c040', o: '#7ad0ff', x: '#ffffff', X: '#c8c8d8', p: '#f07a50',
     }),
     lashes: true,
     back(g) {
@@ -596,7 +596,7 @@
   // MAGUS — long dark hair with a blue sheen, pale, pointed ears, high dark collar, red eyes.
   SPECS.magus = {
     pal: {
-      f: '#f2dcd6', n: '#d4b4b6', e: '#ecd2cc', E: '#b08a90', N: '#c8a0a4',
+      f: '#e4e8f0', n: '#bcc0d4', e: '#e4e8f0', E: '#9294b0', N: '#bcc0d4',
       h: '#262c42', g: '#1a1e2e', H: '#0c0e18', R: '#5a78b8', b: '#10141e', i: '#c01c3c', I: '#ff5a78', j: '#2a0410', L: '#5a3040',
       c: '#2c2c3c', C: '#16161f', d: '#8a1c30', a: '#a8acc0', A: '#6a6e84', m: '#8a5058',
     },
@@ -909,7 +909,7 @@
     fxo: { tearsAt: [[21, 33, 6], [38, 33, 9]] },
     pal: Object.assign({}, SKIN_LIGHT, {
       f: '#f4cdb4', n: '#dcae98', h: '#e4e8f2', H: '#9aa2bc', R: '#ffffff', b: '#8a90a8', i: '#5a7890', I: '#9ab8d0', j: '#141c28',
-      P: '#f2eee4', G: '#5ae0ff', K: '#2a5a80', c: '#7c808a', C: '#4a4e58', d: '#626670', D: '#3c4048', Y: '#8af0ff', V: '#e8fcff',
+      P: '#e4e8f0', G: '#5ae0ff', K: '#2a5a80', c: '#6e7090', C: '#3a3a52', d: '#52526e', D: '#3a3a52', Y: '#8af0ff', V: '#e8fcff',
     }),
     lashes: true,
     back(g) {
@@ -1205,7 +1205,7 @@
     };
     const md = moods[e.key] || moods.neutral;
     const pal = {
-      f: '#f0ece2', p: '#e2ddd0', l: '#1c2c48', G: md.glow, w: md.core, c: '#5c5e64', C: '#34363c', d: '#484a50', a: '#a8a080', K: '#2c3a54',
+      f: '#e4e8f0', p: '#bcc0d4', l: '#1c2c48', G: md.glow, w: md.core, c: '#52526e', C: '#2a2038', d: '#3a3a52', a: '#a8a080', K: '#2c3a54',
     };
     // Coat with tall collar.
     poly(g, [[0, 62], [2, 54], [12, 48], [22, 46], [40, 46], [50, 48], [60, 54], [62, 62]], 'c');
@@ -1272,12 +1272,123 @@
 
   // Render the grid, then move it onto a canvas made for pixel readback (the
   // effects pass and the palette snap both read pixels back).
+  // ---- Palette-ramp cel shading -----------------------------------------------------
+  // Same band structure as CT.PX.shadeGrid (1px outline, dark bands on the
+  // bottom/right edges, light bands on the top/left, a soft top-left-lit
+  // gradient across each region), but every tone is a step on the material's
+  // ramp in the master palette, and half steps become a 2x2 ordered dither, the
+  // way SNES portraits were shaded. Detail letters and 'k' are drawn flat.
+  const OUT_HEX = '#1a1226';
+  let CHAINS = null;
+  function chains() {
+    if (CHAINS) return CHAINS;
+    const R = CT.PAL.RAMPS;
+    const ink = R.ink[1];
+    // Shading chains, dark -> light. Short ramps borrow neighbours so every
+    // material has at least one darker and one lighter step.
+    const list = [
+      [R.ink[0], ...R.ink, R.slate[0]].filter((h, i, a) => a.indexOf(h) === i),
+      [R.ink[2], ...R.slate, R.white[0]],
+      [ink, ...R.stone, R.skin[4]],
+      [R.ink[0], ...R.blue],
+      [R.ink[1], ...R.green],
+      [R.ink[1], R.blue[1], ...R.teal, R.blue[6]],
+      [R.ink[0], ...R.wood, R.gold[4]],
+      [R.ink[1], ...R.skin],
+      [R.ink[0], ...R.red, R.gold[3]],
+      [R.wood[1], R.wood[2], ...R.gold, R.white[0]],
+      [R.ink[0], ...R.purple, R.white[0]],
+      [R.ink[1], R.purple[1], ...R.pink, R.skin[5]],
+    ];
+    // For each palette colour: the chain it belongs to (its own ramp first).
+    const own = {};
+    const names = Object.keys(R);
+    const home = [R.ink, R.slate, R.stone, R.blue, R.green, R.teal, R.wood, R.skin, R.red, R.gold, R.purple, R.pink];
+    home.forEach((ramp, ci) => ramp.forEach((h) => (own[h] = own[h] || { chain: list[ci], i: list[ci].indexOf(h) })));
+    own[R.white[0]] = { chain: list[1], i: list[1].length - 1 };
+    CHAINS = { list, own, names };
+    return CHAINS;
+  }
+  const BAYER2 = [0.125, 0.625, 0.875, 0.375];
   function render(g, pal, detail) {
-    const src = CT.PX.shadeGrid(g, pal, detail, true);
+    const P = 1, W = g.w + 2 * P, H = g.h + 2 * P;
     const cv = document.createElement('canvas');
-    cv.width = src.width;
-    cv.height = src.height;
-    cv.getContext('2d', { willReadFrequently: true }).drawImage(src, 0, 0);
+    cv.width = W;
+    cv.height = H;
+    const ctx = cv.getContext('2d', { willReadFrequently: true });
+    const img = ctx.createImageData(W, H);
+    const { own } = chains();
+    const hexRGB = CT.PAL.hex;
+    const at = (x, y) => (x < 0 || y < 0 || x >= g.w || y >= g.h ? '.' : g.a[y][x]);
+    const isDetail = (c) => detail.includes(c);
+    const same = (x, y, c) => {
+      const d = at(x, y);
+      return d === c || (d !== '.' && isDetail(d));
+    };
+    const info = {};
+    for (const k in pal) {
+      const snapped = CT.PAL.snapHex(pal[k]);
+      info[k] = { raw: hexRGB(pal[k]), ramp: own[snapped] };
+    }
+    const outline = hexRGB(OUT_HEX);
+    const put = (x, y, rgb) => {
+      const i = ((y + P) * W + (x + P)) * 4;
+      img.data[i] = rgb[0];
+      img.data[i + 1] = rgb[1];
+      img.data[i + 2] = rgb[2];
+      img.data[i + 3] = 255;
+    };
+    const boxes = {};
+    for (let y = 0; y < g.h; y++)
+      for (let x = 0; x < g.w; x++) {
+        const c = g.a[y][x];
+        const b = (boxes[c] = boxes[c] || [x, y, x, y]);
+        b[0] = Math.min(b[0], x);
+        b[1] = Math.min(b[1], y);
+        b[2] = Math.max(b[2], x);
+        b[3] = Math.max(b[3], y);
+      }
+    for (let y = -P; y < g.h + P; y++)
+      for (let x = -P; x < g.w + P; x++) {
+        const c = at(x, y);
+        if (c === '.') {
+          if (at(x + 1, y) !== '.' || at(x - 1, y) !== '.' || at(x, y + 1) !== '.' || at(x, y - 1) !== '.') put(x, y, outline);
+          continue;
+        }
+        const m = info[c];
+        if (c === 'k' || !m) {
+          put(x, y, outline);
+          continue;
+        }
+        if (isDetail(c) || !m.ramp) {
+          put(x, y, m.raw);
+          continue;
+        }
+        const r1 = !same(x + 1, y, c) || !same(x, y + 1, c);
+        const r2 = !same(x + 2, y, c) || !same(x, y + 2, c) || !same(x + 1, y + 1, c);
+        const l1 = !same(x - 1, y, c) || !same(x, y - 1, c);
+        const l2 = !same(x - 2, y, c) || !same(x, y - 2, c);
+        const seam = [[1, 0], [0, 1]].some(([dx, dy]) => {
+          const d = at(x + dx, y + dy);
+          return d !== '.' && d !== c && !isDetail(d);
+        });
+        const b = boxes[c];
+        const gx = (x - b[0]) / Math.max(1, b[2] - b[0]);
+        const gy = (y - b[1]) / Math.max(1, b[3] - b[1]);
+        // Region gradient in whole steps only: a lit top-left cap, a shaded
+        // bottom-right corner; the flat middle stays the base tone.
+        const grad = 0.9 * gx + 0.7 * gy;
+        let lv = grad < 0.18 ? 1 : grad > 1.3 ? -1 : 0;
+        if (seam) lv = -2;
+        else if (r1) lv = Math.min(lv, 0) - 1;
+        else if (r2) lv = Math.min(lv, 0) - 0.5;
+        else if (l1) lv = Math.max(lv, 0) + 1;
+        const t = BAYER2[((y & 1) << 1) | (x & 1)];
+        const { chain, i } = m.ramp;
+        const k = Math.max(0, Math.min(chain.length - 1, i + Math.floor(lv + t)));
+        put(x, y, hexRGB(chain[k]));
+      }
+    ctx.putImageData(img, 0, 0);
     return cv;
   }
 
@@ -1322,12 +1433,12 @@
     if (!cache[k]) {
       try {
         cache[k] = build(String(id), String(emotion || 'neutral'));
-        // Every portrait ends on the master palette (fx use soft alpha / off-palette tints).
-        if (CT.PAL) CT.PAL.snapCanvas(cache[k]);
       } catch (err) {
         console.warn('portrait ' + k + ' failed: ' + err.message);
         cache[k] = silhouette();
       }
+      // Every portrait ends on the master palette (fx use soft alpha / off-palette tints).
+      CT.PAL.snapCanvas(cache[k]);
     }
     return cache[k];
   };

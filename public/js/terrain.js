@@ -184,6 +184,7 @@
   CT.DECOR = CT.DECOR || {};
   CT.registerDecor = (kind, def) => {
     CT.DECOR[kind] = def;
+    for (const k of Object.keys(decorCache)) if (k.startsWith(kind + ':')) delete decorCache[k];
   };
   CT.getDecor = function (kind, variant = 0) {
     const def = CT.DECOR[kind];
