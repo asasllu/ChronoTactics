@@ -1292,7 +1292,7 @@ CT.sheet('ayla', {
           '....pABBBCCp.....pBCCCCp',
           '....pppppppp.....pppppppp',
         ] },
-      { ms: 110, dy: 4, at: [18, 26], rows: [
+      { ms: 110, dy: -4, at: [18, 26], rows: [
           '..........H.....H',
           '.....H...HoH...HoH',
           '.....HoH.HoRH.HoRrH.H',
@@ -1335,7 +1335,7 @@ CT.sheet('ayla', {
           '......pABnCp.pBnCp',
           '......ppppp..pppp',
         ] },
-      { ms: 170, dy: 6, at: [18, 25], rows: [
+      { ms: 170, dy: -6, at: [18, 25], rows: [
           '..........H.....H',
           '.....H...HoH...HoH',
           '.....HoH.HoRH.HoRrH.H',
@@ -1469,7 +1469,7 @@ CT.sheet('ayla', {
           '....pABBBCCp.....pBCCCCp',
           '....pppppppp.....pppppppp',
         ] },
-      { ms: 80, dy: 5, at: [18, 25], rows: [
+      { ms: 80, dy: -5, at: [18, 25], rows: [
           '..........H.....H',
           '.....H...HoH...HoH',
           '.....HoH.HoRH.HoRrH.H',
@@ -1514,7 +1514,7 @@ CT.sheet('ayla', {
           '..........pABppBCp',
           '...........ppp.ppp',
         ] },
-      { ms: 220, dy: 12, at: [18, 25], rows: [
+      { ms: 220, dy: -12, at: [18, 25], rows: [
           '..........H.....H',
           '.....H...HoH...HoH',
           '.....HoH.HoRH.HoRrH.H',
@@ -2447,7 +2447,7 @@ CT.sheet('ayla', {
           'pABBBCCp........pBCCCCp',
           'pppppppp........pppppppp',
         ] },
-      { ms: 100, dx: 8, dy: 4, at: [18, 26], rows: [
+      { ms: 100, dx: 8, dy: -4, at: [18, 26], rows: [
           '..........H.....H',
           '.....H...HoH...HoH',
           '.....HoH.HoRH.HoRrH.H',
@@ -2758,7 +2758,7 @@ CT.sheet('ayla', {
           '...............pBCCCCCp',
           '...............pppppppp',
         ] },
-      { ms: 70, dx: 6, dy: 9, at: [18, 26], rows: [
+      { ms: 70, dx: 6, dy: -9, at: [18, 26], rows: [
           '..........H.....H',
           '.....H...HoH...HoH',
           '.....HoH.HoRH.HoRrH.H',
@@ -2802,7 +2802,7 @@ CT.sheet('ayla', {
           '.............pABBCCp',
           '.............ppppppp',
         ] },
-      { ms: 60, dx: 7, dy: 16, at: [23, 50], rows: [
+      { ms: 60, dx: 7, dy: -16, at: [23, 50], rows: [
           '..pppp.HHHHH',
           '.pAABCpRRRRrHH',
           '.pABnBCpRRRRRrH',
@@ -2822,7 +2822,7 @@ CT.sheet('ayla', {
           '....HHdddddddH',
           '......HHHHHH',
         ] },
-      { ms: 60, dx: 8, dy: 18, at: [23, 50], rows: [
+      { ms: 60, dx: 8, dy: -18, at: [23, 50], rows: [
           '......HHHHHH',
           '....HHoRRRRrHH',
           '..HoRRRRdoRRrrH',
@@ -2842,7 +2842,7 @@ CT.sheet('ayla', {
           '....HHdddddddH',
           '......HHHHHH',
         ] },
-      { ms: 170, dx: 9, dy: 12, at: [16, 24], rows: [
+      { ms: 170, dx: 9, dy: -12, at: [16, 24], rows: [
           '..........H.....H',
           '.....H...HoH...HoH',
           '.....HoH.HoRH.HoRrH.H',
@@ -2885,7 +2885,7 @@ CT.sheet('ayla', {
           '............pBnCp',
           '............ppppp',
         ] },
-      { ms: 80, dx: 6, dy: 5, at: [18, 24], rows: [
+      { ms: 80, dx: 6, dy: -5, at: [18, 24], rows: [
           '..........H.....H',
           '.....H...HoH...HoH',
           '.....HoH.HoRH.HoRrH.H',
@@ -3061,7 +3061,7 @@ CT.sheet('ayla', {
           '...pABBBCCp.......pBCCCCp',
           '...pppppppp.......pppppppp',
         ] },
-      { ms: 60, dy: 3, at: [18, 26], rows: [
+      { ms: 60, dy: -3, at: [18, 26], rows: [
           '..........H.....H',
           '.....H...HoH...HoH',
           '.....HoH.HoRH.HoRrH.H',
@@ -3165,7 +3165,7 @@ CT.sheet('ayla', {
           '....HHdddddddH',
           '......HHHHHH',
         ] },
-      { ms: 50, dx: 14, dy: 2, at: [23, 50], rows: [
+      { ms: 50, dx: 14, dy: -2, at: [23, 50], rows: [
           '..pppp.HHHHH',
           '.pAABCpRRRRrHH',
           '.pABnBCpRRRRRrH',
@@ -3185,7 +3185,7 @@ CT.sheet('ayla', {
           '....HHdddddddH',
           '......HHHHHH',
         ] },
-      { ms: 180, dx: 17, dy: 5, at: [14, 24], rows: [
+      { ms: 180, dx: 17, dy: -5, at: [14, 24], rows: [
           '............H.....H',
           '.......H...HoH...HoH',
           '.......HoH.HoRH.HoRrH.H',
@@ -3269,7 +3269,7 @@ CT.sheet('ayla', {
           '....pABBBCCp.....pBCCCCp',
           '....pppppppp.....pppppppp',
         ] },
-      { ms: 100, dx: 6, dy: 4, at: [18, 26], rows: [
+      { ms: 100, dx: 6, dy: -4, at: [18, 26], rows: [
           '..........H.....H',
           '.....H...HoH...HoH',
           '.....HoH.HoRH.HoRrH.H',
@@ -3761,7 +3761,7 @@ CT.sheet('ayla', {
           '...pABBBCCp.......pBCCCCp',
           '...pppppppp.......pppppppp',
         ] },
-      { ms: 80, dy: 10, at: [18, 25], rows: [
+      { ms: 80, dy: -10, at: [18, 25], rows: [
           '..........H.....H',
           '.....H...HoH...HoH',
           '.....HoH.HoRH.HoRrH.H',
@@ -3806,7 +3806,7 @@ CT.sheet('ayla', {
           '..........pABppBCp',
           '...........ppp.ppp',
         ] },
-      { ms: 150, dx: 3, dy: 24, at: [18, 25], rows: [
+      { ms: 150, dx: 3, dy: -24, at: [18, 25], rows: [
           '..........H.....H',
           '.....H...HoH...HoH',
           '.....HoH.HoRH.HoRrH.H',
@@ -3851,7 +3851,7 @@ CT.sheet('ayla', {
           '.............pABBCCp',
           '.............ppppppp',
         ] },
-      { ms: 70, dx: 9, dy: 16, at: [15, 26], rows: [
+      { ms: 70, dx: 9, dy: -16, at: [15, 26], rows: [
           '...........H.....H',
           '......H...HoH...HoH',
           '......HoH.HoRH.HoRrH.H',
@@ -3895,8 +3895,8 @@ CT.sheet('ayla', {
           '.......................pABBBCp.pp',
           '........................pppppp',
         ] },
-      { ms: 50, dx: 14, dy: 7, base: 'tech_drop_kick.3' },
-      { ms: 170, dx: 16, dy: 2, at: [15, 25], rows: [
+      { ms: 50, dx: 14, dy: -7, base: 'tech_drop_kick.3' },
+      { ms: 170, dx: 16, dy: -2, at: [15, 25], rows: [
           '...........H.....H',
           '......H...HoH...HoH',
           '......HoH.HoRH.HoRrH.H',
@@ -3941,7 +3941,7 @@ CT.sheet('ayla', {
           '.......................pABBBCp.pp',
           '........................pppppp',
         ] },
-      { ms: 100, dx: 10, dy: 8, at: [18, 24], rows: [
+      { ms: 100, dx: 10, dy: -8, at: [18, 24], rows: [
           '..........H.....H',
           '.....H...HoH...HoH',
           '.....HoH.HoRH.HoRrH.H',
@@ -5675,7 +5675,7 @@ CT.sheet('ayla', {
           '....pABBBCCp.....pBCCCCp',
           '....pppppppp.....pppppppp',
         ] },
-      { ms: 110, dy: 4, at: [18, 26], rows: [
+      { ms: 110, dy: -4, at: [18, 26], rows: [
           '..........H.....H',
           '.....H...HoH...HoH',
           '.....HoH.HoRH.HoRrH.H',
@@ -5718,7 +5718,7 @@ CT.sheet('ayla', {
           '......pABnCp.pBnCp',
           '......ppppp..pppp',
         ] },
-      { ms: 170, dy: 6, at: [18, 25], rows: [
+      { ms: 170, dy: -6, at: [18, 25], rows: [
           '..........H.....H',
           '.....H...HoH...HoH',
           '.....HoH.HoRH.HoRrH.H',
@@ -5852,7 +5852,7 @@ CT.sheet('ayla', {
           '....pABBBCCp.....pBCCCCp',
           '....pppppppp.....pppppppp',
         ] },
-      { ms: 80, dy: 5, at: [18, 25], rows: [
+      { ms: 80, dy: -5, at: [18, 25], rows: [
           '..........H.....H',
           '.....H...HoH...HoH',
           '.....HoH.HoRH.HoRrH.H',
@@ -5897,7 +5897,7 @@ CT.sheet('ayla', {
           '..........pABppBCp',
           '...........ppp.ppp',
         ] },
-      { ms: 220, dy: 12, at: [18, 25], rows: [
+      { ms: 220, dy: -12, at: [18, 25], rows: [
           '..........H.....H',
           '.....H...HoH...HoH',
           '.....HoH.HoRH.HoRrH.H',
@@ -6830,7 +6830,7 @@ CT.sheet('ayla', {
           'pABBBCCp........pBCCCCp',
           'pppppppp........pppppppp',
         ] },
-      { ms: 100, dx: 8, dy: 4, at: [18, 26], rows: [
+      { ms: 100, dx: 8, dy: -4, at: [18, 26], rows: [
           '..........H.....H',
           '.....H...HoH...HoH',
           '.....HoH.HoRH.HoRrH.H',
@@ -7141,7 +7141,7 @@ CT.sheet('ayla', {
           '...............pBCCCCCp',
           '...............pppppppp',
         ] },
-      { ms: 70, dx: 6, dy: 9, at: [18, 26], rows: [
+      { ms: 70, dx: 6, dy: -9, at: [18, 26], rows: [
           '..........H.....H',
           '.....H...HoH...HoH',
           '.....HoH.HoRH.HoRrH.H',
@@ -7185,7 +7185,7 @@ CT.sheet('ayla', {
           '.............pABBCCp',
           '.............ppppppp',
         ] },
-      { ms: 60, dx: 7, dy: 16, at: [23, 50], rows: [
+      { ms: 60, dx: 7, dy: -16, at: [23, 50], rows: [
           '..pppp.HHHHH',
           '.pAABCpRRRRrHH',
           '.pABnBCpRRRRRrH',
@@ -7205,7 +7205,7 @@ CT.sheet('ayla', {
           '....HHdddddddH',
           '......HHHHHH',
         ] },
-      { ms: 60, dx: 8, dy: 18, at: [23, 50], rows: [
+      { ms: 60, dx: 8, dy: -18, at: [23, 50], rows: [
           '......HHHHHH',
           '....HHoRRRRrHH',
           '..HoRRRRdoRRrrH',
@@ -7225,7 +7225,7 @@ CT.sheet('ayla', {
           '....HHdddddddH',
           '......HHHHHH',
         ] },
-      { ms: 170, dx: 9, dy: 12, at: [16, 24], rows: [
+      { ms: 170, dx: 9, dy: -12, at: [16, 24], rows: [
           '..........H.....H',
           '.....H...HoH...HoH',
           '.....HoH.HoRH.HoRrH.H',
@@ -7268,7 +7268,7 @@ CT.sheet('ayla', {
           '............pBnCp',
           '............ppppp',
         ] },
-      { ms: 80, dx: 6, dy: 5, at: [18, 24], rows: [
+      { ms: 80, dx: 6, dy: -5, at: [18, 24], rows: [
           '..........H.....H',
           '.....H...HoH...HoH',
           '.....HoH.HoRH.HoRrH.H',
@@ -7401,7 +7401,7 @@ CT.sheet('ayla', {
           '...pABBBCCp.......pBCCCCp',
           '...pppppppp.......pppppppp',
         ] },
-      { ms: 60, dy: 3, at: [18, 26], rows: [
+      { ms: 60, dy: -3, at: [18, 26], rows: [
           '..........H.....H',
           '.....H...HoH...HoH',
           '.....HoH.HoRH.HoRrH.H',
@@ -7505,7 +7505,7 @@ CT.sheet('ayla', {
           '....HHdddddddH',
           '......HHHHHH',
         ] },
-      { ms: 50, dx: 14, dy: 2, at: [23, 50], rows: [
+      { ms: 50, dx: 14, dy: -2, at: [23, 50], rows: [
           '..pppp.HHHHH',
           '.pAABCpRRRRrHH',
           '.pABnBCpRRRRRrH',
@@ -7525,7 +7525,7 @@ CT.sheet('ayla', {
           '....HHdddddddH',
           '......HHHHHH',
         ] },
-      { ms: 180, dx: 17, dy: 5, at: [16, 24], rows: [
+      { ms: 180, dx: 17, dy: -5, at: [16, 24], rows: [
           '..........H.....H',
           '.....H...HoH...HoH',
           '.....HoH.HoRH.HoRrH.H',
@@ -7609,7 +7609,7 @@ CT.sheet('ayla', {
           '....pABBBCCp.....pBCCCCp',
           '....pppppppp.....pppppppp',
         ] },
-      { ms: 100, dx: 6, dy: 4, at: [18, 26], rows: [
+      { ms: 100, dx: 6, dy: -4, at: [18, 26], rows: [
           '..........H.....H',
           '.....H...HoH...HoH',
           '.....HoH.HoRH.HoRrH.H',
@@ -8101,7 +8101,7 @@ CT.sheet('ayla', {
           '...pABBBCCp.......pBCCCCp',
           '...pppppppp.......pppppppp',
         ] },
-      { ms: 80, dy: 10, at: [18, 25], rows: [
+      { ms: 80, dy: -10, at: [18, 25], rows: [
           '..........H.....H',
           '.....H...HoH...HoH',
           '.....HoH.HoRH.HoRrH.H',
@@ -8146,7 +8146,7 @@ CT.sheet('ayla', {
           '..........pABppBCp',
           '...........ppp.ppp',
         ] },
-      { ms: 150, dx: 3, dy: 24, at: [18, 25], rows: [
+      { ms: 150, dx: 3, dy: -24, at: [18, 25], rows: [
           '..........H.....H',
           '.....H...HoH...HoH',
           '.....HoH.HoRH.HoRrH.H',
@@ -8191,7 +8191,7 @@ CT.sheet('ayla', {
           '.............pABBCCp',
           '.............ppppppp',
         ] },
-      { ms: 70, dx: 9, dy: 16, at: [16, 26], rows: [
+      { ms: 70, dx: 9, dy: -16, at: [16, 26], rows: [
           '..........H.....H',
           '.....H...HoH...HoH',
           '.....HoH.HoRH.HoRrH.H',
@@ -8235,8 +8235,8 @@ CT.sheet('ayla', {
           '......................pABBBCp.pp',
           '.......................pppppp',
         ] },
-      { ms: 50, dx: 14, dy: 7, base: 'tech_drop_kick.3' },
-      { ms: 170, dx: 16, dy: 2, at: [16, 25], rows: [
+      { ms: 50, dx: 14, dy: -7, base: 'tech_drop_kick.3' },
+      { ms: 170, dx: 16, dy: -2, at: [16, 25], rows: [
           '..........H.....H',
           '.....H...HoH...HoH',
           '.....HoH.HoRH.HoRrH.H',
@@ -8281,7 +8281,7 @@ CT.sheet('ayla', {
           '......................pABBBCp.pp',
           '.......................pppppp',
         ] },
-      { ms: 100, dx: 10, dy: 8, at: [18, 24], rows: [
+      { ms: 100, dx: 10, dy: -8, at: [18, 24], rows: [
           '..........H.....H',
           '.....H...HoH...HoH',
           '.....HoH.HoRH.HoRrH.H',
