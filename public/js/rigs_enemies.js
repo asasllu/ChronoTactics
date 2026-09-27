@@ -744,8 +744,8 @@
     { footF: [0, 5], footB: [1, 0], bob: -1 },
   ];
   define('tyrano', {
-    size: 80,
-    portrait: { x: 60, y: 24, side: 28 },
+    size: 84,
+    portrait: { x: 61, y: 29, side: 28 },
     rimAt,
     koRotate: false,
     pal: {
@@ -760,8 +760,8 @@
       attack: {
         frames: [
           F(180, { lean: -0.3, crouch: 1, jaw: 0.6, footF: [2, 0], footB: [-3, 0], tail: 1 }),
-          F(80, { lean: 0.45, crouch: 2, x: 3, jaw: 1, footF: [5, 0], footB: [-4, 0], tail: -1 }),
-          F(180, { lean: 0.5, crouch: 3, x: 3, jaw: 0, footF: [5, 0], footB: [-4, 0], tail: -1 }),
+          F(80, { lean: 0.45, crouch: 2, x: 2, jaw: 1, footF: [5, 0], footB: [-4, 0], tail: -1 }),
+          F(180, { lean: 0.5, crouch: 3, x: 2, jaw: 0, footF: [5, 0], footB: [-4, 0], tail: -1 }),
           F(160, { lean: 0.1, crouch: 1, x: 1, footF: [2, 0], footB: [-2, 0] }),
         ],
       },
@@ -770,7 +770,7 @@
         frames: [
           F(170, { lean: -0.35, crouch: 1, jaw: 0.3, glow: 1, tail: 1 }),
           F(170, { lean: -0.4, bob: -1, jaw: 0.4, glow: 2, tail: 1 }),
-          F(300, { lean: 0.3, crouch: 1, x: 2, jaw: 1, glow: 2, footF: [3, 0], footB: [-3, 0], tail: -1 }),
+          F(300, { lean: 0.3, crouch: 1, x: 1, jaw: 1, glow: 2, footF: [3, 0], footB: [-3, 0], tail: -1 }),
         ],
         charge: [0, 1], release: 2, rim: true,
       },
@@ -782,17 +782,17 @@
     },
     draw(g0, J, view, p) {
       const b = base(p, J);
-      const g = scaled(g0, b.x, b.y, 1.4);
+      const g = scaled(g0, b.x, b.y, 1.35);
       const se = view === 'se';
       const L = b.lean, dip = b.dip, tw = p.tail || 0;
       const X = b.x, Y = b.y;
       const ff = p.footF || [0, 0], fb = p.footB || [0, 0];
       // Hip and body centre.
-      const hx = X - 6, hy = Y - 16 + dip;
+      const hx = X - 7, hy = Y - 16 + dip;
       // Tail sweeping back and down to the left, swaying with `tail`.
       for (let i = 0; i <= 20; i++) {
         const t = i / 20;
-        const x = hx - 4 - t * 17;
+        const x = hx - 4 - t * 16;
         const y = hy - 2 + t * 4 - Math.sin(t * PI) * 5 + t * t * tw * 3;
         g.ell(x, y, 5.5 * (1 - t) + 0.6, 4.5 * (1 - t) + 0.6, 't');
       }
@@ -956,16 +956,24 @@
         if (p.glow > 1) g.px(sh(cx, ct - cl), ct - cl, 'Y');
         // Flared base rim.
         g.rect(R(cx - rx), by - 1, R(cx + rx), by + 1, 'c');
+        if (p.ko) {
+          // Dead shell: split by jagged cracks.
+          const ty = by - ry;
+          g.line(sh(cx - 1, ty + 2), ty + 2, sh(cx + 2, ty + ry * 0.4), ty + ry * 0.4, 'm');
+          g.line(sh(cx + 2, ty + ry * 0.4), ty + ry * 0.4, sh(cx - 2, by - 3), by - 3, 'm');
+          g.line(sh(cx + 2, ty + ry * 0.4), ty + ry * 0.4, sh(cx + rx * 0.6, by - ry * 0.3), by - ry * 0.3, 'm');
+        }
         if (se) {
+          const kb = Math.max(k, 1.25); // the small sprout's beak stays chunky enough to read
           // Hooked red beak on the facing side; eyes above it glow.
-          const bx = sh(cx + rx * 0.45, by - 4 * k), bY = by - 4 * k;
-          const jaw = p.jaw ? 1.5 * k : 0;
-          g.poly([[bx - 1 * k, bY + 1 * k + jaw], [bx + 5 * k, bY + 2 * k + jaw], [bx + 1 * k, bY + 3.5 * k + jaw]], 'R');
-          g.poly([[bx - 3 * k, bY - 2 * k], [bx + 3 * k, bY - 3 * k], [bx + 7 * k, bY - 0.5 * k], [bx + 7 * k, bY + 3 * k], [bx + 5 * k, bY + 1.5 * k], [bx - 3 * k, bY + 1.5 * k]], 'r');
-          if (jaw) g.line(bx - 1 * k, bY + 1.5 * k, bx + 4.5 * k, bY + 2 * k + jaw * 0.5, 'm');
-          else g.line(bx - 2 * k, bY + 1 * k, bx + 5 * k, bY + 2 * k, 'm');
-          const ey = bY - 5 * k, eyeC = p.hurt ? 'm' : 'e';
-          for (const dx of [-2, 1.5, 5]) g.rect(R(bx + dx * k), R(ey), R(bx + dx * k), R(ey + (p.glow ? 1 : 0)), eyeC);
+          const bx = sh(cx + rx * 0.45, by - 4 * kb), bY = by - 4 * kb;
+          const jaw = p.jaw ? 1.5 * kb : 0;
+          g.poly([[bx - 1 * kb, bY + 1 * kb + jaw], [bx + 5 * kb, bY + 2 * kb + jaw], [bx + 1 * kb, bY + 3.5 * kb + jaw]], 'R');
+          g.poly([[bx - 3 * kb, bY - 2 * kb], [bx + 3 * kb, bY - 3 * kb], [bx + 7 * kb, bY - 0.5 * kb], [bx + 7 * kb, bY + 3 * kb], [bx + 5 * kb, bY + 1.5 * kb], [bx - 3 * kb, bY + 1.5 * kb]], 'r');
+          if (jaw) g.line(bx - 1 * kb, bY + 1.5 * kb, bx + 4.5 * kb, bY + 2 * kb + jaw * 0.5, 'm');
+          else g.line(bx - 2 * kb, bY + 1 * kb, bx + 5 * kb, bY + 2 * kb, 'm');
+          const ey = bY - 5 * kb, eyeC = p.hurt ? 'm' : 'e';
+          for (const dx of [-2, 1.5, 5]) g.rect(R(bx + dx * kb), R(ey), R(bx + dx * kb), R(ey + (p.glow ? 1 : 0)), eyeC);
         } else {
           // Back: a central ridge.
           g.line(sh(cx, by - ry + 2), by - ry + 2, cx, by - 2, 's');
@@ -982,7 +990,9 @@
   // Drawn as a true isometric box: SE shows the front (right) and left side, NE the back
   // (left) and right side. The skeleton is painted only onto glass pixels, so it stays inside.
   define('vitrine', {
-    body: { leg: 14, torso: 14, neck: 2, headR: 5 },
+    portrait: { x: 29, y: 21, side: 24 },
+    rimAt,
+    koRotate: false,
     pal: {
       G: '#3c64b4', H: '#2c4488', w: '#6e4222', W: '#4a2a16', c: '#94602e', C: '#6e4222', t: '#bc8844',
       y: '#f8bc3c', Y: '#c05c1c', X: '#c4e4ff', x: '#ffffff', b: '#e4e8f0', B: '#9294b0', j: '#1a1226',
@@ -1019,7 +1029,7 @@
       },
       shoot: { frames: [F(150, { lean: -0.05, armF: [1.6, 0], armB: [1.4, 0] }), F(150, { lean: -0.1, x: -1, armF: [1.9, 0], armB: [1.6, 0], jaw: 1 })] },
       hurt: { frames: [F(320, { lean: -0.18, x: -2, armF: [2.4, 0], armB: [-0.4, 0], nod: 2, hurt: true })] },
-      ko: { frames: [F(1000, { crouch: 3, lean: 0.1, nod: 3, armF: [0, 0], armB: [0, 0], hurt: true, ko: true })] },
+      ko: { frames: [F(1000, { crouch: 3, lean: 0.14, nod: 5, armF: [0.1, 0], armB: [-0.1, 0], hurt: true, ko: true })] },
       kneel: { frames: [F(1000, { crouch: 3, nod: 2 })] },
       victory: { loop: true, frames: [F(300, { armF: [2.9, 0], armB: [-0.2, 0], y: -2 }), F(300, { armF: [2.6, 0], armB: [-0.2, 0], bob: 1 })] },
     },
@@ -1056,6 +1066,7 @@
       faceU(Hh - 3, Hh, 'c');
       faceV(Hh - 3, Hh, 'C');
       g.poly([P(0, 0, Hh), P(wu, 0, Hh), P(wu, wv, Hh), P(0, wv, Hh)], 't');
+      J.rim = P(wu / 2, wv / 2, Hh + 2);
       // Skeleton, masked to the glass.
       const sk = new CT.PX.Grid(g.w, g.h);
       const [sx0, sy0] = P(wu / 2, wv / 2, 5);
@@ -1104,6 +1115,12 @@
       g.line(...P(0, wv, 5), ...P(0, wv, Hh - 3), 'Y');
       // Reflection streaks across the wide pane (drawn in its plane).
       for (const [u0, h0, u1, h1] of [[2, 10, 6, 20], [3, 8, 8, 18], [10, 7, 12, 11]]) g.line(...P(u0, 0, h0), ...P(u1, 0, h1), 'X');
+      if (p.ko) {
+        // Shattered: a starburst across both panes, shards on the floor.
+        for (const [u1, h1] of [[4, 22], [15, 20], [14, 8], [2, 9], [8, 24]]) g.line(...P(9, 0, 15), ...P(u1, 0, h1), 'x');
+        g.line(...P(0, 3, 8), ...P(0, 6, 20), 'x');
+        for (const [dx, c] of [[-9, 'X'], [-6, 'x'], [9, 'X'], [12, 'x'], [5, 'X']]) g.px(b.x + dx, b.y, c);
+      }
       if (p.hurt) {
         // Cracks.
         g.line(...P(9, 0, 16), ...P(11, 0, 20), 'x');
@@ -1127,7 +1144,11 @@
   };
   const CUR_ARMS = { armF: [1.0, 1.0], armB: [-0.1, 0.2] };
   define('curator_p1', {
+    // Solved at 1x proportions and drawn magnified (see scaled()).
     body: { leg: 17, torso: 12, neck: 3, headR: 5, shoulder: 5, upper: 8, fore: 7, hipW: 2, stance: 3 },
+    size: 76,
+    portrait: { x: 38, y: 19, side: 26 },
+    rimAt,
     pal: CUR_PAL,
     detail: 'LgGYfj',
     magic: '#8cc0f0',
@@ -1164,9 +1185,11 @@
       kneel: { frames: [F(1000, { lean: 0.3, crouch: 6, footF: [3, 0], footB: [-4, 0], armF: [0.5, 0.6], armB: [0.2, 0.4], nod: 1 })] },
       victory: { loop: true, frames: [F(400, { armF: [2.0, -0.2], armB: [-1.2, 0.2], glow: 2 }), F(400, { armF: [2.1, -0.2], armB: [-1.3, 0.2], y: -1, glow: 1 })] },
     },
-    draw(g, J, view, p) {
+    draw(g0, J, view, p) {
+      const g = scaled(g0, J.root.x, J.root.y, 1.35);
       const se = view === 'se';
       const c = J.chest, h = J.hip, rt = J.root, L = J.lean;
+      J.rim = g.T((J.handF.x + J.handB.x) / 2, Math.min(J.handF.y, J.handB.y) - 1);
       const eye = p.hurt ? 'j' : p.glow > 1 ? 'G' : 'g';
       const ff = p.footF || [0, 0], fb = p.footB || [0, 0];
       // Long porcelain fingers fanning from a hand along the forearm.
@@ -1257,10 +1280,11 @@
   // screaming knot of Lavos-red energy; split head above, tattered coat below, arms flung
   // =========================================================================================
   // `fl` = [near, far] arm fling angles (0 = hanging, PI/2 = straight out).
-  // The standard armF/armB are only used to aim the cast rim light at the core.
-  const CORE_RIM = { armF: [-1.1, 0], armB: [1.1, 0] };
   define('curator_p2', {
-    body: { leg: 14, torso: 16, neck: 2, headR: 5 },
+    size: 76,
+    portrait: { x: 38, y: 27, side: 34 },
+    rimAt,
+    koRotate: false,
     pal: CUR_PAL,
     detail: 'LgGmfk',
     magic: '#f06c4c',
@@ -1285,24 +1309,26 @@
       },
       cast: {
         frames: [
-          F(160, { open: 0.25, glow: 2, fl: [2.4, 2.4], ...CORE_RIM }),
-          F(160, { open: 0.35, glow: 1, y: -1, fl: [2.5, 2.5], ...CORE_RIM }),
-          F(300, { open: 1, glow: 2, y: -2, fl: [1.5, 1.5], ...CORE_RIM }),
+          F(160, { open: 0.25, glow: 2, fl: [2.4, 2.4] }),
+          F(160, { open: 0.35, glow: 1, y: -1, fl: [2.5, 2.5] }),
+          F(300, { open: 1, glow: 2, y: -2, fl: [1.5, 1.5] }),
         ],
         charge: [0, 1], release: 2, rim: true,
       },
       shoot: { frames: [F(150, { open: 0.5, glow: 1, fl: [1.2, 1.2] }), F(150, { open: 1, glow: 2, x: -1, fl: [1.6, 1.4] })] },
       hurt: { frames: [F(320, { open: 0.5, x: -2, lean: -0.2, glow: 0, hurt: true, fl: [2.2, 0.6] })] },
-      ko: { frames: [F(1000, { open: 0.3, crouch: 3, glow: 0, hurt: true, fl: [0.2, 0.2], ko: true })] },
+      ko: { frames: [F(1000, { open: 0.05, crouch: 5, glow: 0, hurt: true, fl: [0.15, 0.15], ko: true })] },
       kneel: { frames: [F(1000, { open: 0.4, crouch: 3, glow: 0, fl: [0.3, 0.3] })] },
       victory: { loop: true, frames: [F(300, { open: 1, glow: 2, fl: [2.3, 2.3], y: -2 }), F(300, { open: 0.9, glow: 1, fl: [2.1, 2.1], y: -1 })] },
     },
-    draw(g, J, view, p) {
+    draw(g0, J, view, p) {
       const b = base(p, J);
+      const g = scaled(g0, b.x, b.y, 1.35);
       const se = view === 'se';
       const o = p.open == null ? 0.8 : p.open, gl = p.glow || 0, L = b.lean;
       const cx = b.x + L * 8, cy = b.y - 23 + b.dip;
       const fl = p.fl || [1.2, 1.2];
+      J.rim = g.T(cx, cy);
       // Tattered coat hanging below the bloom, hem torn into points.
       const hemY = b.y - (p.y || 0) - 3;
       g.poly([[cx - 6, cy + 6], [cx + 6, cy + 6], [b.x + 11, hemY], [b.x - 11, hemY]], 'T');

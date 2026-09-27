@@ -17,10 +17,6 @@
   --au0: #c05c1c; --au1: #e88c28; --au2: #f8bc3c; --au3: #fce068; --au4: #fff4b0;
   --pu3: #9450c0; --pu4: #bc84e4; --pk2: #e0709c; --pk3: #f8b0c8;
   --font: 'Press Start 2P', 'DejaVu Sans Mono', 'Liberation Mono', monospace;
-  /* window frame: 2px ink outline (border), then a bevelled silver rim and an inner ink line */
-  --rim: inset 2px 2px 0 0 var(--sl5), inset -2px -2px 0 0 var(--sl2), inset 0 0 0 4px var(--sl4), inset 0 0 0 6px var(--ink1);
-  /* stepped (1 game px) corners */
-  --corners: polygon(2px 0, calc(100% - 2px) 0, calc(100% - 2px) 2px, 100% 2px, 100% calc(100% - 2px), calc(100% - 2px) calc(100% - 2px), calc(100% - 2px) 100%, 2px 100%, 2px calc(100% - 2px), 0 calc(100% - 2px), 0 2px, 2px 2px);
 }
 * { box-sizing: border-box; }
 html, body {
@@ -54,36 +50,39 @@ small { font-size: 8px; }
 /* ---- The window skin ------------------------------------------------------------ */
 .panel, #banner, #hint, #prompt, #turns, .dlg, #credits .roll, .still-cap {
   position: absolute;
-  border: 2px solid var(--ink0);
-  box-shadow: var(--rim);
-  clip-path: var(--corners);
-  background: var(--ui-win-top, none) left 0 top 6px / 4px 16px repeat-x, var(--ui-win-bot, none) left 0 bottom 6px / 4px 16px repeat-x, var(--b2);
+  /* frame = a 9x9 palette image (ui.js) as border-image at 2x: ink outline, bevelled
+     silver rim, inner ink line, stepped corners. Body = blue with dithered bands. */
+  border: 8px solid var(--sl4);
+  border-image: var(--ui-frame) 4 / 8px / 0 stretch;
+  background: var(--ui-win-top, none) left 0 top 0 / 4px 16px repeat-x, var(--ui-win-bot, none) left 0 bottom 0 / 4px 16px repeat-x, var(--b2);
+  background-clip: padding-box;
   image-rendering: pixelated;
   text-shadow: 2px 2px 0 var(--b0);
   line-height: 24px;
 }
-.panel { padding: 12px 14px; }
+.panel { padding: 6px 8px; }
 
 /* ---- Banner / hints ---- */
 #banner {
   display: none; top: 88px; left: 50%; transform: translateX(-50%);
-  padding: 12px 20px; white-space: nowrap; pointer-events: none; z-index: 20;
+  padding: 6px 14px; white-space: nowrap; pointer-events: none; z-index: 20;
 }
 #banner.show { display: block; }
 #banner.warn {
-  background: var(--ui-warn-top, none) left 0 top 6px / 4px 16px repeat-x, var(--ui-warn-bot, none) left 0 bottom 6px / 4px 16px repeat-x, var(--r2);
+  background: var(--ui-warn-top, none) left 0 top 0 / 4px 16px repeat-x, var(--ui-warn-bot, none) left 0 bottom 0 / 4px 16px repeat-x, var(--r2);
+  background-clip: padding-box;
   text-shadow: 2px 2px 0 var(--r1); color: var(--au4);
 }
-#banner.dual { box-shadow: inset 2px 2px 0 0 var(--au4), inset -2px -2px 0 0 var(--au0), inset 0 0 0 4px var(--au2), inset 0 0 0 6px var(--ink1); color: var(--au3); }
+#banner.dual { border-image-source: var(--ui-frame-gold); color: var(--au3); }
 #hint {
   left: 8px; top: 8px; max-width: 440px; font-size: 8px; line-height: 14px; text-shadow: none;
-  padding: 10px 12px 10px 20px; display: none;
+  padding: 4px 6px 4px 14px; display: none;
 }
-#hint::before { content: ''; position: absolute; left: 8px; top: 8px; bottom: 8px; width: 4px; background: var(--au3); }
+#hint::before { content: ''; position: absolute; left: 2px; top: 2px; bottom: 2px; width: 4px; background: var(--au3); }
 #hint.show { display: block; }
 #prompt {
   left: 50%; bottom: 12px; transform: translateX(-50%); font-size: 8px; line-height: 12px; text-shadow: none;
-  padding: 10px 14px; display: none; white-space: nowrap; z-index: 4;
+  padding: 4px 8px; display: none; white-space: nowrap; z-index: 4;
 }
 #prompt.show { display: block; }
 #title.show ~ #help { display: none; }
@@ -93,7 +92,7 @@ small { font-size: 8px; }
 /* ---- Battle HUD ---- */
 #turns {
   top: 8px; left: 50%; transform: translateX(-50%); display: flex; gap: 4px;
-  padding: 10px 10px 8px; z-index: 5; line-height: 8px;
+  padding: 4px 4px 2px; z-index: 5; line-height: 8px;
 }
 .tb { width: 56px; padding: 2px 0 2px; text-align: center; font-size: 8px; line-height: 8px; text-shadow: none; overflow: hidden; white-space: nowrap; }
 .tb img { width: 40px; height: 44px; display: block; margin: 0 auto 4px; background: var(--b0); border-bottom: 4px solid var(--sl2); }
@@ -103,13 +102,13 @@ small { font-size: 8px; }
 .tb.now { background: var(--b3); box-shadow: inset 0 0 0 2px var(--au3); color: var(--white); }
 .tb.now img { outline: 2px solid var(--ink0); }
 
-#objective { left: 8px; top: 8px; width: 208px; font-size: 8px; line-height: 12px; padding: 12px 12px 10px; z-index: 5; text-shadow: none; }
+#objective { left: 8px; top: 8px; width: 208px; font-size: 8px; line-height: 12px; padding: 6px 6px 4px; z-index: 5; text-shadow: none; }
 .obj-label { color: var(--au3); margin-bottom: 4px; }
 .obj-sec { margin-top: 4px; color: var(--b6); }
 .hatch { margin-top: 6px; color: var(--pk3); }
 .hatch b { color: var(--white); font-size: 16px; line-height: 16px; text-shadow: 2px 2px 0 var(--b0); }
 
-#active, #target { bottom: 8px; width: 300px; display: flex; gap: 10px; z-index: 6; padding: 12px 12px 10px; align-items: flex-start; }
+#active, #target { bottom: 8px; width: 300px; display: flex; gap: 10px; z-index: 6; padding: 6px 6px 4px; align-items: flex-start; }
 #active { left: 8px; } #target { right: 8px; }
 .portrait {
   width: 84px; height: 84px; flex: none; object-fit: cover;
@@ -139,7 +138,7 @@ small { font-size: 8px; }
 /* ---- Menus ---- */
 #menu-layer { position: absolute; inset: 0; pointer-events: none; z-index: 30; }
 #menu-layer > * { pointer-events: auto; }
-.menu { min-width: 176px; padding: 12px 10px 12px; }
+.menu { min-width: 176px; padding: 6px 4px 6px; }
 .menu:not(.battle-menu):not(.choice):not(.title-menu) { left: 50%; top: 50%; transform: translate(-50%, -50%); max-height: 520px; overflow-y: auto; }
 .menu.battle-menu { left: 318px; bottom: 8px; }
 .menu.battle-menu.techs { min-width: 240px; left: 8px; bottom: 184px; }
@@ -181,7 +180,7 @@ small { font-size: 8px; }
 
 .popup {
   left: 0; right: 0; margin: 0 auto; width: fit-content; top: 42%; transform: translateY(-50%); min-width: 320px; max-width: 720px;
-  text-align: center; font-size: 16px; line-height: 28px; z-index: 40; padding: 20px 24px 16px;
+  text-align: center; font-size: 16px; line-height: 28px; z-index: 40; padding: 14px 18px 10px;
 }
 .popup small { display: inline-block; font-size: 8px; line-height: 14px; color: var(--b6); text-shadow: none; }
 .popup .dlg-more { position: static; margin: 4px auto 0; }
@@ -198,7 +197,7 @@ small { font-size: 8px; }
 
 /* ---- Dialogue ---- */
 .dlg {
-  left: 20px; right: 20px; bottom: 16px; min-height: 160px; display: none; gap: 16px; padding: 14px 20px 14px 14px;
+  left: 20px; right: 20px; bottom: 16px; min-height: 160px; display: none; gap: 16px; padding: 8px 14px 8px 8px;
   z-index: 35; cursor: pointer; align-items: flex-start;
 }
 .dlg.show { display: flex; }
@@ -221,10 +220,11 @@ small { font-size: 8px; }
 }
 .dlg-more.on { visibility: visible; animation: blink 0.8s steps(1) infinite; }
 .dlg.narrator .dlg-text { color: var(--b6); }
-.dlg.narrator { padding-left: 24px; }
+.dlg.narrator { padding-left: 18px; }
 .dlg.curator {
-  background: var(--ui-cur-top, none) left 0 top 6px / 4px 16px repeat-x, var(--sl5);
-  box-shadow: inset 2px 2px 0 0 var(--b6), inset -2px -2px 0 0 var(--b2), inset 0 0 0 4px var(--b4), inset 0 0 0 6px var(--b1);
+  background: var(--ui-cur-top, none) left 0 top 0 / 4px 16px repeat-x, var(--sl5);
+  background-clip: padding-box;
+  border-image-source: var(--ui-frame-blue);
   text-shadow: none;
 }
 .dlg.curator .dlg-text { color: var(--b2); letter-spacing: 2px; }
@@ -266,13 +266,13 @@ small { font-size: 8px; }
 #credits { position: absolute; inset: 0; display: none; z-index: 44; pointer-events: none; }
 #credits.show { display: block; }
 #credits .roll {
-  right: 32px; width: 400px; top: 100%; text-align: center; animation: roll linear forwards; padding: 20px 20px 28px;
+  right: 32px; width: 400px; top: 100%; text-align: center; animation: roll linear forwards; padding: 14px 14px 22px;
 }
 #credits h3 { font-weight: normal; color: var(--au3); font-size: 16px; line-height: 24px; margin: 28px 0 8px; }
 #credits h3:first-child { margin-top: 4px; }
 #credits p { font-size: 16px; margin: 4px 0; line-height: 24px; }
 #credits .fin { font-size: 32px; line-height: 40px; margin: 80px 0 12px; text-shadow: 4px 4px 0 var(--b0); }
-.still-cap { left: 24px; bottom: 24px; max-width: 480px; font-size: 16px; line-height: 24px; padding: 14px 16px; }
+.still-cap { left: 24px; bottom: 24px; max-width: 480px; font-size: 16px; line-height: 24px; padding: 8px 10px; }
 .still-cap:empty { display: none; }
 @keyframes roll { to { transform: translateY(calc(-100% - 700px)); } }
 

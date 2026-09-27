@@ -54,7 +54,29 @@
   ];
   const MORE = ['kkkkkkk', 'kwwwwwk', '.kwwwk.', '..kgk..', '...k...'];
   const GEM = ['...k...', '..kYk..', '.kyWyk.', 'kYWWWYk', '.kyWyk.', '..kYk..', '...k...'];
+  // 9x9 window frame for border-image (4px ring: ink outline, bevel, rim, inner ink;
+  // the outer corner pixels are left out so windows get stepped corners).
+  function frameURL(hi, lo, mid, inner) {
+    const rows = [];
+    for (let y = 0; y < 9; y++) {
+      let r = '';
+      for (let x = 0; x < 9; x++) {
+        const d = Math.min(x, y, 8 - x, 8 - y);
+        const corner = (x === 0 || x === 8) && (y === 0 || y === 8);
+        if (corner || d > 3) r += '.';
+        else if (d === 0) r += 'k';
+        else if (d === 1) r += (y === 1 && x < 7) || (x === 1 && y < 7) ? 'h' : 'l';
+        else if (d === 2) r += 'm';
+        else r += 'i';
+      }
+      rows.push(r);
+    }
+    return pixURL(rows, { k: INK, h: hi, l: lo, m: mid, i: inner });
+  }
   const vars = {
+    '--ui-frame': frameURL(R.slate[5], R.slate[2], R.slate[4], R.ink[1]),
+    '--ui-frame-gold': frameURL(R.gold[4], R.gold[0], R.gold[2], R.ink[1]),
+    '--ui-frame-blue': frameURL(R.blue[6], R.blue[2], R.blue[4], R.blue[1]),
     '--ui-hand': pixURL(HAND, { k: INK, w: R.white[0], g: R.slate[3] }),
     '--ui-more': pixURL(MORE, { k: INK, w: R.gold[3], g: R.gold[1] }),
     '--ui-more-blue': pixURL(MORE, { k: R.blue[1], w: R.blue[4], g: R.blue[3] }),
