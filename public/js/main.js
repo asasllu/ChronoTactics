@@ -38,9 +38,17 @@
   CT.input = { field: null };
 
   // ---- Layout & render loop -----------------------------------------------------
+  // The game image is 480x300; the DOM stage is laid out at 960x600 (2 stage px per
+  // game pixel). Scale so each game pixel is a whole number of device pixels, and
+  // place the stage on whole device pixels, so pixels stay square and crisp.
   function fit() {
-    const s = Math.min(window.innerWidth / 960, window.innerHeight / 600);
-    $('stage').style.transform = `scale(${s}) translate(-50%, -50%)`;
+    const dpr = window.devicePixelRatio || 1;
+    const W = window.innerWidth, H = window.innerHeight;
+    const n = Math.floor(Math.min((W * dpr) / 480, (H * dpr) / 300));
+    const s = n >= 2 ? n / (2 * dpr) : Math.min(W / 960, H / 600);
+    const left = Math.floor(((W - 960 * s) / 2) * dpr) / dpr;
+    const top = Math.floor(((H - 600 * s) / 2) * dpr) / dpr;
+    $('stage').style.transform = `translate(${left}px, ${top}px) scale(${s})`;
   }
   window.addEventListener('resize', fit);
   fit();

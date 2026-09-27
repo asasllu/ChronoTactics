@@ -1270,8 +1270,15 @@
     return Object.assign(base, over || {}, { key });
   }
 
+  // Render the grid, then move it onto a canvas made for pixel readback (the
+  // effects pass and the palette snap both read pixels back).
   function render(g, pal, detail) {
-    return CT.PX.shadeGrid(g, pal, detail, true);
+    const src = CT.PX.shadeGrid(g, pal, detail, true);
+    const cv = document.createElement('canvas');
+    cv.width = src.width;
+    cv.height = src.height;
+    cv.getContext('2d', { willReadFrequently: true }).drawImage(src, 0, 0);
+    return cv;
   }
 
   function applyFx(cv, e, fxo, spec) {
@@ -1315,6 +1322,8 @@
     if (!cache[k]) {
       try {
         cache[k] = build(String(id), String(emotion || 'neutral'));
+        // Every portrait ends on the master palette (fx use soft alpha / off-palette tints).
+        if (CT.PAL) CT.PAL.snapCanvas(cache[k]);
       } catch (err) {
         console.warn('portrait ' + k + ' failed: ' + err.message);
         cache[k] = silhouette();

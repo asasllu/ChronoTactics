@@ -77,7 +77,7 @@
     const cv = document.createElement('canvas');
     cv.width = W;
     cv.height = H;
-    const ctx = cv.getContext('2d');
+    const ctx = cv.getContext('2d', { willReadFrequently: true });
     const img = ctx.createImageData(W, H);
     const at = (x, y) => (x < 0 || y < 0 || x >= g.w || y >= g.h ? '.' : g.a[y][x]);
     const isDetail = (c) => detail.includes(c);
@@ -155,7 +155,7 @@
     const cv = document.createElement('canvas');
     cv.width = src.width;
     cv.height = src.height;
-    const g = cv.getContext('2d');
+    const g = cv.getContext('2d', { willReadFrequently: true });
     g.drawImage(src, 0, 0);
     g.globalCompositeOperation = 'source-in';
     g.fillStyle = '#ffffff';
@@ -166,7 +166,7 @@
     const cv = document.createElement('canvas');
     cv.width = src.width;
     cv.height = src.height;
-    const g = cv.getContext('2d');
+    const g = cv.getContext('2d', { willReadFrequently: true });
     g.translate(src.width, 0);
     g.scale(-1, 1);
     g.drawImage(src, 0, 0);
@@ -174,7 +174,7 @@
   }
   // Opaque bounding box, used to anchor sprites by their feet.
   function bbox(cv) {
-    const d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data;
+    const d = cv.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, cv.width, cv.height).data;
     let x0 = cv.width, y0 = cv.height, x1 = -1, y1 = -1;
     for (let y = 0; y < cv.height; y++)
       for (let x = 0; x < cv.width; x++)
@@ -196,7 +196,7 @@
     const cv = document.createElement('canvas');
     cv.width = src.width;
     cv.height = src.height;
-    const g = cv.getContext('2d');
+    const g = cv.getContext('2d', { willReadFrequently: true });
     g.drawImage(src, 0, 0);
     const img = g.getImageData(0, 0, cv.width, cv.height);
     const d = img.data;
@@ -219,7 +219,7 @@
     const cv = document.createElement('canvas');
     cv.width = w;
     cv.height = h;
-    const g = cv.getContext('2d');
+    const g = cv.getContext('2d', { willReadFrequently: true });
     g.imageSmoothingEnabled = false;
     if (fn) fn(g, cv);
     return cv;

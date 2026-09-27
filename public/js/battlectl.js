@@ -651,11 +651,22 @@
       const partners = tech.dual ? b.partnersFor(u, tech) : [];
       if (!tech.isAttack) {
         UI.banner(`${u.name}${partners.length ? ' & ' + partners.map((p) => p.name).join(' & ') : ''}: ${tech.name}`, 1400, tech.dual ? 'dual' : '');
-        for (const m of [u, ...partners]) m.flash = 0.6;
-        await tween(CT.FAST ? 5 : 420, (k) => {
-          for (const m of [u, ...partners]) m.flash = 0.6 * Math.sin(k * Math.PI * 3) ** 2;
+        const elem = tech.vfx || tech.elem || (u.key === 'magus' ? 'shadow' : 'lightning');
+        for (const m of [u, ...partners]) {
+          this.r.anim(m, 'cast', { charge: true });
+          this.r.charge(m, elem, CT.FAST ? 5 : 520);
+        }
+        await tween(CT.FAST ? 5 : 560, (k) => {
+          for (const m of [u, ...partners]) m.flash = Math.floor(k * 8) % 4 === 0 ? 0.4 : 0;
         });
-        for (const m of [u, ...partners]) m.flash = 0;
+        for (const m of [u, ...partners]) {
+          m.flash = 0;
+          // Jump to the release frame of the cast.
+          const spr = CT.getSprite(m.sprite || m.key);
+          const cast = spr.rig && spr.anims.cast;
+          const skip = cast ? cast['south-east'].slice(0, cast.release).reduce((s, f) => s + f.ms, 0) : 0;
+          m.anim = { name: 'cast', t0: performance.now() - skip };
+        }
       }
       if (tech.big) {
         this.r.bigFx(tech.big, tech.big === 'eclipse' ? 1600 : 1100);
@@ -668,11 +679,15 @@
         const toP = this.r.project(center.x, center.y, b.visH(tt) + 1.2);
         const dur = 120 + 50 * (Math.abs(u.x - center.x) + Math.abs(u.y - center.y));
         sfx('sfx_sword_swing');
+        this.r.anim(u, 'shoot');
         this.r.projectile(fromP, toP, u.key === 'magus' ? 'dark' : 'shot', dur);
         await wait(dur);
       } else if (physMelee && (center.x !== u.x || center.y !== u.y)) {
         const [dx, dy] = CT.DIRS[CT.dirTo(u.x, u.y, center.x, center.y)];
         sfx('sfx_sword_swing');
+        // Wind-up frame, then lunge with the strike.
+        this.r.anim(u, 'attack');
+        await wait(CT.FAST ? 5 : 130);
         await tween(110, (k) => {
           u.ox = dx * 0.35 * k;
           u.oy = dy * 0.35 * k;
@@ -759,6 +774,7 @@
           this.r.floatText(v, `${r.dmg}${r.crit ? '!' : ''}`, col, r.crit || r.dmg > 150);
           if (r.crit) sfx('sfx_crit');
           v.flash = 1;
+          if (v.alive) this.r.anim(v, 'hurt');
         }
       }
       await tween(CT.FAST ? 5 : 200, (k) => {
@@ -952,9 +968,10 @@
           }
           case 'anim': {
             const u = this.b.units.find((v) => v.id === a[0]);
-            if (u && a[1] === 'kneel') u.oz = -4;
+            if (u && a[1] === 'kneel') this.r.anim(u, 'kneel', { hold: true });
             if (u && a[1] === 'draw_sword') {
               sfx('sfx_sword_swing');
+              this.r.anim(u, 'attack');
               u.flash = 1;
               await tween(300, (k) => (u.flash = 1 - k));
             }

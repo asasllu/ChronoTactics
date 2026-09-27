@@ -236,7 +236,7 @@
             const t = this.tile(sp.x, sp.y);
             this.r.focus(sp.x, sp.y, t ? t.h : 0);
           }
-          this.r.dialogueBias = -70;
+          this.r.dialogueBias = -35;
           await UI.say(a[0], a[1], a[2], a[3] || {});
           this.r.dialogueBias = 0;
           break;
@@ -497,17 +497,21 @@
           break;
         case 'draw_sword':
           sfx('sfx_sword_swing');
+          this.r.anim(u, 'attack');
           u.flash = 1;
           u.emote = { text: '!', t0: performance.now(), ms: 900, color: '#c02020' };
           await tween(300, (k) => (u.flash = 1 - k));
           break;
         case 'point':
           u.emote = { text: '!', t0: performance.now(), ms: 900 };
+          this.r.anim(u, 'shoot');
           await tween(250, (k) => (u.ox = Math.sin(k * Math.PI) * 0.15 * (u.face === 0 ? 1 : u.face === 2 ? -1 : 0)));
           u.ox = 0;
           break;
         case 'bow':
-          await tween(600, (k) => (u.oz = -Math.sin(k * Math.PI) * 5));
+          this.r.anim(u, 'kneel', { hold: true });
+          await wait(600);
+          this.r.stopAnim(u);
           break;
         case 'spin':
           for (let i = 0; i < 8; i++) {
@@ -520,11 +524,13 @@
           await tween(400, (k) => (u.oz = Math.sin(k * Math.PI) * 18));
           break;
         case 'kneel':
-          await tween(300, (k) => (u.oz = -4 * k));
+          this.r.anim(u, 'kneel', { hold: true });
+          await wait(300);
           break;
         case 'stand':
           u.oz = 0;
           u.koPose = false;
+          this.r.stopAnim(u);
           break;
         case 'fall':
           u.koPose = true;
@@ -548,7 +554,7 @@
         default:
           await wait(200);
       }
-      u.oz = name === 'kneel' ? u.oz : 0;
+      u.oz = 0;
     }
 
     // ---- Field exploration ----------------------------------------------------------

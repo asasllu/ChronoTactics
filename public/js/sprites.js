@@ -462,7 +462,7 @@
         const cv = document.createElement('canvas');
         cv.width = im.width;
         cv.height = im.height;
-        cv.getContext('2d').drawImage(im, 0, 0);
+        cv.getContext('2d', { willReadFrequently: true }).drawImage(im, 0, 0);
         res(cv);
       };
       im.onerror = rej;
@@ -479,7 +479,7 @@
         const src = assets[key].rotations[dir];
         if (src) frames[dir] = frameOf(await loadImage(src));
       }
-      cache[key] = { frames, hiRes: true };
+      cache[key] = { frames, hiRes: true, legacyRaw: true };
     }
   };
 
@@ -490,12 +490,40 @@
     });
   }
 
+  // Legacy art (authored for the old 960-wide canvas) is halved to the logical
+  // resolution until it is redrawn as a rig.
+  const halfFrame = (cv) => frameOf(CT.PX.halve(cv));
   CT.getSprite = function (key) {
-    if (cache[key]) return cache[key];
+    if (cache[key] && !cache[key].legacyRaw) return cache[key];
+    if (CT.RIGS && CT.RIGS[key]) return (cache[key] = CT.RIG.makeSprite(CT.RIGS[key]));
+    if (cache[key] && cache[key].legacyRaw) {
+      // PixelLab export with no rig yet.
+      const frames = {};
+      for (const d in cache[key].frames) frames[d] = halfFrame(cache[key].frames[d].img);
+      return (cache[key] = { frames, hiRes: true });
+    }
     if (key.startsWith('echo_') && !CT.SPRITE_BUILDERS[key]) {
       const base = CT.getSprite(key.slice(5));
+      if (base.rig) {
+        // Echo: every frame of every animation re-tinted.
+        const anims = {};
+        for (const a in base.anims) {
+          anims[a] = Object.assign({}, base.anims[a]);
+          for (const d of ['south-east', 'south-west', 'north-east', 'north-west', 'south']) {
+            anims[a][d] = base.anims[a][d].map((f) => {
+              const img = CT.PAL.snapCanvas(CT.PX.echoify(f.img));
+              return Object.assign({}, f, { img, flash: CT.PX.flashOf(img), glow: null });
+            });
+          }
+        }
+        const spr = Object.assign({}, base, { anims, echo: true });
+        spr.frame = (anim, dir, t, opts) => pick(anims, anim, dir, t, opts, base);
+        spr.frames = {};
+        for (const d in base.frames) spr.frames[d] = anims.idle[d][0];
+        return (cache[key] = spr);
+      }
       const frames = {};
-      for (const d in base.frames) frames[d] = frameOf(CT.PX.echoify(base.frames[d].img));
+      for (const d in base.frames) frames[d] = frameOf(CT.PAL.snapCanvas(CT.PX.echoify(base.frames[d].img)));
       return (cache[key] = { frames, hiRes: base.hiRes, echo: true });
     }
     const fn = CT.SPRITE_BUILDERS[key];
@@ -505,10 +533,19 @@
     const ne = built.ne || se;
     const sw = built.sw || mirror(se);
     const nw = built.nw || (built.ne ? mirror(ne) : sw);
-    const r = frameOf(se);
-    cache[key] = { frames: { 'south-east': r, 'south-west': frameOf(sw), 'north-east': frameOf(ne), 'north-west': frameOf(nw), south: r } };
+    const r = halfFrame(se);
+    cache[key] = { frames: { 'south-east': r, 'south-west': halfFrame(sw), 'north-east': halfFrame(ne), 'north-west': halfFrame(nw), south: r } };
     return cache[key];
   };
+  // Frame lookup shared by derived (echo) rig sprites: same timing as the base.
+  function pick(anims, anim, dir, t, opts, base) {
+    const a = anims[anim] || anims.idle;
+    const list = a[dir] || a['south-east'];
+    const bl = (base.anims[anim] || base.anims.idle)[dir] || (base.anims[anim] || base.anims.idle)['south-east'];
+    const f = base.frame(anim, dir, t, opts);
+    const i = bl.indexOf(f);
+    return list[i < 0 ? 0 : i];
+  }
 
   // Small sprite-based portrait for HUD lists (turn bar), as a data URL.
   const portraitCache = {};
@@ -519,16 +556,15 @@
       const size = 30;
       const scale = 4;
       const cv = CT.PX.canvas(size * scale, size * scale, (g) => {
-        if (spr.hiRes || f.img.width > 40) {
-          // Detailed art: frame the whole figure rather than cropping the head.
-          const b = f.box;
-          const side = Math.max(b.x1 - b.x0, b.y1 - b.y0) + 3;
-          const cx = (b.x0 + b.x1 + 1) / 2;
-          const cy = (b.y0 + b.y1 + 1) / 2;
-          g.drawImage(f.img, Math.round(cx - side / 2), Math.round(cy - side / 2), side, side, 0, 0, size * scale, size * scale);
+        let cx, cy, side;
+        if (f.J) {
+          cx = f.J.head.x + 1; cy = f.J.head.y + 3; side = 20;
         } else {
-          g.drawImage(f.img, Math.round(f.cx - size / 2), Math.max(0, f.top - 1), size, size, 0, 0, size * scale, size * scale);
+          const b = f.box;
+          side = Math.max(b.x1 - b.x0, b.y1 - b.y0) + 3;
+          cx = (b.x0 + b.x1 + 1) / 2; cy = (b.y0 + b.y1 + 1) / 2;
         }
+        g.drawImage(f.img, Math.round(cx - side / 2), Math.round(cy - side / 2), side, side, 0, 0, size * scale, size * scale);
       });
       portraitCache[key] = cv.toDataURL();
     }

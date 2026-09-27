@@ -8,9 +8,9 @@
   const CT = (window.CT = window.CT || {});
   const { hash, vnoise } = CT.TX;
 
-  const TW = 64; // tile diamond width
-  const TH = 32; // tile diamond height
-  const HS = 16; // pixels per height level
+  const TW = 32; // tile diamond width (logical px)
+  const TH = 16; // tile diamond height
+  const HS = 8; // pixels per height level
   const BASE = 0.6; // extra column depth below height 0
   const WATER_FRAMES = 8;
 
@@ -76,22 +76,90 @@
   };
   CT.THEMES = THEMES;
 
+  const PXD = CT.PXD;
+  // Palette ramps for effects, light -> dark. Particles walk down their ramp as they age.
+  const RAMPS = {
+    fire: ['#fff4b0', '#fce068', '#f8bc3c', '#e88c28', '#c05c1c', '#6c1422'],
+    ice: ['#ffffff', '#c4e4ff', '#8cc0f0', '#5c90dc', '#3c64b4', '#1c2c5c'],
+    lightning: ['#ffffff', '#fff4b0', '#fce068', '#f8bc3c', '#e88c28', '#c05c1c'],
+    shadow: ['#e0c0fc', '#bc84e4', '#9450c0', '#6c3094', '#4a1c6c', '#2a1040'],
+    dark: ['#e0c0fc', '#bc84e4', '#9450c0', '#6c3094', '#4a1c6c', '#2a1040'],
+    water: ['#ffffff', '#c4e4ff', '#8cc0f0', '#5c90dc', '#3c64b4', '#1c2c5c'],
+    laser: ['#ffffff', '#f8b0c8', '#e0709c', '#7cd4b8', '#48a894', '#2a7470'],
+    heal: ['#ffffff', '#d4ec94', '#a8d45c', '#74b43c', '#488c34', '#2c6430'],
+    slash: ['#ffffff', '#e4e8f0', '#bcc0d4', '#9294b0', '#6e7090', '#3a3a52'],
+    hit: ['#ffffff', '#fff0dc', '#fce068', '#f8bc3c', '#e88c28', '#6c1422'],
+    porcelain: ['#ffffff', '#e4e8f0', '#bcc0d4', '#9294b0', '#6e7090', '#3a3a52'],
+    glass: ['#ffffff', '#c4e4ff', '#e4e8f0', '#8cc0f0', '#9294b0', '#52526e'],
+    lavos: ['#fff4b0', '#f06c4c', '#d43c3c', '#a02030', '#6c1422', '#3c0a14'],
+    charm: ['#ffffff', '#f8b0c8', '#e0709c', '#a83c74', '#6c2048', '#2a1040'],
+    shot: ['#ffffff', '#fff4b0', '#fce068', '#f8bc3c', '#e88c28', '#c05c1c'],
+    seed: ['#fff4b0', '#f06c4c', '#d43c3c', '#a02030', '#6c1422', '#3c0a14'],
+  };
+  CT.FX_RAMPS = RAMPS;
+  const rampOf = (k) => RAMPS[k] || RAMPS.hit;
+  const rampAt = (r, k) => r[Math.max(0, Math.min(r.length - 1, Math.floor(k * r.length)))];
+
+  // Legacy (960-scale) art is halved until it is redrawn natively: each 2x2 block
+  // takes its most common opaque colour (darkest on ties), then snaps to the palette.
+  function halve(src) {
+    const w = Math.ceil(src.width / 2), h = Math.ceil(src.height / 2);
+    const s = src.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, src.width, src.height).data;
+    const cv = document.createElement('canvas');
+    cv.width = w; cv.height = h;
+    const g = cv.getContext('2d', { willReadFrequently: true });
+    const img = g.createImageData(w, h);
+    const d = img.data;
+    for (let y = 0; y < h; y++)
+      for (let x = 0; x < w; x++) {
+        const cand = [];
+        for (let j = 0; j < 2; j++)
+          for (let i = 0; i < 2; i++) {
+            const X = x * 2 + i, Y = y * 2 + j;
+            if (X >= src.width || Y >= src.height) continue;
+            const k = (Y * src.width + X) * 4;
+            if (s[k + 3] > 100) cand.push([s[k], s[k + 1], s[k + 2]]);
+          }
+        if (cand.length < 2) continue;
+        let best = cand[0], bn = 0;
+        for (const c of cand) {
+          const n = cand.filter((o) => o[0] === c[0] && o[1] === c[1] && o[2] === c[2]).length;
+          if (n > bn || (n === bn && c[0] + c[1] + c[2] < best[0] + best[1] + best[2])) { best = c; bn = n; }
+        }
+        const k = (y * w + x) * 4;
+        d[k] = best[0]; d[k + 1] = best[1]; d[k + 2] = best[2]; d[k + 3] = 255;
+      }
+    g.putImageData(img, 0, 0);
+    return CT.PAL.snapCanvas(cv);
+  }
+  CT.PX.halve = halve;
+
   class Renderer {
     constructor(canvas) {
-      this.cv = canvas;
-      this.ctx = canvas.getContext('2d');
-      this.ctx.imageSmoothingEnabled = false;
+      // `canvas` is the on-screen 480x300 canvas; the frame is composed on a CPU
+      // back buffer, then quantised to the master palette into the screen canvas.
+      this.screen = canvas;
+      this.sctx = canvas.getContext('2d', { alpha: false });
       this.W = canvas.width;
       this.H = canvas.height;
+      this.cv = document.createElement('canvas');
+      this.cv.width = this.W;
+      this.cv.height = this.H;
+      this.ctx = this.cv.getContext('2d', { willReadFrequently: true, alpha: false });
+      this.ctx.imageSmoothingEnabled = false;
+      this.outImg = this.sctx.createImageData(this.W, this.H);
+      this.out32 = new Uint32Array(this.outImg.data.buffer);
+      this.dither = 6;
       this._rot = 0;
       this.ox = this.W / 2;
-      this.oy = 150;
+      this.oy = 75;
       this.cam = null; // camera centre in base (origin-free) screen coords
       this.camTarget = null;
       this.world = null;
       this.floaters = [];
-      this.particles = [];
-      this.flashes = [];
+      this.parts = [];
+      this.rings = [];
+      this.orbits = [];
       this.bolts = [];
       this.shots = [];
       this.rifts = [];
@@ -104,6 +172,7 @@
       this.screenFlashT = 0;
       this.cache = new Map();
       this.bgCache = new Map();
+      this.decorHalf = new Map();
       this.motes = Array.from({ length: 60 }, (_, i) => ({ x: hash(i, 1) * this.W, y: hash(i, 2) * this.H, p: hash(i, 3) * 6.28, s: 0.3 + hash(i, 4) * 0.7 }));
     }
 
@@ -192,7 +261,6 @@
     }
 
     // ---- Camera ------------------------------------------------------------------------
-    // Focus on a tile (smoothly unless instant). With no argument, frame the whole map.
     focus(x, y, h = 0, instant = false) {
       this.camTarget = this.base(x, y, h + 1);
       if (instant || !this.cam) this.cam = [...this.camTarget];
@@ -210,7 +278,6 @@
       if (!this.cam) this.cam = [...this.camTarget];
       this.cam[0] += (this.camTarget[0] - this.cam[0]) * 0.12;
       this.cam[1] += (this.camTarget[1] - this.cam[1]) * 0.12;
-      // While a dialogue box covers the bottom, frame the action higher up.
       const bias = this.dialogueBias || 0;
       this.biasNow = (this.biasNow || 0) + (bias - (this.biasNow || 0)) * 0.1;
       this.ox = Math.round(this.W / 2 - this.cam[0]);
@@ -254,16 +321,20 @@
     }
 
     // ---- Tile rasterisation ------------------------------------------------------
+    // Top diamond TW x TH, then the two side faces HS px per height level.
+    // Material callbacks get world coordinates (scale-free) plus, for side faces,
+    // both native pixel coords (pu, pv) and legacy double-scale ones (u, v).
     buildTile(t, frame) {
       const mat = CT.TERRAIN[t.t];
       const h = this.tileHeight(t);
-      const depthPx = Math.max(2, Math.round((h + BASE) * HS));
+      const depthPx = Math.max(1, Math.round((h + BASE) * HS));
       const Wc = TW;
+      const HW = TW / 2, HH = TH / 2;
       const Hc = TH + depthPx + 1;
       const cv = document.createElement('canvas');
       cv.width = Wc;
       cv.height = Hc;
-      const ctx = cv.getContext('2d');
+      const ctx = cv.getContext('2d', { willReadFrequently: true });
       const img = ctx.createImageData(Wc, Hc);
       const put = (x, y, c) => {
         if (!c) return;
@@ -285,20 +356,21 @@
       const liquid = mat.liquid;
       const ph = (frame / WATER_FRAMES) * Math.PI * 2;
 
-      // Top diamond.
-      const p = { t, nb, frame, ph };
+      const p = { t, nb, frame, ph, native: true };
       for (let y = 0; y < TH; y++) {
-        const hw = y < 16 ? 2 * (y + 1) : 2 * (TH - y);
-        for (let x = 32 - hw; x < 32 + hw; x++) {
-          const dx = x + 0.5 - 32;
-          const dy = y + 0.5 - 16;
+        const hw = y < HH ? 2 * (y + 1) : 2 * (TH - y);
+        for (let x = HW - hw; x < HW + hw; x++) {
+          const dx = x + 0.5 - HW;
+          const dy = y + 0.5 - HH;
           const ovx = dx / TW + dy / TH;
           const ovy = dy / TH - dx / TW;
           const [owx, owy] = this.vecToWorld(ovx, ovy);
           p.wx = t.x + owx;
           p.wy = t.y + owy;
-          p.tx = Math.floor(p.wx * 32);
-          p.ty = Math.floor(p.wy * 32);
+          p.px = x;
+          p.py = y;
+          p.tx = Math.floor(p.wx * 16);
+          p.ty = Math.floor(p.wy * 16);
           p.grain = hash(p.tx, p.ty, 7);
           p.n = vnoise(p.wx * 2.2, p.wy * 2.2, 1) * 0.55 + vnoise(p.wx * 7, p.wy * 7, 2) * 0.45;
           let c = mat.top(p);
@@ -309,28 +381,31 @@
           if (hBack.r > h + 0.2) k *= 0.72 + 0.28 * Math.min(1, dUR / 0.3);
           c = [c[0] * k, c[1] * k, c[2] * k];
           if (!liquid && !mat.noRim) {
-            const edgeR = x >= 32 && (x - 32 >= 2 * (TH - y) - 2 || y >= TH - 1) && y >= 15;
-            const edgeL = x < 32 && (31 - x >= 2 * (TH - y) - 2 || y >= TH - 1) && y >= 15;
-            if ((edgeR && hFront.r < h - 0.2) || (edgeL && hFront.l < h - 0.2)) c = CT.TX.mixc(c, [255, 250, 220], 0.28);
-            const backEdge = y <= 16 && ((x < 32 && x - (32 - 2 * (y + 1)) < 2) || (x >= 32 && 32 + 2 * (y + 1) - 1 - x < 2));
-            if (backEdge && hBack.l <= h && hBack.r <= h) c = CT.TX.mixc(c, [255, 250, 220], 0.12);
+            // 1px lit lip on edges that drop away, faint highlight on the back edges.
+            const edgeR = x >= HW && x - HW >= 2 * (TH - y) - 2 && y >= HH;
+            const edgeL = x < HW && HW - 1 - x >= 2 * (TH - y) - 2 && y >= HH;
+            if ((edgeR && hFront.r < h - 0.2) || (edgeL && hFront.l < h - 0.2)) c = CT.TX.mixc(c, [255, 250, 220], 0.3);
+            const backEdge = y < HH && ((x < HW && x - (HW - 2 * (y + 1)) < 2) || (x >= HW && HW + 2 * (y + 1) - 1 - x < 2));
+            if (backEdge && hBack.l <= h && hBack.r <= h) c = CT.TX.mixc(c, [255, 250, 220], 0.14);
           }
           put(x, y, c.map(Math.round));
         }
       }
 
-      // Side faces.
-      const sp = { t, depthPx };
+      const sp = { t, depthPx: depthPx * 2, pdepth: depthPx, native: true };
       for (let face = 0; face < 2; face++) {
         sp.face = face;
         sp.k = face === 0 ? 0.72 : 0.88;
-        for (let i = 0; i < 32; i++) {
-          const x = face === 0 ? i : 63 - i;
-          const yTop = 16 + Math.floor(i / 2) + 1;
-          sp.u = face === 0 ? i : 31 - i;
+        for (let i = 0; i < HW; i++) {
+          const x = face === 0 ? i : TW - 1 - i;
+          const yTop = HH + Math.floor(i / 2) + 1;
+          sp.pu = face === 0 ? i : HW - 1 - i;
+          sp.u = sp.pu * 2;
           sp.wu = sp.u + (face === 0 ? 0 : 97) + t.x * 31 + t.y * 57;
+          sp.pwu = sp.pu + (face === 0 ? 0 : 53) + t.x * 16 + t.y * 29;
           for (let v = 0; v < depthPx && yTop + v < Hc; v++) {
-            sp.v = v;
+            sp.pv = v;
+            sp.v = v * 2;
             const ao = 1 - Math.min(0.35, (v / Math.max(depthPx, 1)) * 0.35);
             sp.fin = (c) => [c[0] * sp.k * ao, c[1] * sp.k * ao, c[2] * sp.k * ao];
             const c = mat.side(sp);
@@ -340,18 +415,15 @@
       }
       ctx.putImageData(img, 0, 0);
 
-      // Hanging blades over the lip (grassy materials).
       if (mat.blades) {
-        for (let i = 0; i < 64; i += 3) {
-          if (hash(i, t.x * 13 + t.y, 99) > 0.5) continue;
-          const yTop = 16 + Math.floor((i < 32 ? i : 63 - i) / 2) + 1;
-          const len = 3 + Math.floor(hash(i, t.y, 98) * 4);
-          ctx.fillStyle = mat.blades;
-          if (i >= 32) ctx.globalAlpha = 0.85;
-          ctx.fillRect(i, yTop, 1, len);
-          ctx.globalAlpha = 1;
+        ctx.fillStyle = mat.blades;
+        for (let i = 0; i < TW; i += 2) {
+          if (hash(i, t.x * 13 + t.y, 99) > 0.45) continue;
+          const yTop = HH + Math.floor((i < HW ? i : TW - 1 - i) / 2) + 1;
+          ctx.fillRect(i, yTop, 1, 1 + Math.floor(hash(i, t.y, 98) * 3));
         }
       }
+      CT.PAL.snapCanvas(cv);
       return { cv, depthPx };
     }
 
@@ -372,6 +444,7 @@
     }
 
     // ---- Background -----------------------------------------------------------------
+    // Painted at full logical size; theme coordinates are authored at 960x600 and halved.
     buildBackground(name) {
       const th = THEMES[name] || THEMES.dusk;
       const W = this.W;
@@ -382,133 +455,125 @@
       for (const [s, c] of th.sky) sky.addColorStop(s, c);
       g.fillStyle = sky;
       g.fillRect(0, 0, W, H);
-      // Dither into bands for a 16-bit feel.
-      const img = g.getImageData(0, 0, W, H);
-      for (let y = 0; y < H; y++)
-        for (let x = 0; x < W; x++) {
-          const i = (y * W + x) * 4;
-          const b = ((x + y) & 1) * 6 - 3;
-          for (let k = 0; k < 3; k++) img.data[i + k] = Math.max(0, Math.min(255, Math.round((img.data[i + k] + b) / 8) * 8));
-        }
-      g.putImageData(img, 0, 0);
       for (let i = 0; i < (th.stars || 0); i++) {
         const y = hash(i, 5) * H * 0.55;
-        g.fillStyle = `rgba(255,255,255,${0.25 + hash(i, 6) * 0.7 * (1 - y / (H * 0.55))})`;
-        const s = hash(i, 13) > 0.93 ? 2 : 1;
-        g.fillRect(Math.floor(hash(i, 4) * W), Math.floor(y), s, s);
+        const bright = hash(i, 6) * (1 - y / (H * 0.55));
+        g.fillStyle = bright > 0.55 ? '#ffffff' : bright > 0.25 ? '#bcc0d4' : '#6e7090';
+        g.fillRect(Math.floor(hash(i, 4) * W), Math.floor(y), 1, 1);
       }
       if (th.moon) {
-        const [mx, my] = th.moon;
-        const glow = g.createRadialGradient(mx, my, 10, mx, my, 90);
-        glow.addColorStop(0, 'rgba(220,230,255,0.35)');
-        glow.addColorStop(1, 'rgba(220,230,255,0)');
-        g.fillStyle = glow;
-        g.fillRect(0, 0, W, H);
-        g.fillStyle = '#f0f0e0';
-        g.beginPath();
-        g.arc(mx, my, 18, 0, 6.29);
-        g.fill();
-        g.fillStyle = '#d0d0c4';
-        g.fillRect(mx - 6, my - 4, 5, 4);
-        g.fillRect(mx + 4, my + 5, 4, 3);
+        const mx = Math.round(th.moon[0] / 2), my = Math.round(th.moon[1] / 2);
+        for (let r = 16; r > 9; r -= 3) {
+          // stepped halo rings, checker-dithered
+          for (let y = -r; y <= r; y++)
+            for (let x = -r; x <= r; x++)
+              if (x * x + y * y <= r * r && ((x + y) & 1) === 0) {
+                g.fillStyle = 'rgba(200,210,255,0.18)';
+                g.fillRect(mx + x, my + y, 1, 1);
+              }
+        }
+        g.fillStyle = '#fff0dc';
+        PXD.disc(g, mx, my, 9);
+        g.fillStyle = '#bcc0d4';
+        g.fillRect(mx - 4, my - 2, 3, 2);
+        g.fillRect(mx + 2, my + 3, 2, 2);
+        g.fillRect(mx - 1, my + 5, 2, 1);
       }
       if (th.sun) {
         const [sx, sy, col] = th.sun;
-        const sun = g.createRadialGradient(sx, sy, 4, sx, sy, 130);
+        const X = Math.round(sx / 2), Y = Math.round(sy / 2);
+        const sun = g.createRadialGradient(X, Y, 2, X, Y, 65);
         sun.addColorStop(0, `rgba(${col},0.9)`);
         sun.addColorStop(0.15, `rgba(${col},0.45)`);
         sun.addColorStop(1, `rgba(${col},0)`);
         g.fillStyle = sun;
         g.fillRect(0, 0, W, H);
+        g.fillStyle = `rgb(${col})`;
+        PXD.disc(g, X, Y, 5);
       }
       if (th.volcano) {
         g.fillStyle = th.mountains[0];
-        g.beginPath();
-        g.moveTo(560, 400);
-        g.lineTo(700, 190);
-        g.lineTo(740, 190);
-        g.lineTo(900, 400);
-        g.fill();
-        const smoke = g.createRadialGradient(720, 170, 5, 720, 150, 90);
-        smoke.addColorStop(0, 'rgba(90,70,70,0.6)');
-        smoke.addColorStop(1, 'rgba(90,70,70,0)');
-        g.fillStyle = smoke;
-        g.fillRect(600, 40, 240, 200);
+        const pts = [[280, 200], [350, 95], [370, 95], [450, 200]];
+        for (let y = 95; y <= 200; y++) {
+          const k = (y - 95) / 105;
+          g.fillRect(Math.round(350 - k * 70), y, Math.round(20 + k * 150), 1);
+        }
+        void pts;
+        for (let i = 0; i < 40; i++) {
+          g.fillStyle = 'rgba(90,70,70,0.35)';
+          PXD.disc(g, 360 + (hash(i, 50) - 0.5) * 60, 80 - hash(i, 51) * 60, 3 + Math.floor(hash(i, 52) * 6));
+        }
       }
       (th.mountains || []).forEach((col, li) => {
-        const base = 330 + li * 55;
-        const amp = (th.peaks ? 150 : 90) - li * 20;
-        const f = [0.006, 0.01, 0.016][li];
-        g.fillStyle = col;
+        const base = 165 + li * 27;
+        const amp = (th.peaks ? 75 : 45) - li * 10;
+        const f = [0.012, 0.02, 0.032][li];
         for (let x = 0; x < W; x++) {
           let n = vnoise(x * f, 0, li + 1) * 0.7 + vnoise(x * f * 4, 1, li + 1) * 0.3;
           if (th.peaks) n = Math.pow(n, 0.7);
           const top = Math.round(base - n * amp);
+          g.fillStyle = col;
           g.fillRect(x, top, 1, H - top);
           if (th.peaks && li === 0 && n > 0.55) {
-            g.fillStyle = '#f4f8ff';
-            g.fillRect(x, top, 1, Math.round((n - 0.55) * 60));
-            g.fillStyle = col;
+            g.fillStyle = '#e4e8f0';
+            g.fillRect(x, top, 1, Math.round((n - 0.55) * 30));
+          }
+          // 1px lighter ridge line on the nearest layer
+          if (li === (th.mountains.length - 1)) {
+            g.fillStyle = 'rgba(255,255,255,0.12)';
+            g.fillRect(x, top, 1, 1);
           }
         }
-        const hz = g.createLinearGradient(0, base - 20, 0, base + 60);
-        hz.addColorStop(0, 'rgba(255,255,255,0)');
-        hz.addColorStop(1, 'rgba(255,230,220,0.12)');
-        g.fillStyle = hz;
-        g.fillRect(0, base - 20, W, 80);
       });
       if (th.sea) {
         g.fillStyle = th.sea;
-        g.fillRect(0, 440, W, H - 440);
-        for (let i = 0; i < 80; i++) {
-          g.fillStyle = 'rgba(200,230,255,0.25)';
-          g.fillRect(Math.floor(hash(i, 30) * W), 444 + Math.floor(hash(i, 31) * 150), 6 + Math.floor(hash(i, 32) * 14), 1);
-        }
+        g.fillRect(0, 220, W, H - 220);
+        g.fillStyle = '#8cc0f0';
+        for (let i = 0; i < 60; i++) g.fillRect(Math.floor(hash(i, 30) * W), 222 + Math.floor(hash(i, 31) * 75), 3 + Math.floor(hash(i, 32) * 7), 1);
       }
       if (th.forest) {
         g.fillStyle = th.forest;
-        for (let x = 0; x < W; x += 3) {
-          const top = 470 - Math.floor(vnoise(x * 0.08, 3, 4) * 26) - (x % 6 === 0 ? 4 : 0);
-          g.fillRect(x, top, 3, H - top);
+        for (let x = 0; x < W; x += 2) {
+          const top = 235 - Math.floor(vnoise(x * 0.16, 3, 4) * 13) - (x % 6 === 0 ? 2 : 0);
+          g.fillRect(x, top, 2, H - top);
         }
       }
       if (th.interior) {
-        // Soft pillars of light / distant architecture.
         for (let i = 0; i < 7; i++) {
-          const x = 60 + i * 140 + hash(i, 40) * 40;
-          const gr = g.createLinearGradient(x, 0, x + 50, 0);
-          gr.addColorStop(0, 'rgba(255,255,255,0)');
-          gr.addColorStop(0.5, `rgba(255,255,255,${name === 'museum' ? 0.35 : 0.04})`);
-          gr.addColorStop(1, 'rgba(255,255,255,0)');
-          g.fillStyle = gr;
-          g.fillRect(x, 0, 50, H);
+          const x = Math.round(30 + i * 70 + hash(i, 40) * 20);
+          for (let k = 0; k < 25; k++) {
+            const a = (name === 'museum' ? 0.3 : 0.05) * Math.sin((k / 25) * Math.PI);
+            g.fillStyle = `rgba(255,255,255,${a})`;
+            g.fillRect(x + k, 0, 1, H);
+          }
         }
       }
       const clouds = th.clouds
         ? [0, 1, 2, 3, 4].map((i) => {
-            const w = 120 + Math.floor(hash(i, 8) * 100);
-            const c = CT.PX.canvas(w, 34, (cg) => {
-              for (let k = 0; k < 9; k++) {
-                const cx = 16 + hash(i, k + 20) * (w - 32);
-                const cy = 18 + hash(i, k + 40) * 8;
-                const r = 8 + hash(i, k + 60) * 10;
+            const w = 60 + Math.floor(hash(i, 8) * 50);
+            const c = CT.PX.canvas(w, 18, (cg) => {
+              for (let k = 0; k < 8; k++) {
+                const cx = 8 + hash(i, k + 20) * (w - 16);
+                const cy = 10 + hash(i, k + 40) * 4;
+                const r = 4 + Math.floor(hash(i, k + 60) * 5);
                 cg.fillStyle = th.clouds[0];
-                cg.beginPath();
-                cg.arc(cx, cy, r, 0, 6.29);
-                cg.fill();
+                PXD.disc(cg, cx, cy, r);
+              }
+              for (let k = 0; k < 8; k++) {
+                const cx = 8 + hash(i, k + 20) * (w - 16);
+                const cy = 10 + hash(i, k + 40) * 4;
+                const r = 4 + Math.floor(hash(i, k + 60) * 5);
                 cg.fillStyle = th.clouds[1];
-                cg.beginPath();
-                cg.arc(cx - 2, cy - 3, r * 0.75, 0, 6.29);
-                cg.fill();
+                PXD.disc(cg, cx - 1, cy - 2, Math.max(1, r - 2));
               }
             });
-            return { c, x: hash(i, 9) * W, y: 60 + i * 45 + hash(i, 10) * 20, v: 0.004 + hash(i, 11) * 0.006, a: 0.35 + hash(i, 12) * 0.3 };
+            return { c, x: hash(i, 9) * W, y: 30 + i * 22 + hash(i, 10) * 10, v: 0.002 + hash(i, 11) * 0.003, a: 0.5 + hash(i, 12) * 0.3 };
           })
         : [];
       const vg = CT.PX.canvas(W, H, (v) => {
-        const rg = v.createRadialGradient(W / 2, H / 2, H * 0.45, W / 2, H / 2, H * 0.95);
+        const rg = v.createRadialGradient(W / 2, H / 2, H * 0.5, W / 2, H / 2, H * 0.95);
         rg.addColorStop(0, 'rgba(0,0,0,0)');
-        rg.addColorStop(1, `rgba(8,4,20,${th.vignette != null ? th.vignette : 0.55})`);
+        rg.addColorStop(1, `rgba(8,4,20,${th.vignette != null ? th.vignette : 0.4})`);
         v.fillStyle = rg;
         v.fillRect(0, 0, W, H);
       });
@@ -535,12 +600,19 @@
 
     // ---- Frame -------------------------------------------------------------------
     shake(amount, ms = 250) {
-      this.shakeAmt = amount;
+      this.shakeAmt = Math.max(1, Math.round(amount / 2));
       this.shakeT = performance.now() + ms;
       this.shakeMs = ms;
     }
     flashScreen(color = '255,255,255', ms = 200) {
       this.screenFlash = { color, t0: performance.now(), ms };
+    }
+
+    // Quantise the composed frame onto the master palette and show it.
+    present() {
+      const src = this.ctx.getImageData(0, 0, this.W, this.H);
+      CT.PAL.quantize(src, this.out32, this.W, this.H, this.dither);
+      this.sctx.putImageData(this.outImg, 0, 0);
     }
 
     draw(ui, now) {
@@ -550,17 +622,21 @@
       ctx.globalCompositeOperation = 'source-over';
       const world = this.world;
       if (!world || !world.map) {
-        ctx.fillStyle = '#000';
+        ctx.fillStyle = '#0a0612';
         ctx.fillRect(0, 0, this.W, this.H);
         this.drawOverlays(now);
+        this.present();
         return;
       }
       this.updateCamera();
       this.drawBackground(now);
 
       if (now < this.shakeT) {
+        // Whole-pixel shake that decays; alternates so it never drifts.
         const k = (this.shakeT - now) / (this.shakeMs || 250);
-        ctx.translate(Math.round((Math.random() - 0.5) * this.shakeAmt * k), Math.round((Math.random() - 0.5) * this.shakeAmt * k));
+        const a = Math.max(1, Math.round(this.shakeAmt * k));
+        const ph = Math.floor(now / 33) % 4;
+        ctx.translate([a, -a, a, -a][ph], [0, a, -a, 0][ph] >> (k < 0.5 ? 1 : 0));
       }
 
       const drawables = [];
@@ -575,20 +651,22 @@
       const lights = [];
       for (const d of drawables) {
         if (d.t) this.drawTile(d.t, ui, now, lights);
-        else this.drawUnit(d.u, world, ui, now);
+        else this.drawUnit(d.u, world, ui, now, lights);
       }
       for (const r of this.rifts) this.drawRift(r, now);
 
-      this.drawEffects(now);
       this.drawGrading(lights, now);
+      this.drawEffects(now);
       this.drawWeather(now);
+      this.drawUnitHud(world, ui, now);
       this.drawFloaters(now);
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.drawImage(this.background(this.map.theme || 'dusk').vignette, 0, 0);
       this.drawOverlays(now);
+      this.present();
     }
 
-    // Colour grading, darkness and light sources.
+    // Colour grading, darkness and light sources (stepped pools).
     drawGrading(lights, now) {
       const ctx = this.ctx;
       const th = this.theme;
@@ -604,16 +682,17 @@
         ctx.fillStyle = `rgba(4,6,20,${th.dark})`;
         ctx.fillRect(0, 0, this.W, this.H);
       }
+      ctx.restore();
+      ctx.save();
       ctx.globalCompositeOperation = 'lighter';
       for (const l of lights) {
         const fl = l.flicker ? 0.85 + 0.15 * Math.sin(now / 90 + l.x * 7) * Math.sin(now / 53 + l.y) : 1;
-        const r = l.radius * (0.95 + 0.05 * fl);
-        const g = ctx.createRadialGradient(l.x, l.y, 0, l.x, l.y, r);
-        g.addColorStop(0, `rgba(${l.color},${0.42 * fl})`);
-        g.addColorStop(0.4, `rgba(${l.color},${0.16 * fl})`);
-        g.addColorStop(1, `rgba(${l.color},0)`);
-        ctx.fillStyle = g;
-        ctx.fillRect(l.x - r, l.y - r, r * 2, r * 2);
+        const r = Math.round(l.radius * (0.95 + 0.05 * fl));
+        // Three concentric steps, brightest in the middle.
+        for (const [kr, a] of [[1, 0.1], [0.62, 0.12], [0.3, 0.16]]) {
+          ctx.fillStyle = `rgba(${l.color},${a * fl})`;
+          PXD.ellipse(ctx, l.x, l.y, Math.round(r * kr), Math.round(r * kr * 0.7));
+        }
       }
       ctx.restore();
     }
@@ -624,57 +703,62 @@
       ctx.save();
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       const kind = th.particles;
+      const W = this.W, H = this.H;
       if (kind === 'snow') {
+        ctx.fillStyle = '#ffffff';
         for (const m of this.motes) {
-          const x = (m.x + Math.sin(now / 1600 + m.p) * 24 + now * 0.01 * m.s) % this.W;
-          const y = (m.y + now * 0.03 * (0.5 + m.s)) % this.H;
-          ctx.fillStyle = `rgba(255,255,255,${0.5 + m.s * 0.4})`;
-          ctx.fillRect(Math.round(x), Math.round(y), m.s > 0.7 ? 3 : 2, m.s > 0.7 ? 3 : 2);
+          const x = (m.x + Math.sin(now / 1600 + m.p) * 12 + now * 0.005 * m.s) % W;
+          const y = (m.y + now * 0.015 * (0.5 + m.s)) % H;
+          const s = m.s > 0.7 ? 2 : 1;
+          ctx.fillRect(Math.round(x), Math.round(y), s, s);
         }
       } else if (kind === 'embers') {
-        ctx.globalCompositeOperation = 'lighter';
         for (const m of this.motes) {
-          const x = (m.x + Math.sin(now / 900 + m.p) * 20) % this.W;
-          const y = (this.H - ((m.y + now * 0.03 * (0.4 + m.s)) % this.H));
-          ctx.fillStyle = `rgba(255,${120 + Math.floor(m.s * 100)},40,${0.4 + 0.4 * Math.sin(now / 200 + m.p)})`;
-          ctx.fillRect(Math.round(x), Math.round(y), 2, 2);
+          const x = (m.x + Math.sin(now / 900 + m.p) * 10) % W;
+          const y = H - ((m.y + now * 0.015 * (0.4 + m.s)) % H);
+          const k = 0.5 + 0.5 * Math.sin(now / 200 + m.p);
+          ctx.fillStyle = k > 0.66 ? '#fce068' : k > 0.33 ? '#e88c28' : '#a02030';
+          ctx.fillRect(Math.round(x), Math.round(y), 1, 1);
         }
       } else if (kind === 'fireflies' || kind === 'motes' || kind === 'sparkle') {
-        ctx.globalCompositeOperation = 'lighter';
-        const col = kind === 'fireflies' ? '255,240,150' : kind === 'sparkle' ? '150,220,255' : '255,255,230';
+        const ramp = kind === 'fireflies' ? ['#fff4b0', '#fce068', '#a8d45c'] : kind === 'sparkle' ? ['#ffffff', '#c4e4ff', '#8cc0f0'] : ['#fff0dc', '#c0aa92', '#7a665a'];
         const n = kind === 'fireflies' ? 26 : 40;
         for (let i = 0; i < n; i++) {
           const m = this.motes[i];
-          const x = (m.x + Math.sin(now / 2100 + m.p) * 30 + now * 0.004 * m.s) % this.W;
-          const y = (m.y * 0.8 + 60 + Math.sin(now / 1300 + m.p * 2) * 16) % this.H;
-          const a = 0.35 + 0.35 * Math.sin(now / 400 + m.p * 3);
-          ctx.fillStyle = `rgba(${col},${a * 0.35})`;
-          ctx.fillRect(Math.round(x) - 1, Math.round(y) - 1, 4, 4);
-          ctx.fillStyle = `rgba(${col},${a})`;
-          ctx.fillRect(Math.round(x), Math.round(y), kind === 'motes' ? 1 : 2, kind === 'motes' ? 1 : 2);
+          const x = Math.round((m.x + Math.sin(now / 2100 + m.p) * 15 + now * 0.002 * m.s) % W);
+          const y = Math.round((m.y * 0.8 + 30 + Math.sin(now / 1300 + m.p * 2) * 8) % H);
+          const a = 0.5 + 0.5 * Math.sin(now / 400 + m.p * 3);
+          if (a < 0.2) continue;
+          ctx.fillStyle = ramp[a > 0.75 ? 0 : a > 0.45 ? 1 : 2];
+          ctx.fillRect(x, y, 1, 1);
+          if (a > 0.85 && kind !== 'motes') {
+            ctx.fillStyle = ramp[2];
+            ctx.fillRect(x - 1, y, 1, 1); ctx.fillRect(x + 1, y, 1, 1); ctx.fillRect(x, y - 1, 1, 1); ctx.fillRect(x, y + 1, 1, 1);
+          }
         }
       } else if (kind === 'dust') {
+        ctx.fillStyle = '#c0aa92';
         for (let i = 0; i < 30; i++) {
           const m = this.motes[i];
-          const x = (m.x + now * 0.006 * m.s) % this.W;
-          const y = (m.y + Math.sin(now / 1500 + m.p) * 10) % this.H;
-          ctx.fillStyle = `rgba(255,250,235,${0.15 + 0.2 * m.s})`;
+          if (m.s < 0.5) continue;
+          const x = (m.x + now * 0.003 * m.s) % W;
+          const y = (m.y + Math.sin(now / 1500 + m.p) * 5) % H;
           ctx.fillRect(Math.round(x), Math.round(y), 1, 1);
         }
       } else if (kind === 'wind') {
+        ctx.fillStyle = '#e4e8f0';
         for (let i = 0; i < 18; i++) {
           const m = this.motes[i];
-          const x = (m.x + now * 0.25 * (0.5 + m.s)) % (this.W + 200) - 100;
-          const y = m.y * 0.7 + Math.sin(now / 700 + m.p) * 8;
-          ctx.fillStyle = 'rgba(255,255,255,0.25)';
-          ctx.fillRect(Math.round(x), Math.round(y), 30 + Math.floor(m.s * 40), 1);
+          const x = ((m.x + now * 0.12 * (0.5 + m.s)) % (W + 100)) - 50;
+          const y = m.y * 0.7 + Math.sin(now / 700 + m.p) * 4;
+          const len = 12 + Math.floor(m.s * 18);
+          for (let k = 0; k < len; k += 2) ctx.fillRect(Math.round(x) + k, Math.round(y + Math.sin((x + k) / 20) * 1), 1, 1);
         }
       }
       if (th.scan) {
-        ctx.globalCompositeOperation = 'source-over';
         ctx.fillStyle = `rgba(0,0,0,${th.scan})`;
-        const off = Math.floor(now / 60) % 4;
-        for (let y = off; y < this.H; y += 4) ctx.fillRect(0, y, this.W, 1);
+        const off = Math.floor(now / 60) % 3;
+        for (let y = off; y < H; y += 3) ctx.fillRect(0, y, W, 1);
       }
       ctx.restore();
     }
@@ -690,83 +774,54 @@
         const k = (now - this.screenFlash.t0) / this.screenFlash.ms;
         if (k >= 1) this.screenFlash = null;
         else {
-          ctx.fillStyle = `rgba(${this.screenFlash.color},${1 - k})`;
+          ctx.fillStyle = `rgba(${this.screenFlash.color},${Math.round((1 - k) * 4) / 4})`;
           ctx.fillRect(0, 0, this.W, this.H);
         }
       }
       if (this.fade > 0) {
-        ctx.fillStyle = `rgba(${this.fadeColor},${this.fade})`;
+        // Stepped fade (8 levels) so it reads as a palette fade.
+        ctx.fillStyle = `rgba(${this.fadeColor},${Math.min(1, Math.ceil(this.fade * 8) / 8)})`;
         ctx.fillRect(0, 0, this.W, this.H);
       }
       ctx.restore();
-    }
-
-    diamond(sx, sy, inset = 0) {
-      const ctx = this.ctx;
-      const hw = TW / 2 - inset * 2;
-      const hh = TH / 2 - inset;
-      ctx.beginPath();
-      ctx.moveTo(sx, sy - hh);
-      ctx.lineTo(sx + hw, sy);
-      ctx.lineTo(sx, sy + hh);
-      ctx.lineTo(sx - hw, sy);
-      ctx.closePath();
     }
 
     drawTile(t, ui, now, lights) {
       const ctx = this.ctx;
       const mat = CT.TERRAIN[t.t];
       const h = this.tileHeight(t);
-      const [sx, sy] = this.project(t.x, t.y, h);
+      const [sx0, sy0] = this.project(t.x, t.y, h);
+      const sx = Math.round(sx0), sy = Math.round(sy0);
       const key = `${t.x},${t.y}`;
       if (!mat.void) {
         const { cv } = this.tileImage(t, now);
-        ctx.drawImage(cv, Math.round(sx - 32), Math.round(sy - 16));
-        if (mat.glow) lights.push({ x: sx, y: sy, color: mat.glow, radius: 46, flicker: true });
+        ctx.drawImage(cv, sx - TW / 2, sy - TH / 2);
+        if (mat.glow) lights.push({ x: sx, y: sy, color: mat.glow, radius: 23, flicker: true });
       }
 
       if (ui.grid && !mat.void) {
-        ctx.strokeStyle = 'rgba(255,255,255,0.13)';
-        ctx.lineWidth = 1;
-        this.diamond(Math.round(sx) + 0.5, Math.round(sy) + 0.5);
-        ctx.stroke();
+        ctx.fillStyle = 'rgba(255,255,255,0.12)';
+        PXD.diamond(ctx, sx, sy, TW / 2, false);
       }
 
       const hl = ui.highlights && ui.highlights.get(key);
       if (hl) {
-        const pulse = 0.5 + 0.5 * Math.sin(now / 200);
-        const col = { move: [90, 170, 255], aoe: [255, 214, 70], tech: [255, 214, 70], range: [255, 80, 80], zone: [255, 60, 140], danger: [255, 40, 40] }[hl] || [255, 255, 255];
-        ctx.fillStyle = `rgba(${col},${(hl === 'zone' ? 0.18 : 0.28) + 0.14 * pulse})`;
-        this.diamond(sx, sy, 1);
-        ctx.fill();
-        ctx.strokeStyle = `rgba(${col.map((c) => Math.min(255, c + 90))},${0.75 + 0.25 * pulse})`;
-        ctx.stroke();
-        if (hl !== 'zone') {
-          ctx.strokeStyle = `rgba(255,255,255,${0.25 * pulse})`;
-          this.diamond(sx, sy, 4);
-          ctx.stroke();
-        }
+        const pulse = Math.floor(now / 220) % 2;
+        const col = { move: [92, 144, 220], aoe: [252, 224, 104], tech: [252, 224, 104], range: [212, 60, 60], zone: [224, 112, 156], danger: [240, 108, 76] }[hl] || [255, 255, 255];
+        ctx.fillStyle = `rgba(${col},${hl === 'zone' ? 0.22 : 0.34 + pulse * 0.08})`;
+        PXD.diamond(ctx, sx, sy, TW / 2 - 1, true);
+        ctx.fillStyle = `rgb(${col.map((c) => Math.min(255, c + 70))})`;
+        PXD.diamond(ctx, sx, sy, TW / 2 - 1, false);
       }
       if (ui.path && ui.path.has(key)) {
-        ctx.fillStyle = 'rgba(255,255,255,0.9)';
-        this.diamond(sx, sy, 11);
-        ctx.fill();
+        ctx.fillStyle = '#ffffff';
+        PXD.diamond(ctx, sx, sy, 4, true);
       }
       if (ui.hover && ui.hover.x === t.x && ui.hover.y === t.y) {
-        const a = 0.6 + 0.4 * Math.sin(now / 120);
-        ctx.strokeStyle = `rgba(255,255,255,${a})`;
-        ctx.lineWidth = 2;
-        this.diamond(sx, sy, 1);
-        ctx.stroke();
-        ctx.lineWidth = 1;
-        if (ui.grid) {
-          ctx.font = '8px "Press Start 2P", monospace';
-          ctx.textAlign = 'center';
-          ctx.fillStyle = '#101018';
-          ctx.fillText(String(t.h), sx + 1, sy + 4);
-          ctx.fillStyle = '#fff';
-          ctx.fillText(String(t.h), sx, sy + 3);
-        }
+        ctx.fillStyle = Math.floor(now / 160) % 2 ? '#ffffff' : '#fce068';
+        PXD.diamond(ctx, sx, sy, TW / 2, false);
+        PXD.diamond(ctx, sx, sy - 1, TW / 2, false);
+        if (ui.grid) PXD.text(ctx, String(t.h), sx, sy - 3, '#ffffff', { align: 'center' });
       }
 
       const d = this.map.decorAt.get(key);
@@ -777,21 +832,30 @@
       const ctx = this.ctx;
       const def = CT.DECOR[d.kind];
       if (!def) return;
-      const img = CT.getDecor(d.kind, d.variant || 0);
-      if (def.shadow) {
-        ctx.fillStyle = 'rgba(10,12,20,0.3)';
-        ctx.beginPath();
-        ctx.ellipse(sx, sy + 1, def.shadow[0], def.shadow[1], 0, 0, Math.PI * 2);
-        ctx.fill();
+      const native = !!def.native; // drawn at the logical resolution; legacy art is halved
+      const k = native ? 1 : 0.5;
+      let img = CT.getDecor(d.kind, d.variant || 0);
+      let frameImg = def.animate ? def.animate(img, now, d) || img : img;
+      if (!native) {
+        let h = this.decorHalf.get(frameImg);
+        if (!h) {
+          h = halve(frameImg);
+          if (this.decorHalf.size > 400) this.decorHalf.clear();
+          this.decorHalf.set(frameImg, h);
+        }
+        frameImg = h;
       }
-      const frameImg = def.animate ? def.animate(img, now, d) || img : img;
-      const flat = def.flat; // drawn flat on the tile top (runes, rugs)
-      const dx = Math.round(sx - frameImg.width / 2 + (def.xOff || 0));
-      const dy = flat ? Math.round(sy - frameImg.height / 2) : Math.round(sy - frameImg.height + (def.yOff || 0));
+      if (def.shadow) {
+        ctx.fillStyle = 'rgba(10,6,18,0.3)';
+        PXD.ellipse(ctx, sx, sy + 1, Math.round(def.shadow[0] * k), Math.max(1, Math.round(def.shadow[1] * k)));
+      }
+      const flat = def.flat;
+      const dx = Math.round(sx - frameImg.width / 2 + (def.xOff || 0) * k);
+      const dy = flat ? Math.round(sy - frameImg.height / 2) : Math.round(sy - frameImg.height + (def.yOff || 0) * k);
       ctx.drawImage(frameImg, dx, dy);
       if (def.light) {
         const l = def.light;
-        lights.push({ x: sx + (l.dx || 0), y: dy + (l.dy != null ? l.dy : frameImg.height * 0.3), color: l.color, radius: l.radius || 60, flicker: l.flicker });
+        lights.push({ x: sx + (l.dx || 0) * k, y: dy + (l.dy != null ? l.dy * k : frameImg.height * 0.3), color: l.color, radius: (l.radius || 60) * k, flicker: l.flicker });
       }
     }
 
@@ -799,146 +863,157 @@
       return this.project(u.rx + u.ox, u.ry + u.oy, u.rh);
     }
 
-    drawUnit(u, world, ui, now) {
-      const ctx = this.ctx;
+    // Which animation a unit is in right now: explicit u.anim (set by battle and
+    // scene code), walking while its render position moves, else idle.
+    unitAnim(u, spr, now) {
+      if (u.koPose) return { name: 'ko', t: 0 };
+      if (u.anim) {
+        const a = spr.anims[u.anim.name];
+        const t = now - u.anim.t0;
+        if (a && (u.anim.hold || u.anim.charge || a.loop || t < a.total)) return { name: u.anim.name, t, charge: u.anim.charge };
+        if (!u.anim.hold) u.anim = null;
+      }
+      const moved = u._lx !== undefined && (Math.abs(u._lx - u.rx) > 0.001 || Math.abs(u._ly - u.ry) > 0.001);
+      u._lx = u.rx;
+      u._ly = u.ry;
+      if (moved) u._walkUntil = now + 120;
+      if (u._walkUntil > now) return { name: 'walk', t: now };
+      if (u.status && u.status.stasis) return { name: 'idle', t: 0 };
+      return { name: 'idle', t: now + (u.id || 0) * 377 };
+    }
+
+    spriteFrame(u, now) {
       const spr = CT.getSprite(u.sprite || u.key);
-      const f = spr.frames[this.screenDir(u.face)] || spr.frames['south-east'];
+      const dir = this.screenDir(u.face);
+      if (spr.rig) {
+        const a = this.unitAnim(u, spr, now);
+        const f = spr.frame(a.name, dir, a.t, a);
+        if (f) return f;
+      }
+      return spr.frames[dir] || spr.frames['south-east'] || Object.values(spr.frames)[0];
+    }
+
+    drawUnit(u, world, ui, now, lights) {
+      const ctx = this.ctx;
+      const f = this.spriteFrame(u, now);
       const [sx0, sy0] = this.unitScreenPos(u);
       const sx = Math.round(sx0);
-      const sy = Math.round(sy0 - (u.oz || 0));
+      const sy = Math.round(sy0 - (u.oz || 0) / 2);
       const isActive = world.active === u;
-      const bob = isActive ? Math.round(Math.sin(now / 160) * 1) : 0;
       const showRing = ui.grid && !u.prop && u.team != null;
+      u._f = f;
+      u._sx = sx;
+      u._sy = sy;
 
       ctx.save();
       ctx.globalAlpha = u.alpha;
       if (!u.noShadow) {
-        const sh = u.big ? 1.8 : 1;
-        ctx.fillStyle = 'rgba(10,8,24,0.35)';
-        ctx.beginPath();
-        ctx.ellipse(sx, Math.round(sy0) + 1, 15 * sh, 6 * sh, 0, 0, Math.PI * 2);
-        ctx.fill();
+        const big = u.big ? 1.8 : 1;
+        ctx.fillStyle = 'rgba(10,6,18,0.35)';
+        PXD.ellipse(ctx, sx, Math.round(sy0) + 1, Math.round(8 * big), Math.round(3 * big));
       }
       if (showRing) {
-        const ring = u.guest ? '110,230,140' : u.team === 0 ? '110,190,255' : u.team === 1 ? '255,100,100' : '200,200,210';
-        ctx.strokeStyle = `rgba(${ring},${isActive ? 0.6 + 0.4 * Math.sin(now / 150) : 0.75})`;
-        ctx.lineWidth = isActive ? 2 : 1;
-        ctx.beginPath();
-        ctx.ellipse(sx, Math.round(sy0) + 1, u.big ? 30 : 17, u.big ? 12 : 7, 0, 0, Math.PI * 2);
-        ctx.stroke();
+        const ring = u.guest ? '#a8d45c' : u.team === 0 ? '#8cc0f0' : u.team === 1 ? '#f06c4c' : '#bcc0d4';
+        ctx.fillStyle = ring;
+        if (!isActive || Math.floor(now / 200) % 2) PXD.ellipseRing(ctx, sx, Math.round(sy0) + 1, u.big ? 16 : 10, u.big ? 6 : 4);
       }
 
-      let img = f.img;
+      const img = f.img;
       const dx = Math.round(sx - f.cx);
-      const dy = Math.round(sy - f.footY + 3 + bob);
-      if (u.flicker && Math.floor(now / 70 + u.id * 3) % 7 === 0) ctx.globalAlpha = u.alpha * 0.45;
+      const dy = Math.round(sy - f.footY + 2);
+      if (u.flicker && Math.floor(now / 70 + u.id * 3) % 7 === 0) ctx.globalAlpha = u.alpha * 0.5;
       if (u.status && u.status.stasis) ctx.globalAlpha *= 0.85;
       if (u.koPose) {
-        // Lying down: rotate the sprite onto its side.
-        ctx.translate(sx, sy - 6);
-        ctx.rotate(Math.PI / 2 * (this.screenDir(u.face).endsWith('west') ? -1 : 1));
-        ctx.drawImage(img, -f.cx, -f.footY + 6);
+        // Lying down: an exact quarter turn of the sprite (lossless for pixel art).
+        const west = this.screenDir(u.face).endsWith('west');
+        ctx.translate(sx, sy - 3);
+        ctx.rotate((Math.PI / 2) * (west ? -1 : 1));
+        ctx.drawImage(img, -Math.round(f.cx), -f.footY + 4);
         ctx.setTransform(1, 0, 0, 1, 0, 0);
       } else ctx.drawImage(img, dx, dy);
       if (u.flash > 0) {
-        ctx.globalAlpha = u.alpha * Math.min(1, u.flash);
+        ctx.globalAlpha = u.alpha * (u.flash > 0.5 ? 1 : 0.5);
         ctx.drawImage(f.flash, dx, dy);
       }
-      if (u.tintColor) {
-        ctx.globalAlpha = u.alpha * (u.tintAmt || 0.4);
-        ctx.globalCompositeOperation = 'source-atop';
-      }
       ctx.restore();
+      if (f.glow && lights) lights.push({ x: dx + f.glow.x, y: dy + f.glow.y, color: CT.PAL.hex(f.glow.color).join(','), radius: 14, flicker: true });
+      const top = f.box ? f.box.y0 : f.top;
+      u._headY = dy + top;
+    }
 
-      const headY = dy + f.top;
-      if (u.status && u.status.stasis) {
-        ctx.save();
-        ctx.strokeStyle = `rgba(190,240,255,${0.6 + 0.3 * Math.sin(now / 200)})`;
-        ctx.fillStyle = 'rgba(190,240,255,0.12)';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.ellipse(sx, (headY + sy) / 2, 20, (sy - headY) / 2 + 6, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-        ctx.restore();
-      }
-      if (ui.grid && u.alive && !u.prop && u.maxHp) {
-        const bw = u.big ? 44 : 28;
-        const bx = sx - bw / 2;
-        const by = headY - 9;
-        ctx.fillStyle = 'rgba(12,10,24,0.85)';
-        ctx.fillRect(bx - 1, by - 1, bw + 2, 5);
-        const fr = Math.max(0, u.hp / u.maxHp);
-        ctx.fillStyle = fr > 0.5 ? '#58e878' : fr > 0.25 ? '#f8d848' : '#f85848';
-        ctx.fillRect(bx, by, Math.max(1, Math.round(bw * fr)), 3);
-        ctx.fillStyle = 'rgba(255,255,255,0.35)';
-        ctx.fillRect(bx, by, Math.max(1, Math.round(bw * fr)), 1);
-        // Status badges.
-        if (u.status) {
-          const badges = [];
-          const S = { burn: ['B', '#ff7030'], slow: ['S', '#80a0ff'], haste: ['H', '#60ff90'], stun: ['*', '#ffe040'], catalogued: ['C', '#ff4060'], stasis: ['∎', '#c0f0ff'], magdown: ['M', '#c080ff'] };
-          for (const k in u.status) if (u.status[k] && S[k]) badges.push(S[k]);
-          ctx.font = '7px "Press Start 2P", monospace';
-          ctx.textAlign = 'center';
-          badges.forEach(([ch, col], i) => {
-            const x = bx + 4 + i * 9;
-            ctx.fillStyle = '#101018';
-            ctx.fillRect(x - 4, by - 11, 9, 9);
-            ctx.fillStyle = col;
-            ctx.fillText(ch, x + 1, by - 3);
-          });
+    // HP bars, badges, emotes and the active marker: drawn after grading so they stay legible.
+    drawUnitHud(world, ui, now) {
+      const ctx = this.ctx;
+      for (const u of world.units) {
+        if (u.hidden || u._headY == null || (!u.alive && u.alpha <= 0)) continue;
+        const sx = u._sx, headY = u._headY;
+        if (u.status && u.status.stasis) {
+          ctx.fillStyle = Math.floor(now / 150) % 2 ? '#c4e4ff' : '#8cc0f0';
+          PXD.ellipseRing(ctx, sx, Math.round((headY + u._sy) / 2), 11, Math.round((u._sy - headY) / 2) + 3);
         }
-        if (u.carrying) {
-          // The seed they carry, pulsing.
-          const p = 0.6 + 0.4 * Math.sin(now / 150);
-          ctx.fillStyle = `rgba(255,40,60,${p * 0.5})`;
-          ctx.beginPath();
-          ctx.arc(sx + 12, headY + 16, 7, 0, 6.29);
-          ctx.fill();
+        if (ui.grid && u.alive && !u.prop && u.maxHp) {
+          const bw = u.big ? 24 : 16;
+          const bx = Math.round(sx - bw / 2);
+          const by = headY - 5;
+          ctx.fillStyle = '#0a0612';
+          ctx.fillRect(bx - 1, by - 1, bw + 2, 4);
+          const fr = Math.max(0, u.hp / u.maxHp);
+          const w = Math.max(1, Math.round(bw * fr));
+          ctx.fillStyle = fr > 0.5 ? '#488c34' : fr > 0.25 ? '#e88c28' : '#a02030';
+          ctx.fillRect(bx, by, w, 2);
+          ctx.fillStyle = fr > 0.5 ? '#a8d45c' : fr > 0.25 ? '#fce068' : '#f06c4c';
+          ctx.fillRect(bx, by, w, 1);
+          if (u.status) {
+            const S = { burn: ['B', '#f06c4c'], slow: ['S', '#8cc0f0'], haste: ['H', '#a8d45c'], stun: ['*', '#fce068'], catalogued: ['C', '#e0709c'], stasis: ['∎', '#c4e4ff'], magdown: ['M', '#bc84e4'] };
+            let i = 0;
+            for (const k in u.status) {
+              if (!u.status[k] || !S[k]) continue;
+              const x = bx + i * 8;
+              ctx.fillStyle = '#0a0612';
+              ctx.fillRect(x - 1, by - 10, 7, 9);
+              PXD.text(ctx, S[k][0], x, by - 9, S[k][1], { outline: false });
+              i++;
+            }
+          }
+          if (u.carrying) {
+            ctx.fillStyle = Math.floor(now / 150) % 2 ? '#f06c4c' : '#a02030';
+            PXD.disc(ctx, sx + 7, headY + 9, 2);
+          }
         }
-      }
-
-      if (u.emote) {
-        const age = now - u.emote.t0;
-        if (age > (u.emote.ms || 1400)) u.emote = null;
-        else {
-          const ey = headY - 18 - Math.min(6, age / 30);
-          ctx.fillStyle = '#fff';
-          ctx.strokeStyle = '#101018';
-          ctx.lineWidth = 2;
-          ctx.beginPath();
-          ctx.ellipse(sx + 10, ey, 13, 10, 0, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.stroke();
-          ctx.font = '10px "Press Start 2P", monospace';
-          ctx.textAlign = 'center';
-          ctx.fillStyle = u.emote.color || '#101018';
-          ctx.fillText(u.emote.text, sx + 10, ey + 5);
+        if (u.emote) {
+          const age = now - u.emote.t0;
+          if (age > (u.emote.ms || 1400)) u.emote = null;
+          else {
+            const ey = Math.round(headY - 9 - Math.min(3, age / 60));
+            const w = Math.max(7, u.emote.text.length * 6 + 3);
+            ctx.fillStyle = '#0a0612';
+            PXD.ellipse(ctx, sx + 6, ey, Math.ceil(w / 2) + 1, 6);
+            ctx.fillStyle = '#ffffff';
+            PXD.ellipse(ctx, sx + 6, ey, Math.ceil(w / 2), 5);
+            ctx.fillRect(sx + 2, ey + 5, 2, 2);
+            PXD.text(ctx, u.emote.text, sx + 6, ey - 3, u.emote.color || '#1a1226', { align: 'center', outline: false });
+          }
         }
+        if (world.active === u && u.alive && ui.grid) {
+          const ay = headY - 16 + (Math.floor(now / 250) % 2);
+          const col = u.team === 0 ? ['#c4e4ff', '#5c90dc', '#2c4488'] : ['#f8b0c8', '#d43c3c', '#6c1422'];
+          for (let r = 0; r < 6; r++) {
+            const hw = 5 - r;
+            ctx.fillStyle = '#0a0612';
+            ctx.fillRect(sx - hw - 1, ay + r, hw * 2 + 3, 1);
+          }
+          for (let r = 0; r < 5; r++) {
+            const hw = 4 - r;
+            ctx.fillStyle = col[1];
+            ctx.fillRect(sx - hw, ay + r, hw + 1, 1);
+            ctx.fillStyle = col[2];
+            ctx.fillRect(sx + 1, ay + r, hw, 1);
+          }
+          ctx.fillStyle = col[0];
+          ctx.fillRect(sx - 3, ay, 2, 1);
+        }
+        if (ui.facingFor === u) this.drawFacingArrows(u, sx, Math.round(this.unitScreenPos(u)[1]), now);
       }
-
-      if (isActive && u.alive && ui.grid) {
-        const ay = headY - 30 + Math.sin(now / 200) * 4;
-        const col = u.team === 0 ? ['#a8e8ff', '#48a8f0', '#2060b0'] : ['#ffc0c0', '#f05858', '#a02020'];
-        ctx.fillStyle = col[1];
-        ctx.beginPath();
-        ctx.moveTo(sx, ay + 14);
-        ctx.lineTo(sx - 7, ay + 2);
-        ctx.lineTo(sx, ay - 5);
-        ctx.lineTo(sx + 7, ay + 2);
-        ctx.closePath();
-        ctx.fill();
-        ctx.fillStyle = col[2];
-        ctx.beginPath();
-        ctx.moveTo(sx, ay + 14);
-        ctx.lineTo(sx + 7, ay + 2);
-        ctx.lineTo(sx, ay + 2);
-        ctx.closePath();
-        ctx.fill();
-        ctx.fillStyle = col[0];
-        ctx.fillRect(sx - 3, ay - 1, 2, 4);
-      }
-      if (ui.facingFor === u) this.drawFacingArrows(u, sx, Math.round(sy0), now);
     }
 
     drawFacingArrows(u, sx, sy, now) {
@@ -946,91 +1021,102 @@
       for (let f = 0; f < 4; f++) {
         const [fx, fy] = CT.DIRS[f];
         const [vx, vy] = this.vecToView(fx, fy);
-        const ax = sx + (vx - vy) * 26;
-        const ay = sy + (vx + vy) * 13;
+        const ax = sx + (vx - vy) * 13;
+        const ay = sy + (vx + vy) * 6;
         const on = u.face === f;
-        ctx.fillStyle = on ? `rgba(255,230,90,${0.8 + 0.2 * Math.sin(now / 120)})` : 'rgba(255,255,255,0.6)';
-        ctx.beginPath();
-        ctx.moveTo(ax + (vx - vy) * 8, ay + (vx + vy) * 4);
-        ctx.lineTo(ax - (vx + vy) * 6, ay + (vx - vy) * 3);
-        ctx.lineTo(ax + (vx + vy) * 6, ay - (vx - vy) * 3);
-        ctx.closePath();
-        ctx.fill();
-        ctx.strokeStyle = '#101018';
-        ctx.stroke();
+        const col = on ? (Math.floor(now / 150) % 2 ? '#fce068' : '#f8bc3c') : '#e4e8f0';
+        // small arrow head pointing outward along the iso direction
+        const px = vx - vy, py = (vx + vy) / 2;
+        for (let s = 0; s < 4; s++) {
+          ctx.fillStyle = '#0a0612';
+          ctx.fillRect(Math.round(ax + px * s - py * (4 - s) * 2) - 1, Math.round(ay + py * s + px * (4 - s) / 2) - 1, 3, 3);
+          ctx.fillRect(Math.round(ax + px * s + py * (4 - s) * 2) - 1, Math.round(ay + py * s - px * (4 - s) / 2) - 1, 3, 3);
+        }
+        ctx.fillStyle = col;
+        for (let s = 0; s < 4; s++) {
+          ctx.fillRect(Math.round(ax + px * s - py * (4 - s) * 2), Math.round(ay + py * s + px * (4 - s) / 2), 1, 1);
+          ctx.fillRect(Math.round(ax + px * s + py * (4 - s) * 2), Math.round(ay + py * s - px * (4 - s) / 2), 1, 1);
+        }
       }
+    }
+
+    // ---- Unit animation helpers (called by battle & scene code) ---------------------------
+    // Play a one-shot animation; resolves when it ends. opts.hold keeps the last frame.
+    anim(u, name, opts = {}) {
+      u.anim = { name, t0: performance.now(), hold: !!opts.hold, charge: !!opts.charge };
+      const spr = CT.getSprite(u.sprite || u.key);
+      const a = spr.rig && spr.anims[name];
+      return a && !opts.charge && !a.loop ? a.total : 0;
+    }
+    stopAnim(u) {
+      u.anim = null;
     }
 
     // ---- Effects -------------------------------------------------------------------
     floatText(u, text, color, big) {
       const [sx, sy] = this.project(u.x, u.y, u.rh);
-      this.floaters.push({ x: sx, y: sy - 58 - this.floaters.filter((f) => performance.now() - f.t0 < 300).length * 12, text, color, t0: performance.now(), big });
+      const now = performance.now();
+      // Stack above any recent text on the same unit.
+      let y = Math.round(sy - 38);
+      for (const f of this.floaters) if (now - f.t0 < 700 && Math.abs(f.x - sx) < 14) y = Math.min(y, f.y - (big ? 17 : 10));
+      this.floaters.push({ x: Math.round(sx), y, text, color, t0: now, big });
     }
 
     drawFloaters(now) {
       const ctx = this.ctx;
-      ctx.textAlign = 'center';
       this.floaters = this.floaters.filter((f) => now - f.t0 < 1300);
       for (const f of this.floaters) {
-        ctx.font = `${f.big ? 22 : 16}px "Press Start 2P", monospace`;
         const k = (now - f.t0) / 1300;
-        const y = f.y - (k < 0.2 ? Math.sin((k / 0.2) * Math.PI) * 14 : 0) - k * 10;
-        ctx.globalAlpha = k > 0.75 ? 1 - (k - 0.75) * 4 : 1;
-        ctx.lineWidth = 5;
-        ctx.strokeStyle = '#100818';
-        ctx.strokeText(f.text, f.x, y);
-        ctx.fillStyle = f.color;
-        ctx.fillText(f.text, f.x, y);
-        ctx.globalAlpha = 1;
+        if (k > 0.8 && Math.floor(now / 50) % 2) continue; // blink out
+        const y = f.y - (k < 0.2 ? Math.round(Math.sin((k / 0.2) * Math.PI) * 7) : 0) - Math.round(k * 5);
+        PXD.text(ctx, f.text, f.x, y, f.color, { align: 'center', scale: f.big ? 2 : 1 });
       }
+    }
+
+    // Pooled pixel particles. p: { x, y, vx, vy, g, t0, life, ramp, s, heart, drag }
+    spawn(p) {
+      if (this.parts.length > 900) this.parts.shift();
+      this.parts.push(p);
     }
 
     burst(x, y, h, elem, opts = {}) {
-      const [sx, sy] = this.project(x, y, h);
-      const colors = {
-        fire: ['#ff5020', '#ffa030', '#ffe060'],
-        ice: ['#a0e8ff', '#e0f8ff', '#60b0f0'],
-        lightning: ['#fff8a0', '#ffffff', '#f0e040'],
-        shadow: ['#a060f0', '#602090', '#e0a0ff'],
-        water: ['#4090f0', '#a0d0ff', '#2060c0'],
-        laser: ['#ff60c0', '#60f0ff', '#ffffff'],
-        heal: ['#80ff90', '#e0ffe0', '#40d060'],
-        slash: ['#ffffff', '#d0e0ff', '#a0b0ff'],
-        hit: ['#ffffff', '#ffe0a0', '#ffb060'],
-        porcelain: ['#ffffff', '#d8e8ff', '#80a0ff'],
-        lavos: ['#ff2040', '#ff8040', '#400010'],
-        charm: ['#ff80c0', '#ffc0e0', '#ff4090'],
-        glass: ['#e0f8ff', '#ffffff', '#a0d0f0'],
-      }[elem] || ['#ffffff'];
+      const [sx0, sy0] = this.project(x, y, h);
+      const sx = Math.round(sx0), sy = Math.round(sy0) - 12;
+      const ramp = rampOf(elem);
       const now = performance.now();
-      const n = opts.n || (elem === 'hit' ? 14 : 30);
+      const up = elem === 'heal' || elem === 'charm';
+      const n = opts.n || (elem === 'hit' ? 12 : 26);
       for (let i = 0; i < n; i++) {
         const a = Math.random() * Math.PI * 2;
-        const sp = 0.6 + Math.random() * 2.6;
-        this.particles.push({
-          x: sx,
-          y: sy - 20,
+        const sp = 0.35 + Math.random() * 1.3;
+        this.spawn({
+          x: sx, y: sy,
           vx: Math.cos(a) * sp,
-          vy: elem === 'heal' || elem === 'charm' ? -0.8 - Math.random() * 1.4 : Math.sin(a) * sp * 0.7 - 1.3,
-          g: elem === 'heal' || elem === 'charm' ? -0.01 : 0.09,
-          c: colors[i % colors.length],
-          t0: now,
-          life: 500 + Math.random() * 500,
-          s: elem === 'hit' ? 2 : 2 + Math.floor(Math.random() * 2),
-          heart: elem === 'charm',
+          vy: up ? -0.4 - Math.random() * 0.7 : Math.sin(a) * sp * 0.7 - 0.7,
+          g: up ? -0.004 : 0.045,
+          t0: now + (elem === 'ice' || elem === 'heal' ? Math.random() * 120 : 0),
+          life: 380 + Math.random() * 460,
+          ramp, heart: elem === 'charm', drag: 0.985,
         });
       }
-      const glow = { fire: '255,120,40', ice: '140,220,255', lightning: '255,250,160', shadow: '170,90,255', water: '80,150,255', laser: '255,120,220', heal: '120,255,150', slash: '220,230,255', hit: '255,240,200', lavos: '255,40,60', porcelain: '200,220,255', charm: '255,120,200', glass: '220,245,255' }[elem] || '255,255,255';
-      this.flashes.push({ x: sx, y: sy - 18, c: glow, t0: now, r: elem === 'hit' ? 22 : opts.r || 40 });
-      if (elem === 'lightning') this.bolts.push({ x: sx, y: sy - 16, t0: now });
-      if (elem !== 'heal' && elem !== 'charm' && !opts.noShake) this.shake(elem === 'hit' ? 3 : 6);
+      this.rings.push({ x: sx, y: sy, t0: now, ms: elem === 'hit' ? 180 : 320, r: Math.round((opts.r || (elem === 'hit' ? 22 : 40)) / 2), ramp });
+      if (elem === 'lightning') this.bolts.push({ x: sx, y: sy + 4, t0: now });
+      if (!up && !opts.noShake) this.shake(elem === 'hit' ? 3 : 6);
+    }
+
+    // Charge-up: sparks spiral in to a unit's hands (or its middle) for `ms`.
+    charge(u, elem = 'shadow', ms = 700) {
+      const now = performance.now();
+      const ramp = rampOf(elem);
+      for (let i = 0; i < 22; i++) {
+        this.orbits.push({ u, t0: now + (i / 22) * ms * 0.7, life: 300 + Math.random() * 220, a0: Math.random() * Math.PI * 2, r0: 9 + Math.random() * 8, w: (0.012 + Math.random() * 0.008) * (i % 2 ? 1 : -1), ramp });
+      }
     }
 
     projectile(from, to, kind, dur) {
-      this.shots.push({ from, to, kind, t0: performance.now(), dur });
+      this.shots.push({ from, to, kind, t0: performance.now(), dur, ramp: rampOf(kind), last: 0 });
     }
 
-    // Grey time-tear with red scanlines (or a blue gate when grey=false).
     addRift(x, y, h, opts = {}) {
       const r = { x, y, h, t0: performance.now(), grey: opts.grey !== false, size: opts.size || 1, id: opts.id || 'rift' };
       this.rifts.push(r);
@@ -1039,44 +1125,35 @@
     removeRift(id) {
       this.rifts = this.rifts.filter((r) => r.id !== id);
     }
+    // Time tear: a pixel lens of grey static with red scanlines (or a blue gate).
     drawRift(r, now) {
       const ctx = this.ctx;
-      const [sx, sy] = this.project(r.x, r.y, r.h);
+      const [sx0, sy0] = this.project(r.x, r.y, r.h);
+      const sx = Math.round(sx0);
       const grow = Math.max(0.05, Math.min(1, (now - r.t0) / 600)) * r.size;
-      const w = 22 * grow;
-      const hgt = Math.max(3, 46 * grow);
-      const cy = sy - 34;
-      ctx.save();
-      ctx.globalCompositeOperation = 'lighter';
-      const g = ctx.createRadialGradient(sx, cy, 2, sx, cy, hgt);
-      g.addColorStop(0, r.grey ? 'rgba(255,60,80,0.45)' : 'rgba(80,160,255,0.5)');
-      g.addColorStop(1, 'rgba(0,0,0,0)');
-      ctx.fillStyle = g;
-      ctx.fillRect(sx - hgt, cy - hgt, hgt * 2, hgt * 2);
-      ctx.restore();
-      ctx.save();
-      ctx.beginPath();
-      for (let i = 0; i <= 20; i++) {
-        const t = i / 20;
-        const yy = cy - hgt + t * hgt * 2;
-        const xx = sx + Math.sin(t * Math.PI) * w * (0.8 + 0.2 * Math.sin(now / 90 + i));
-        if (i === 0) ctx.moveTo(xx, yy);
-        else ctx.lineTo(xx, yy);
+      const w = 11 * grow;
+      const hgt = Math.max(2, Math.round(23 * grow));
+      const cy = Math.round(sy0) - 17;
+      const par = Math.floor(now / 90) % 2;
+      // dithered glow
+      ctx.fillStyle = r.grey ? '#a02030' : '#3c64b4';
+      for (let y = -hgt - 4; y <= hgt + 4; y++)
+        for (let x = -Math.round(w) - 5; x <= Math.round(w) + 5; x++)
+          if (((x + y + par) & 1) === 0 && (x * x) / ((w + 5) * (w + 5)) + (y * y) / ((hgt + 4) * (hgt + 4)) < 1) ctx.fillRect(sx + x, cy + y, 1, 1);
+      for (let y = -hgt; y <= hgt; y++) {
+        const t = (y + hgt) / (hgt * 2);
+        const hw = Math.round(Math.sin(t * Math.PI) * w * (0.85 + 0.15 * Math.sin(now / 90 + y)));
+        if (hw <= 0) continue;
+        ctx.fillStyle = '#0a0612';
+        ctx.fillRect(sx - hw - 1, cy + y, hw * 2 + 2, 1);
+        const band = (y + Math.floor(now / 40)) % 4;
+        ctx.fillStyle = r.grey ? (band < 2 ? '#d43c3c' : '#6e7090') : band < 2 ? '#8cc0f0' : '#2c4488';
+        ctx.fillRect(sx - hw, cy + y, hw * 2, 1);
+        if ((y & 1) === 0) {
+          ctx.fillStyle = r.grey ? '#bcc0d4' : '#c4e4ff';
+          ctx.fillRect(sx - hw + Math.floor(hash(y, Math.floor(now / 70), 3) * hw * 2), cy + y, 2, 1);
+        }
       }
-      for (let i = 20; i >= 0; i--) {
-        const t = i / 20;
-        const yy = cy - hgt + t * hgt * 2;
-        ctx.lineTo(sx - Math.sin(t * Math.PI) * w * (0.8 + 0.2 * Math.cos(now / 80 + i)), yy);
-      }
-      ctx.closePath();
-      ctx.fillStyle = r.grey ? '#8c8c98' : '#2040a0';
-      ctx.fill();
-      ctx.clip();
-      for (let yy = Math.floor(cy - hgt); yy < cy + hgt; yy += 3) {
-        ctx.fillStyle = r.grey ? ((yy + Math.floor(now / 40)) % 6 < 3 ? 'rgba(255,40,60,0.7)' : 'rgba(40,40,50,0.6)') : `rgba(140,220,255,${0.3 + 0.3 * Math.sin(yy / 4 + now / 100)})`;
-        ctx.fillRect(sx - w - 2, yy, w * 2 + 4, 1);
-      }
-      ctx.restore();
     }
 
     // Destruction Rain: needles falling onto a set of tiles.
@@ -1084,11 +1161,11 @@
       const now = performance.now();
       for (const t of tiles) {
         const [sx, sy] = this.project(t.x, t.y, this.tileHeight(t));
-        for (let i = 0; i < 3; i++) this.rains.push({ x: sx + (Math.random() - 0.5) * 30, y: sy, t0: now + i * 90 + Math.random() * 200, ms: 380 });
+        for (let i = 0; i < 3; i++) this.rains.push({ x: Math.round(sx + (Math.random() - 0.5) * 15), y: Math.round(sy), t0: now + i * 90 + Math.random() * 200, ms: 380 });
       }
     }
 
-    // Full-screen tech spectacles: 'eclipse', 'luminaire', 'blackhole', 'darkmatter'.
+    // Full-screen tech spectacles: 'eclipse', 'luminaire', 'blackhole', 'darkmatter', 'erase'.
     bigFx(kind, ms = 1400) {
       this.big.push({ kind, t0: performance.now(), ms });
     }
@@ -1098,38 +1175,38 @@
       if (k < 0 || k > 1) return;
       const W = this.W;
       const H = this.H;
+      const step = (v) => Math.round(v * 6) / 6;
       if (b.kind === 'eclipse') {
-        ctx.fillStyle = `rgba(0,0,0,${Math.sin(k * Math.PI) * 0.7})`;
+        ctx.fillStyle = `rgba(0,0,0,${step(Math.sin(k * Math.PI) * 0.7)})`;
         ctx.fillRect(0, 0, W, H);
-        ctx.fillStyle = '#000';
-        const rw = W * Math.min(1, k * 2.2);
-        ctx.fillRect(W / 2 - rw / 2, H * 0.3 - 6, rw, 12);
-        ctx.fillStyle = 'rgba(160,80,255,0.8)';
-        ctx.fillRect(W / 2 - rw / 2, H * 0.3 - 8, rw, 2);
+        const rw = Math.round(W * Math.min(1, k * 2.2));
+        ctx.fillStyle = '#0a0612';
+        ctx.fillRect(Math.round(W / 2 - rw / 2), Math.round(H * 0.3) - 3, rw, 6);
+        ctx.fillStyle = '#9450c0';
+        ctx.fillRect(Math.round(W / 2 - rw / 2), Math.round(H * 0.3) - 4, rw, 1);
         if (k > 0.35) {
           const s = (k - 0.35) / 0.65;
-          ctx.strokeStyle = `rgba(255,255,255,${1 - s})`;
-          ctx.lineWidth = 6;
-          ctx.beginPath();
-          ctx.moveTo(W * 0.1 + s * W * 0.4, H * 0.1);
-          ctx.lineTo(W * 0.5 + s * W * 0.3, H * 0.9);
-          ctx.moveTo(W * 0.9 - s * W * 0.4, H * 0.1);
-          ctx.lineTo(W * 0.5 - s * W * 0.3, H * 0.9);
-          ctx.stroke();
+          ctx.fillStyle = s < 0.5 ? '#ffffff' : '#e0c0fc';
+          PXD.line(ctx, W * 0.1 + s * W * 0.4, H * 0.1, W * 0.5 + s * W * 0.3, H * 0.9, 3);
+          PXD.line(ctx, W * 0.9 - s * W * 0.4, H * 0.1, W * 0.5 - s * W * 0.3, H * 0.9, 3);
         }
       } else if (b.kind === 'luminaire') {
-        const r = k * W;
-        const g = ctx.createRadialGradient(W / 2, H / 2, r * 0.6, W / 2, H / 2, r);
-        g.addColorStop(0, 'rgba(255,255,200,0)');
-        g.addColorStop(0.8, `rgba(255,255,220,${0.7 * (1 - k)})`);
-        g.addColorStop(1, 'rgba(255,255,255,0)');
-        ctx.fillStyle = g;
-        ctx.fillRect(0, 0, W, H);
+        const r = Math.round(k * W * 0.7);
+        ctx.fillStyle = k < 0.5 ? '#fff4b0' : '#fce068';
+        const par = Math.floor(now / 50) % 2;
+        for (let y = -r; y <= r; y += 1) {
+          const hw = Math.round(Math.sqrt(Math.max(0, r * r - y * y)));
+          const inner = Math.round(Math.sqrt(Math.max(0, (r - 6) * (r - 6) - y * y)));
+          for (let x = inner; x <= hw; x++) if (((x + y + par) & 1) === 0) {
+            ctx.fillRect(W / 2 + x, H / 2 + y, 1, 1);
+            ctx.fillRect(W / 2 - x, H / 2 + y, 1, 1);
+          }
+        }
       } else if (b.kind === 'blackhole' || b.kind === 'darkmatter') {
-        ctx.fillStyle = `rgba(20,0,40,${Math.sin(k * Math.PI) * 0.5})`;
+        ctx.fillStyle = `rgba(20,0,40,${step(Math.sin(k * Math.PI) * 0.5)})`;
         ctx.fillRect(0, 0, W, H);
       } else if (b.kind === 'erase') {
-        ctx.fillStyle = `rgba(255,255,255,${Math.sin(k * Math.PI) * 0.6})`;
+        ctx.fillStyle = `rgba(255,255,255,${step(Math.sin(k * Math.PI) * 0.6)})`;
         ctx.fillRect(0, 0, W, H);
       }
     }
@@ -1137,47 +1214,74 @@
     drawEffects(now) {
       const ctx = this.ctx;
       ctx.save();
-      ctx.globalCompositeOperation = 'lighter';
-      this.flashes = this.flashes.filter((f) => now - f.t0 < 450);
-      for (const f of this.flashes) {
-        const k = (now - f.t0) / 450;
-        const r = f.r * (0.4 + k * 0.8);
-        const g = ctx.createRadialGradient(f.x, f.y, 0, f.x, f.y, r);
-        g.addColorStop(0, `rgba(${f.c},${0.8 * (1 - k)})`);
-        g.addColorStop(1, `rgba(${f.c},0)`);
-        ctx.fillStyle = g;
-        ctx.fillRect(f.x - r, f.y - r, r * 2, r * 2);
+      // Impact rings: expanding 1px pixel circles walking down their ramp.
+      this.rings = this.rings.filter((r) => now - r.t0 < r.ms);
+      for (const r of this.rings) {
+        const k = (now - r.t0) / r.ms;
+        const rad = Math.max(1, Math.round(r.r * (0.3 + k * 0.7)));
+        ctx.fillStyle = rampAt(r.ramp, k);
+        PXD.ellipseRing(ctx, r.x, r.y, rad, Math.max(1, Math.round(rad * 0.75)));
+        if (k < 0.25) {
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(r.x - 1, r.y - 1, 3, 3);
+          ctx.fillRect(r.x - 3, r.y, 7, 1);
+          ctx.fillRect(r.x, r.y - 3, 1, 7);
+        }
       }
 
-      this.particles = this.particles.filter((p) => now - p.t0 < p.life);
-      for (const p of this.particles) {
-        const t = (now - p.t0) / 16;
-        const x = p.x + p.vx * t;
-        const y = p.y + p.vy * t + 0.5 * p.g * t * t;
-        ctx.globalAlpha = 1 - (now - p.t0) / p.life;
-        ctx.fillStyle = p.c;
+      // Charge spirals.
+      this.orbits = this.orbits.filter((o) => now - o.t0 < o.life);
+      for (const o of this.orbits) {
+        const t = now - o.t0;
+        if (t < 0) continue;
+        const u = o.u, f = u._f;
+        if (!f) continue;
+        const k = t / o.life;
+        const cx = u._sx - f.cx + (f.glow ? f.glow.x : f.cx);
+        const cy = u._sy - f.footY + 2 + (f.glow ? f.glow.y : f.footY - 18);
+        const rad = o.r0 * (1 - k);
+        const a = o.a0 + o.w * t;
+        ctx.fillStyle = rampAt(o.ramp, k * 0.8);
+        ctx.fillRect(Math.round(cx + Math.cos(a) * rad), Math.round(cy + Math.sin(a) * rad * 0.7), 1, 1);
+      }
+
+      // Particles (analytic motion, colour by age along the ramp).
+      this.parts = this.parts.filter((p) => now - p.t0 < p.life);
+      for (const p of this.parts) {
+        const age = now - p.t0;
+        if (age < 0) continue;
+        const t = age / 16;
+        const x = Math.round(p.x + p.vx * t);
+        const y = Math.round(p.y + p.vy * t + 0.5 * p.g * t * t);
+        const k = age / p.life;
+        ctx.fillStyle = rampAt(p.ramp, k);
         if (p.heart) {
-          ctx.fillRect(Math.round(x) - 2, Math.round(y), 2, 2);
-          ctx.fillRect(Math.round(x) + 1, Math.round(y), 2, 2);
-          ctx.fillRect(Math.round(x) - 1, Math.round(y) + 2, 3, 2);
-        } else ctx.fillRect(Math.round(x), Math.round(y), p.s, p.s);
+          ctx.fillRect(x - 1, y, 1, 1);
+          ctx.fillRect(x + 1, y, 1, 1);
+          ctx.fillRect(x - 1, y + 1, 3, 1);
+          ctx.fillRect(x, y + 2, 1, 1);
+        } else {
+          ctx.fillRect(x, y, 1, 1);
+          if (k < 0.3) {
+            // short streak behind fast particles
+            const tx = Math.round(p.x + p.vx * (t - 1.5)), ty = Math.round(p.y + p.vy * (t - 1.5) + 0.5 * p.g * (t - 1.5) * (t - 1.5));
+            if (tx !== x || ty !== y) {
+              ctx.fillStyle = rampAt(p.ramp, k + 0.3);
+              ctx.fillRect(tx, ty, 1, 1);
+            }
+          }
+        }
       }
-      ctx.globalAlpha = 1;
 
+      // Lightning: jagged pixel polyline, thick yellow under a white core.
       this.bolts = this.bolts.filter((b) => now - b.t0 < 320);
       for (const b of this.bolts) {
-        for (const [w, col] of [[7, 'rgba(255,240,120,0.35)'], [3, '#ffffff']]) {
-          ctx.strokeStyle = col;
-          ctx.lineWidth = w;
-          ctx.beginPath();
-          let x = b.x;
-          ctx.moveTo(x + 20, 0);
-          for (let y = 0; y < b.y; y += 22) {
-            x = b.x + (hash(Math.floor(now / 50), y, 3) - 0.5) * 28;
-            ctx.lineTo(x, y);
-          }
-          ctx.lineTo(b.x, b.y);
-          ctx.stroke();
+        const pts = [[b.x + 10, 0]];
+        for (let y = 11; y < b.y; y += 11) pts.push([b.x + (hash(Math.floor(now / 50), y, 3) - 0.5) * 14, y]);
+        pts.push([b.x, b.y]);
+        for (const [w, col] of [[3, '#f8bc3c'], [1, '#ffffff']]) {
+          ctx.fillStyle = col;
+          for (let i = 1; i < pts.length; i++) PXD.line(ctx, pts[i - 1][0], pts[i - 1][1], pts[i][0], pts[i][1], w);
         }
       }
 
@@ -1185,32 +1289,35 @@
       for (const r of this.rains) {
         const k = (now - r.t0) / r.ms;
         if (k < 0) continue;
-        const y = r.y - 260 * (1 - k);
-        ctx.strokeStyle = 'rgba(255,60,80,0.9)';
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.moveTo(r.x, y - 26);
-        ctx.lineTo(r.x, y);
-        ctx.stroke();
+        const y = Math.round(r.y - 130 * (1 - k));
+        ctx.fillStyle = '#6c1422';
+        ctx.fillRect(r.x - 1, y - 13, 3, 13);
+        ctx.fillStyle = '#f06c4c';
+        ctx.fillRect(r.x, y - 13, 1, 13);
         if (k > 0.9) {
-          ctx.fillStyle = 'rgba(255,120,90,0.8)';
-          ctx.fillRect(r.x - 6, r.y - 4, 12, 4);
+          ctx.fillStyle = '#f06c4c';
+          ctx.fillRect(r.x - 3, r.y - 2, 7, 2);
         }
       }
 
+      // Projectiles: glowing pixel orb with a sparkling trail.
       this.shots = this.shots.filter((s) => now - s.t0 < s.dur);
       for (const s of this.shots) {
         const k = (now - s.t0) / s.dur;
-        const x = s.from[0] + (s.to[0] - s.from[0]) * k;
-        const y = s.from[1] + (s.to[1] - s.from[1]) * k - Math.sin(k * Math.PI) * 24;
-        const col = { shot: '255,230,120', harpoon: '220,230,255', bolt: '220,230,255', dark: '170,90,255', seed: '255,40,60' }[s.kind] || '255,255,255';
-        const g = ctx.createRadialGradient(x, y, 0, x, y, 10);
-        g.addColorStop(0, `rgba(${col},0.9)`);
-        g.addColorStop(1, 'rgba(255,255,255,0)');
-        ctx.fillStyle = g;
-        ctx.fillRect(x - 10, y - 10, 20, 20);
-        ctx.fillStyle = '#fff';
-        ctx.fillRect(Math.round(x) - 1, Math.round(y) - 1, 3, 3);
+        const x = Math.round(s.from[0] + (s.to[0] - s.from[0]) * k);
+        const y = Math.round(s.from[1] + (s.to[1] - s.from[1]) * k - Math.sin(k * Math.PI) * 12);
+        if (now - s.last > 30) {
+          s.last = now;
+          this.spawn({ x, y, vx: (Math.random() - 0.5) * 0.3, vy: (Math.random() - 0.5) * 0.3, g: 0, t0: now, life: 220 + Math.random() * 160, ramp: s.ramp });
+        }
+        const r = s.ramp, f = Math.floor(now / 60) % 2;
+        ctx.fillStyle = r[3];
+        for (const [dx, dy] of [[-2, 0], [2, 0], [0, -2], [0, 2]]) ctx.fillRect(x + dx, y + dy, 1, 1);
+        ctx.fillStyle = r[1];
+        ctx.fillRect(x - 1, y, 3, 1);
+        ctx.fillRect(x, y - 1, 1, 3);
+        ctx.fillStyle = f ? r[0] : r[1];
+        ctx.fillRect(x, y, 1, 1);
       }
       ctx.restore();
     }

@@ -1,0 +1,43 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Rig sheet</title>
+<style>body{margin:0;background:#1a1226;color:#e4e8f0;font:12px monospace}canvas{image-rendering:pixelated;display:block}</style>
+<canvas id="c"></canvas>
+<script src="../public/js/pixel.js"></script>
+<script src="../public/js/pal.js"></script>
+<script src="../public/js/rig.js"></script>
+<script src="../public/js/rigs_party.js"></script>
+<script src="../public/js/rigs_allies.js"></script>
+<script src="../public/js/rigs_enemies.js"></script>
+<script src="../public/js/rigs_npcs.js"></script>
+<script>
+// usage: rig.html?key=crono&scale=5  — every animation, SE / NE / SW rows.
+const q = new URLSearchParams(location.search);
+const keys = (q.get('key') || 'crono').split(',');
+const S = +(q.get('scale') || 4);
+const only = q.get('only') ? q.get('only').split(',') : null;
+const cv = document.getElementById('c'), g = cv.getContext('2d');
+const rows = [];
+for (const key of keys) {
+  const def = CT.RIGS[key];
+  if (!def) { console.error('missing rig', key); continue; }
+  const spr = CT.RIG.makeSprite(def);
+  for (const dir of ['south-east', 'north-east']) {
+    const row = [];
+    for (const name in spr.anims) if (!only || only.includes(name)) for (const f of spr.anims[name][dir]) row.push({ f, name });
+    rows.push({ key, dir, row });
+  }
+}
+const fw = CT.RIG.SIZE + 2, fh = CT.RIG.SIZE + 2;
+const cols = Math.max(...rows.map((r) => r.row.length));
+cv.width = cols * fw * S; cv.height = rows.length * fh * S;
+g.imageSmoothingEnabled = false;
+rows.forEach((r, j) => r.row.forEach(({ f }, i) => {
+  g.fillStyle = (i + j) % 2 ? '#3a3a52' : '#52526e';
+  g.fillRect(i * fw * S, j * fh * S, fw * S, fh * S);
+  g.fillStyle = '#6e7090';
+  g.fillRect(i * fw * S, (j * fh + f.footY) * S, fw * S, S); // ground line
+  g.drawImage(f.img, i * fw * S, j * fh * S, fw * S, fh * S);
+}));
+window.READY = true;
+</script>
