@@ -7,7 +7,7 @@
     // hair: outline, dark, mid, orange, yellow
     H: '#580000', r: '#bc0038', R: '#e23229', o: '#ff8c00', y: '#ffc90e',
     // headband / eye whites
-    W: '#ffffff', w: '#c7c7a3',
+    W: '#ffffff', e: '#c7c7a3',
     // skin: light, mid, shade, lines
     F: '#ffcc9c', S: '#ff8468', s: '#af584a', j: '#230c08',
     // eyes
@@ -16,6 +16,8 @@
     Y: '#f2be36', n: '#d57a1f', N: '#882e13',
     // body outline, tunic light/mid/dark
     p: '#281820', T: '#74b5c3', U: '#468fa5', Q: '#1e3a3f',
+    // shoulder caps (dark green)
+    V: '#1c2a1d', w: '#37502f',
     // belt, buckle
     b: '#402038', B: '#553344', G: '#ffc90e', z: '#8f5673',
     // leg outline, wraps light/mid/dark
@@ -38,21 +40,22 @@
     '..HRrHoRrHRrHoRrHRrrH',
     '..HHRHRrHoRrHRrHRrHrH',
     '...HRrHRrHRrHRrHRrHH',
-    '...HRHRrHWWWwHrRHrRH',
+    '...HRHRrHWWWeHrRHrRH',
     '....HrHsSSsSSsSHRrH',
-    '....HRHjwksskwjHRH',
+    '....HRHjeksskejHRH',
     '.....HSjWgSSgWjSj',
     '.....HsSFFsFFSsH',
     '......jSSSjjSSj',
     '......pYjsssjYp',
     '.....pQnYYYYYnQp',
-    '..pQQpQUTTnYnUUUQpQQp',
-    '..pQQppUTTUnUUUQppQQp',
-    '..pSSppUTUTUQUUQppSSp',
-    '..pSFp.pUTUQUUQp.pSSp',
+    '....pQUTnnYYnnUUQp',
+    '...pVQUTTUQUUUUQQVp',
+    '...pwVpUTUQUUUQpVwp',
+    '...pSSppUTUQUUQppSSp',
+    '..pSSp.pUTUQUUQp.pSSp',
     '..pSFp.pBBBGBBBp.pFSp',
     '..prrp.pbbbGbbbp.prrp',
-    '..prrppQUTTUQUUQpprrp',
+    '..prrppQUTUQUTUQpprrp',
     '..pFFppQUTUQUUTQppFFp',
     '...pp.pQUUTQUUTQp.pp',
     '......pQUUUQUUUQp',
@@ -103,7 +106,7 @@
     // scarf ends trailing to the right
     for (const [x, y, c] of [[16, 17, 'n'], [17, 17, 'Y'], [17, 18, 'Y'], [18, 18, 'N'], [18, 19, 'n'], [19, 19, 'p'], [17, 16, 'p'], [18, 17, 'p'], [19, 18, 'p']]) put(x, y, c);
     // small pouch hanging below the belt on the right hip
-    for (const [x, y, c] of [[13, 26, 'p'], [14, 26, 'p'], [13, 27, 'z'], [14, 27, 'B'], [15, 27, 'p'], [13, 28, 'B'], [14, 28, 'b'], [15, 28, 'p'], [13, 29, 'p'], [14, 29, 'p']]) put(x, y, c);
+    for (const [x, y, c] of [[12, 27, 'p'], [13, 27, 'p'], [12, 28, 'z'], [13, 28, 'B'], [14, 28, 'p'], [12, 29, 'B'], [13, 29, 'b'], [14, 29, 'p'], [12, 30, 'p'], [13, 30, 'p']]) put(x, y, c);
     return g.map((r) => r.join(''));
   };
 
