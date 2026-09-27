@@ -303,7 +303,7 @@
     ];
     if (p === 4) {
       npcs.push({ id: 'iselle', talk: [
-        say('iselle', 'neutral', `Your old man sleeps standing up. The Curator would have loved him. Entry… no. I'm done numbering people.`),
+        say('iselle', 'neutral', `Your guru sleeps standing up. The Curator would have loved him. Entry… no. I'm done numbering people.`),
         say('iselle', 'determined', `When you're ready: the grey door. I'll walk in front. I know the halls.`),
       ] });
     }
@@ -791,9 +791,9 @@
       say('frog', 'neutral', `Thou wilt be nothing of the sort.`),
       say('magus', 'neutral', `No.`),
       ['join', 'magus'],
+      ['popup', `Magus fights beside you now. He has new combo techs with Crono and Frog. He won't call them that.`],
       ['unlock', 'shadow_cyclone'],
       ['unlock', 'ice_water'],
-      ['popup', `New dual techs with Magus. He won't call them that.`],
       ['field', {
         leader: 'crono',
         hint: 'Head north to the Zeal wreckage.',
@@ -871,11 +871,13 @@
     script: [
       ['camera', 'iselle', 0],
       ['fade', 'in', 800],
-      say('iselle', 'sad', `The seeds were never the plan. The seeds were the *bait*. Three eras, three heroes pulled out of their homes, all four of you in one place, all your techs and blades logged and measured while you fought me.`),
+      say('iselle', 'sad', `The seeds were never the plan. They were the *bait*. Three eras. Three heroes pulled out of their homes.`),
+      say('iselle', 'sad', `All four of you in one place, every blade and spell logged while you fought me.`),
       ['wait', 700],
       say('iselle', 'sad', `It needed a complete entry. It has one now. And it's opening the door itself.`),
       say('frog', 'angry', `To what end?`),
-      say('iselle', 'neutral', `The Hollow can't stay a pocket forever. It needs a *host* timeline. It was going to use the seeds. Now it's going to use *you.* The thing that ended Lavos, kept in a case, forever. The Curator's final exhibit. Every other year can be sanded off.`),
+      say('iselle', 'neutral', `The Hollow can't stay a pocket forever. It needs a *host* timeline. It was going to use the seeds.`),
+      say('iselle', 'neutral', `Now it's going to use *you.* The ones who ended Lavos, kept in a case. Its final exhibit. Every other year can be sanded off.`),
       say('ayla', 'angry', `Ayla no live in box.`),
       ['move', 'magus', '@iselle'],
       ['face', 'magus', 'iselle'],
@@ -886,8 +888,11 @@
       say('magus', 'angry', `Then let it. I've been *known* by monsters before. It never once helped them.`),
       ['choice', ['Offer a hand', 'Wait'], [
         [
+          ['move', 'crono', '@iselle'],
           ['face', 'crono', 'iselle'],
-          ['anim', 'crono', 'point'],
+          ['anim', 'crono', 'kneel'],
+          ['wait', 600],
+          ['anim', 'crono', 'stand'],
           ['despawn', 'iselle'],
           ['spawn', { id: 'iselle', at: '@iselle', face: 'S' }],
           say('iselle', 'determined', `…Corin would have liked you. He liked idiots.`),
@@ -935,6 +940,11 @@
       ['camera', '@door_grey', 900],
       ['wait', 800],
       ['sfx', 'sfx_hollow_gate'],
+      ['face', 'iselle', 'crono'],
+      say('iselle', 'determined', `Stay close. Past this door, nothing stays where you left it. Not even you.`),
+      ['anim', 'crono', 'nod'],
+      ['face', 'gaspar', 'crono'],
+      say('gaspar', 'sad', `Mind the lamp, boy. I'll keep it lit.`),
       ['face', 'iselle', 'N'],
       ['move', 'crono', '@door_grey', { nowait: true }],
       ['move', 'frog', '@door_grey', { nowait: true }],
@@ -1069,7 +1079,8 @@
       ['wait', 1500],
       V(`…HE IS INTACT.`),
       ['face', 'magus', 'curator'],
-      say('magus', 'neutral', `I'm going to say this once, and I'm going to say it to the thing that thought a hollow statue was my sister. Nothing you keep is kept. It's only *stopped.* And I have spent my whole life fighting things that wanted the world stopped.`),
+      say('magus', 'neutral', `I'll say this once, to the thing that thought a hollow statue was my sister.`),
+      say('magus', 'angry', `Nothing you keep is kept. It's only *stopped.* And I have spent my whole life killing things that wanted the world stopped.`),
       ['choice', ['Draw sword'], [[['anim', 'crono', 'draw_sword']]], 'c_final'],
       ['anim', 'frog', 'draw_sword'],
       ['sfx', 'sfx_kick'],
@@ -1077,7 +1088,8 @@
       ['sfx', 'sfx_dark_mist'],
       ['emote', 'magus', '!'],
       ['sfx', 'sfx_sword_hit'],
-      say('iselle', 'determined', `This one's yours. Corin's watching. Make it a good entry.`),
+      say('iselle', 'sad', `I'm still half its porcelain. In there, it could turn me against you.`),
+      say('iselle', 'determined', `So this one's yours. Corin's watching. Make it a good entry.`),
       ['move', 'iselle', '@iselle_edge'],
       ['face', 'iselle', 'curator'],
       ['guest', 'iselle', false],
@@ -1126,7 +1138,7 @@
       ['face', 'magus', 'iselle'],
       say('iselle', 'broken', `Don't. It's the right ending. I'm from a year that isn't.`),
       ['emote', 'iselle', '...'],
-      say('iselle', 'broken', `Keep this one. Not in a case. In a *pocket.* Somewhere that moves.`),
+      say('iselle', 'broken', `Here. Take Corin. Not in a case — in a *pocket.* Somewhere that moves.`),
       say('magus', 'neutral', `…I'll misplace it. Constantly.`),
       say('iselle', 'happy', `Good. That's living.`),
       say('frog', 'sad', `Warden. Thy brother would have been proud.`),
@@ -1135,7 +1147,7 @@
       say('iselle', 'neutral', `Entry 1. You never said a word to me.`),
       ['choice', ['Nod', 'Bow'], [
         [['anim', 'crono', 'nod'], say('iselle', 'happy', `…Yeah. That was enough.`)],
-        [['anim', 'crono', 'bow'], say('iselle', 'surprised', `Corin would've *hated* you.`), ['emote', 'iselle', '♪']],
+        [['anim', 'crono', 'bow'], say('iselle', 'surprised', `Ha! Corin would've *hated* you. Far too gallant.`), ['emote', 'iselle', '♪']],
       ], 'c_iselle_end'],
       say('ayla', 'sad', `Half-shiny girl brave. Ayla remember. Ayla tell fire.`),
       say('iselle', 'happy', `Tell it loud.`),
@@ -1170,8 +1182,7 @@
       { id: 'spekkio', at: '@spekkio', face: 'S' },
     ],
     script: [
-      ['setflag', 'hollow_closed', true],   // the grey door is gone
-      ['setflag', 'ch4_open', false],
+      ['setflag', 'ch4_open', false],       // the grey door is gone
       ['chapter', 'EPILOGUE. TOMORROW, UNWRITTEN', 'THE END OF TIME'],
       ['vfx', 'gate', '@arrive'],
       ['fade', 'in', 1200, '255,255,255'],
@@ -1218,8 +1229,10 @@
       ['face', 'robo', 'crono'],
       ['anim', 'marle', 'jump'],
       say('marle', 'happy', `All your limbs! You listened!`),
+      ['anim', 'crono', 'nod'],
       say('lucca', 'happy', `The radio cut out for six hours. Six. I aged a decade. Robo got here ten minutes ago and has said nothing but "readings nominal."`),
-      say('robo', 'happy', `Readings are nominal. That was not nothing. That was *everything.*`),
+      say('robo', 'happy', `Because they are. Nothing is reading the Gates anymore. Every year is just… a year again.`),
+      say('robo', 'happy', `That is not nothing, Lucca. That is *everything.*`),
       ['if', '!iselle_ko', [
         say('lucca', 'neutral', `Also — the last thing the radio picked up before it died was a girl's voice saying 'entry filed.' Friend of yours?`),
         say('frog', 'sad', `Aye. She was.`),
@@ -1251,6 +1264,7 @@
         ['face', 'crono', 'N'],
         ['sfx', 'sfx_leene_bell'],
       ]], 'c_bell'],
+      ['anim', 'marle', 'cheer'],
       ['emote', 'marle', '!'],
       ['emote', 'lucca', '!'],
       ['emote', 'robo', '!'],
@@ -1282,9 +1296,8 @@
       { id: 'B0_T1', when: 'PRE_BATTLE', focus: 'frog',
         lines: [L('frog', 'neutral', `Mark the ground, Crono. High ground lendeth strength to the blade, and a foe's back is a foe's weakness.`)],
         script: [
-          ['popup', 'Blue tiles show how far a unit can move. Climbing costs extra movement.'],
-          ['popup', 'Red tiles show what a unit can attack. Hitting from higher ground deals more damage.'],
-          ['popup', 'After acting, choose a facing. Attacks from the side hit harder; attacks from behind hit hardest and never miss.'],
+          ['popup', 'Blue tiles show how far a unit can move; climbing costs extra. Red tiles show what it can attack. Higher ground hits harder.'],
+          ['popup', 'After acting, choose a facing. Side attacks hit harder. Attacks from behind hit hardest and never miss.'],
         ] },
       { id: 'B0_T2', when: 'TURN_START', args: { n: 2 }, focus: 'frog',
         lines: [L('frog', 'neutral', `Thy Cyclone striketh all about thee. Use it when they cluster.`)],
@@ -1299,6 +1312,8 @@
       { id: 'B0_T5', when: 'UNIT_DEFEATED', args: { unit: 'hench' }, focus: 'hench',
         lines: [L('frog', 'surprised', `It… fadeth. Like a memory forgotten.`)] },
       victoryMusic('B0_T6'),
+      { id: 'B0_DEFEAT', when: 'DEFEAT',
+        lines: [L('frog', 'sad', `Up, Crono… the fair is not yet safe.`)] },
     ],
     rewards: { xp: 190, gold: 50, items: { tonic: 2 } },
   };
@@ -1322,7 +1337,10 @@
     },
     triggers: [
       { id: 'B1_T1', when: 'PRE_BATTLE', focus: 'seedA',
-        lines: [RL('lucca', 'neutral', `Seedbearer's on a path to the top. Kill the carrier, the seed drops and goes inert for a few minutes. Frog — she's on the bridge, that's height 3. Don't fight her uphill if you can help it.`)] },
+        lines: [
+          RL('lucca', 'neutral', `Lucca here. That bearer's hauling the seed up to the shrine. Drop it before it gets there and the seed goes cold.`),
+          RL('lucca', 'neutral', `And Frog — she's up on the bridge. Don't fight her uphill if you can help it.`),
+        ] },
       { id: 'B1_T2', when: 'TURN_START', args: { n: 2 }, focus: 'iselle',
         lines: [
           L('iselle', 'neutral', `You're wondering why I don't simply kill you. Entry 1: Crono of Truce. The archive would be poorer without you.`),
@@ -1340,7 +1358,7 @@
       { id: 'B1_T5', when: 'UNIT_HP_BELOW', args: { unit: 'iselle', pct: 40 }, focus: 'iselle',
         lines: [
           L('iselle', 'sad', `…Noted. The Curator will want to know the knight still fights like the man he was.`),
-          L('iselle', 'neutral', `We'll meet in the age of beasts. Bring the savage — she's Entry 9, and I'd like to see it in person.`),
+          L('iselle', 'neutral', `We'll meet again in the age of beasts. Entry 9 lives there. I'd like to see her fight in person.`),
         ],
         effect: [
           { type: 'RIFT', at: 'iselle' },
@@ -1350,7 +1368,9 @@
           { type: 'SET_OBJECTIVE', objective: { type: 'DEFEAT_ALL' }, text: 'The Warden is gone. Defeat the remaining enemies!' },
         ] },
       { id: 'B1_T6', when: 'ALLY_KO', args: { unit: 'frog' }, focus: 'crono',
-        lines: [RL('lucca', 'surprised', `Crono! Get a Revive on him, you're not soloing a Warden!`)] },
+        lines: [RL('lucca', 'surprised', `Frog's down! Crono, get him back up — nobody takes a Warden alone!`)] },
+      { id: 'B1_HATCH', when: 'HATCH', focus: 'frog',
+        lines: [L('frog', 'angry', `Too late — it wakes! Cut it down ere it taketh root!`)] },
       victoryMusic('B1_T7'),
       { id: 'B1_DEFEAT', when: 'DEFEAT',
         lines: [L('frog', 'sad', `Cyrus… I have failed thee twice.`)] },
@@ -1378,7 +1398,8 @@
     triggers: [
       { id: 'B2_T1', when: 'PRE_BATTLE', focus: 'ayla',
         lines: [
-          RL('lucca', 'neutral', `Three carriers are feeding it. Every round they all survive, it grows. Ayla's fast — split up. Frog, keep Crono breathing. And Ayla: the ledges. *Push them off the ledges.*`),
+          RL('lucca', 'neutral', `Three bearers are feeding that seed. Drop two and it stops growing. Drop all three and it dies.`),
+          RL('lucca', 'neutral', `Ayla, you're the fast one. And the ledges — *push them off the ledges.*`),
           L('ayla', 'happy', `Ayla like glasses-girl.`),
         ] },
       { id: 'B2_T2', when: 'TECH_USED', args: { unit: 'ayla', tech: 'rollo_kick', knockedDown: true }, focus: 'ayla',
@@ -1404,13 +1425,29 @@
           L('iselle', 'sad', `…You hit like someone who's never been told no.`),
           L('ayla', 'happy', `Ayla told no many times. Ayla no listen.`),
           L('iselle', 'neutral', `Noted.`),
-          L('iselle', 'neutral', `The mage next. Tell him the Curator has an *exhibit* he'll want to see. Tell him her name.`),
+          L('iselle', 'neutral', `The mage is next. Tell him the Curator built an *exhibit* for him. Tell him it's called Schala.`),
         ],
         effect: [
           { type: 'RIFT', at: 'iselle' },
           { type: 'DESPAWN', unit: 'iselle' },
           { type: 'CLOSE_RIFT' },
+          { type: 'SET_FLAG', flag: 'b2_iselle_gone', value: true },
         ] },
+      // If the Warden was never driven off, she still leaves once the nest is lost
+      // (2.3 and 3.1 depend on her naming Schala).
+      { id: 'B2_T6B', when: 'COUNT_DEFEATED', args: { enemyType: 'seedbearer', count: 3 }, requires: '!b2_hatched', focus: 'iselle',
+        script: [
+          ['if', '!b2_iselle_gone', [
+            ['say', 'iselle', 'neutral', `Nest's gone. I won't bleed for an empty crater.`],
+            ['say', 'iselle', 'neutral', `The mage is next. Tell him the Curator built an *exhibit* for him. Tell him it's called Schala.`],
+            ['sfx', 'sfx_hollow_gate'],
+            ['setflag', 'b2_iselle_gone', true],
+          ]],
+        ],
+        effect: [{ type: 'DESPAWN', unit: 'iselle' }] },
+      { id: 'B2_HATCH', when: 'HATCH', focus: 'sprout',
+        lines: [L('ayla', 'angry', `Egg open! Ayla smash baby thing before it grow!`)],
+        effect: [{ type: 'SET_FLAG', flag: 'b2_hatched', value: true }] },
       { id: 'B2_T7', when: 'UNIT_HP_BELOW', args: { unit: 'ayla', pct: 30 }, focus: 'ayla',
         lines: [
           L('ayla', 'angry', `Ayla not tired! Ayla… little tired.`),
@@ -1444,7 +1481,8 @@
     triggers: [
       { id: 'B3_T1', when: 'PRE_BATTLE', focus: 'sen1',
         lines: [
-          RL('lucca', 'neutral', `Those glass things are sentinels — heavy, slow, and they'll body-block corridors. Magus can float around them over the water. Also, uh, Magus? Hi. Please don't blow up the radio.`),
+          RL('lucca', 'neutral', `Those glass cases are sentinels — slow, heavy, and they'll wall off the aisles. Magus can float around them over the water.`),
+          RL('lucca', 'neutral', `The bearer by the seed is feeding it. Take it out before it roots. Also, uh — Magus? Hi. Please don't blow up the radio.`),
           L('magus', 'neutral', `I'll consider it.`),
         ] },
       { id: 'B3_T2', when: 'TURN_START', args: { n: 2 }, focus: 'iselle',
@@ -1497,6 +1535,8 @@
           L('ayla', 'determined', `Three eggs. No more eggs?`),
           RL('lucca', 'surprised', `That's the last one Gaspar sensed. The grey door should be — hang on. It's not weakening. It's *opening.*`),
         ] },
+      { id: 'B3_HATCH', when: 'HATCH', focus: 'sprout',
+        lines: [L('magus', 'angry', `It hatched. Kill it before it remembers what it's supposed to become.`)] },
       victoryMusic('B3_T8'),
       { id: 'B3_DEFEAT', when: 'DEFEAT',
         lines: [L('magus', 'angry', `Pathetic.`)] },
@@ -1524,7 +1564,7 @@
       { id: 'B4A_T1', when: 'PRE_BATTLE', focus: 'tyrano',
         lines: [
           L('ayla', 'angry', `BIG WEIRD THING. Ayla know this one! Ayla kill it once already!`),
-          L('iselle', 'neutral', `It's a copy. It's read every fight you ever had with the real one.`),
+          L('iselle', 'neutral', `It's a copy. It's read every fight you ever had with the real one. Break it and the tour ends.`),
           L('ayla', 'happy', `Then it know Ayla win.`),
         ] },
       { id: 'B4A_T2', when: 'UNIT_HP_BELOW', args: { unit: 'tyrano', pct: 50 }, focus: 'tyrano',
@@ -1539,6 +1579,8 @@
           L('magus', 'angry', `It matters.`),
         ] },
       victoryMusic('B4A_T4'),
+      { id: 'B4A_DEFEAT', when: 'DEFEAT',
+        lines: [VL(`THE TOUR IS OVER. PLEASE REMAIN STILL.`)] },
     ],
     rewards: { xp: 70, gold: 1200, items: { ether: 2, revive: 1 } },
   };
@@ -1567,8 +1609,9 @@
         lines: [RL('lucca', 'neutral', `I'm losing you — the Hollow eats signal. Magus can cross the gap. Everyone else, hold your side. Crono — don't be a hero.`)],
         script: [
           ['sfx', 'sfx_scanline'],
-          radio('lucca', 'neutral', `…okay be a *little* —`),
+          radio('lucca', 'neutral', `…okay, be a *little* —`),
           ['sfx', 'sfx_scanline'],
+          say('iselle', 'determined', `Those bearers carry catalogue tablets. If two reach the Ledger up top, it files every one of us. Stop them.`),
         ] },
       { id: 'B4B_T2', when: 'UNIT_ENTERS_ZONE', args: { unit: 'magus', zone: 'WEST' }, focus: 'magus',
         lines: [
@@ -1600,6 +1643,8 @@
           { type: 'FILL_TILES', zone: 'CHASM', terrain: 'k', h: 0 },
         ] },
       victoryMusic('B4B_T7'),
+      { id: 'B4B_DEFEAT', when: 'DEFEAT',
+        lines: [VL(`SEPARATION WAS EFFICIENT.`)] },
     ],
     rewards: { xp: 70, gold: 1400, items: { mid_tonic: 3, shelter: 1 } },
   };
@@ -1614,7 +1659,7 @@
     objective: { type: 'DEFEAT_UNIT', unit: 'curator', text: 'Shatter the four placards.' },
     triggers: [
       { id: 'B5_T1', when: 'PRE_BATTLE', focus: 'curator',
-        lines: [RL('lucca', 'determined', `Crono — the pedestals. It built its own weak points. Museums always do.`)],
+        lines: [RL('lucca', 'determined', `Crono — the pedestals! It built its own weak points; museums always do. Stand on one and hit it with a tech!`)],
         script: [['sfx', 'sfx_scanline']] },
       { id: 'B5_T2', when: 'PLACARD_SHATTERED', args: { count: 1 }, focus: 'curator',
         lines: [
@@ -1670,9 +1715,9 @@
           L('magus', 'determined', `Its magic-hide is thick now. Steel, then. And I have one thing left to give steel.`),
           L('iselle', 'determined', `Together! You said it! *Say it again!*`),
           L('magus', 'angry', `…TOGETHER.`),
+          L('ayla', 'determined', `Ayla guard your backs. You three — go!`),
         ],
-        effect: [{ type: 'UNLOCK_TECH', tech: 'eclipse_blade' }],
-        script: [['popup', 'Triple Tech unlocked: ECLIPSE BLADE (Crono + Frog + Magus). Ayla, cover them.']] },
+        effect: [{ type: 'UNLOCK_TECH', tech: 'eclipse_blade' }] },
       { id: 'B5_T8', when: 'TECH_USED', args: { unit: 'any', tech: 'eclipse_blade' }, focus: 'curator',
         lines: [
           VL(`THAT… IS NOT… IN THE RECORD.`),

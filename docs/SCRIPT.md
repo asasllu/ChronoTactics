@@ -306,7 +306,8 @@ MAP: `map_leene_square_night` (16×14). MUSIC: `mus_fair_night`. Lanterns, fairg
 CUTSCENE:
 Crono stands near Leene's Bell. Marle runs up.
 
-MARLE (happy): There you are! Everyone's asking where the hero went. Lucca says you owe her a dance. She's lying, she can't dance.
+MARLE (happy): There you are! The whole fair is toasting the boy who beat Lavos, and he's hiding by the bell.
+MARLE (happy): Lucca says you owe her a dance. She's lying. She can't dance.
 LUCCA (angry): I can dance! I choose not to.
 MARLE (happy): See?
 CHOICE: [Dance with Marle] / [Look at the bell]
@@ -318,17 +319,20 @@ Frog approaches, in his cloak. Fairgoers give him a wide berth.
 FROG (neutral): A fine night. Too fine. Mine ears ring with quiet, and I mistrust it.
 MARLE (happy): Frog! I thought you went back to 600!
 FROG (neutral): The Gate to mine own era… would not open. I stood before it an hour like a fool. Then I came to find thee.
-LUCCA (surprised): Wouldn't open? That's not — Gates don't just close. Not since Lavos —
+LUCCA (surprised): Wouldn't open? Gates don't just close on their own. Not since Lavos —
 
 `sfx_hollow_gate`. MUSIC cuts to `mus_rift`. The lanterns flicker grey. ASSET NOTE: `vfx_time_rift` opens in the center of the square — a grey tear with red scanlines, NOT the blue Gate swirl. Fairgoers flee (run animation off-map).
 
-ROBO (radio, portrait only, static-crackle text effect): Crono. Lucca. This is Robo, transmitting from 2300 A.D. — or what remains of it. Something is… reading the Gate network. The readings are not from any year I know. Please — 
+LUCCA (surprised): …That is *not* one of my fireworks.
+
+ROBO (radio, portrait only, static-crackle text effect): Crono. Lucca. This is Robo, in 2300 A.D. Something is… reading the Gate network. Every Gate, every year, at once.
+ROBO (radio, surprised): The signal comes from no year I know. Please be caref—
 
 Static. Two `spr_echo_imp` and one `spr_echo_hench` crawl out of the rift, flickering (`vfx_echo_flicker`).
 
 FROG (determined): Monsters — yet not. They wear the shape of things I have slain. Crono! Draw!
 Crono: `draw_sword` animation.
-MARLE (surprised): I'll get the guards clear of the square. Lucca, the Epoch!
+MARLE (surprised): I'll get everyone out of the square. Lucca — the Epoch! If that's a Gate, we'll need it.
 LUCCA (determined): On it. Don't die, you two, I'd have to plan the funeral.
 
 `BATTLE 0 — "Echoes at the Fair"` (tutorial)
@@ -347,7 +351,7 @@ LUCCA (determined): On it. Don't die, you two, I'd have to plan the funeral.
 `[SCENE 0.3 — After the fight]`
 MUSIC: `mus_rift` (quiet). The rift is still open, shrinking. Lucca returns with the Epoch hovering behind her (`spr_epoch`).
 
-LUCCA (determined): I ran a scan through the rift before it closes. The other side isn't a year. It's a *nothing*. A timeline that was deleted and didn't take the hint.
+LUCCA (determined): I scanned the rift from the Epoch. The other side isn't a year. It's a *nothing*. A timeline that was deleted and didn't take the hint.
 FROG (neutral): Speak plainly, Lucca.
 LUCCA (neutral): When we killed Lavos, the ruined future — Robo's future — stopped ever having happened. Except something in it survived the deletion. And it just opened a door into our fair.
 MARLE (sad): So it's not over.
@@ -356,9 +360,10 @@ LUCCA (neutral): It's over. This is the thing that comes *after* over.
 The rift spits out a single object before closing: `spr_lavos_seed`, pulsing (`sfx_seed_pulse`). Everyone steps back.
 
 FROG (angry): I know that light. It is *its* light.
-LUCCA (surprised): A seed. A Lavos seed. Oh, no. No no no. If these are being planted in other eras —
-MARLE (determined): Then somebody has to pull them up. Crono. Go with Frog. Find Ayla, find — ugh — find Magus. You'll need everyone who can hit hard and doesn't need a lab.
-LUCCA (happy): Rude. Accurate. I'll ride shotgun on the radio — the Epoch can drop you at the End of Time, Gaspar will know which era's bleeding first.
+LUCCA (surprised): A piece of Lavos. A *seed*. Oh, no. No no no. If something's sowing these through history —
+MARLE (determined): Then somebody has to pull them up. Crono, go with Frog. Find Ayla. Find — ugh — find Magus.
+MARLE (determined): If more of these crawl out here, Guardia needs its princess home. You need people who hit hard and don't need a lab.
+LUCCA (happy): Rude. Accurate. I'll talk you through it by radio. The Epoch can drop you at the End of Time — Gaspar will know which era is bleeding first.
 CHOICE: [Nod] / [Nod harder]
 (Either: Crono `nod`. Marle laughs.)
 MARLE (happy): Come back with a story. And with all your limbs.
@@ -368,11 +373,13 @@ Fade out. `sfx_epoch_fly`.
 `[SCENE 0.4 — End of Time]`
 MAP: `map_end_of_time` (12×12). MUSIC: `mus_end_of_time`. Gaspar under the lamppost. A Nu shopkeeper. Spekkio's door. Three era doors (glowing), and a **fourth door, grey, with red scanlines** (`spr_hollow_gate` variant as a door) that Gaspar stands away from.
 
-GASPAR (neutral): Ah. The boy who wouldn't stay dead. And the knight who wouldn't stay a frog. You've noticed the new door, then.
+GASPAR (neutral): Ah. The boy who wouldn't stay dead. And the frog who wouldn't stop being a knight. You've noticed the new door, then.
 FROG (neutral): It hath the look of sickness.
-GASPAR (sad): It leads to a future that should not be. I cannot open it, and I would not if I could. Whatever lives there has been reaching *backward* — into 600, into the age of the reptites, into the fall of Zeal. Three seeds, three eras. One in each. Pull them up before they take root, and the door may weaken.
+GASPAR (sad): It leads to a future that should not be. I cannot open it, and I would not if I could.
+GASPAR (sad): Whatever lives there is reaching *backward*. Into 600. Into the age of the reptites. Into the fall of Zeal. One seed in each.
+GASPAR (neutral): Pull them up before they take root, and that door may weaken.
 FROG (determined): Six hundred first. 'Tis mine home.
-GASPAR (neutral): It is also the first to bleed. Go. And boy — (to Crono) — the one who guards that door wears a young girl's face. Do not mistake the face for the thing.
+GASPAR (neutral): It is also the first to bleed. Go. And boy — (to Crono) — the one who plants them wears a young girl's face. Don't mistake her for the thing that sent her.
 
 Party gains access: Era door 600 A.D. is lit. Others locked until chapter order (linear). Shop and Spekkio available.
 
@@ -388,8 +395,8 @@ Chapter card: **I. THE KNIGHT WHO STAYED — 600 A.D.**
 MAP: `map_guardia_throne_600` (14×12). MUSIC: `mus_guardia_600`. King Guardia XXI, Queen Leene, guards. Party arrives via Gate outside; walk in.
 
 KING GUARDIA (angry): Glenn! Where in the nine hells — the Denadoro Mountains are *walking*. Porcelain men march the pass at night and the mountain folk say the peak glows red.
-QUEEN LEENE (sad): The Masamune's shrine, Glenn. They're digging at it.
-FROG (determined): Then they dig for a grave. Majesty — a Seed. Of the beast we slew. It hath been planted where Cyrus fell.
+QUEEN LEENE (sad): The Masamune's old shrine, Glenn. They're digging at it.
+FROG (determined): Then they dig their own graves. 'Tis a seed, Majesty — of the very beast we slew. And they plant it where Cyrus fell.
 KING GUARDIA (neutral): Cyrus… (softer) Take whoever you need.
 FROG (sad): I have what I need. (He glances at Crono.) Though I confess I wished for more of us.
 
@@ -415,7 +422,7 @@ Two Seedbearers (`spr_seedbearer`) are visible far up the pass, walking toward t
 
 ISELLE (neutral): The knight and the boy who bent the century. I was told you'd come here first. The Curator keeps very good records.
 FROG (angry): Who art thou to dig at hallowed ground?
-ISELLE (neutral): Iselle. Warden of the Hollow. And this ground isn't hallowed, Sir Glenn. It's *catalogued.* Entry 4,417: Denadoro Mountains, site of the death of Cyrus of Guardia. It will be preserved exactly as it was.
+ISELLE (neutral): Iselle. Warden of the Hollow. And this ground isn't hallowed, Sir Glenn. It's *catalogued.* Entry 4,417: Denadoro Mountains, where Cyrus of Guardia died. It will be preserved exactly as it was.
 FROG (surprised): …Thou knowest his name.
 ISELLE (sad): I know everyone's name. That's the problem with archives.
 She turns. ISELLE (determined): Plant it.
@@ -427,12 +434,13 @@ She turns. ISELLE (determined): Plant it.
 - OBJECTIVE (initial): `PROTECT_TILE(SHRINE)` **and** `DEFEAT_UNIT(seedbearer_A)`. Banner text: *"Stop the Seedbearer before it reaches the shrine!"* If Seedbearer A ends a turn inside `SHRINE`, the seed hatches: EFFECT `SPAWN lavos_sprout` at shrine (HP 300, Destruction Rain 3×3), objective changes to `DEFEAT_ALL`, and the DEFEAT trigger fires instead if the party then wipes. (So the player can recover, but harder.)
 - MUSIC: `mus_battle_boss`.
 - TRIGGERS:
-  - `B1_T1 PRE_BATTLE` — LUCCA (radio): "Seedbearer's on a path to the top. Kill the carrier, the seed drops and goes inert for a few minutes. Frog — she's on the bridge, that's height 3. Don't fight her uphill if you can help it."
+  - `B1_T1 PRE_BATTLE` — LUCCA (radio): "Lucca here. That bearer's hauling the seed up to the shrine. Drop it before it gets there and the seed goes cold." / "And Frog — she's up on the bridge. Don't fight her uphill if you can help it."
   - `B1_T2 TURN_START(2)` — ISELLE (neutral): "You're wondering why I don't simply kill you. Entry 1: Crono of Truce. The archive would be poorer without you." FROG (angry): "Spare me thy ledger!"
   - `B1_T3 UNIT_ENTERS_ZONE(any_party, BRIDGE)` — ISELLE (angry): "Off my bridge." EFFECT: Iselle uses Catalogue on that unit immediately (free action).
   - `B1_T4 UNIT_DEFEATED(seedbearer_A)` — the seed drops (`spr_lavos_seed` object on that tile, inert grey). FROG (determined): "It falls! Now the Warden!" EFFECT: `SET_OBJECTIVE("Defeat Iselle or drive her off")`; objective becomes `DEFEAT_UNIT(iselle)` (fulfilled by her retreat too).
-  - `B1_T5 UNIT_HP_BELOW(iselle, 40)` — ISELLE (sad): "…Noted. The Curator will want to know the knight still fights like the man he was." She plants the halberd; `vfx_time_rift` opens under her. ISELLE (neutral): "We'll meet in the age of beasts. Bring the savage — she's Entry 9, and I'd like to see it in person." EFFECT: `DESPAWN(iselle)`, `PLAY_MUSIC(mus_battle)`, objective → `DEFEAT_ALL`.
-  - `B1_T6 ALLY_KO(frog)` — LUCCA (radio, surprised): "Crono! Get a Revive on him, you're not soloing a Warden!"
+  - `B1_T5 UNIT_HP_BELOW(iselle, 40)` — ISELLE (sad): "…Noted. The Curator will want to know the knight still fights like the man he was." She plants the halberd; `vfx_time_rift` opens under her. ISELLE (neutral): "We'll meet again in the age of beasts. Entry 9 lives there. I'd like to see her fight in person." EFFECT: `DESPAWN(iselle)`, `PLAY_MUSIC(mus_battle)`, objective → `DEFEAT_ALL`.
+  - `B1_T6 ALLY_KO(frog)` — LUCCA (radio, surprised): "Frog's down! Crono, get him back up — nobody takes a Warden alone!"
+  - `B1_HATCH HATCH` — FROG (angry): "Too late — it wakes! Cut it down ere it taketh root!"
   - `B1_T7 VICTORY` — `mus_victory`.
   - `DEFEAT` — FROG (sad): "Cyrus… I have failed thee twice." (Retry.)
 
@@ -447,7 +455,9 @@ FROG (determined): One seed pulled. Let us pull the rest — and then, perhaps, 
 
 Reward: `Denadoro Seed (inert)` key item ×1. +XP. Return to End of Time; Gaspar lights the 65M B.C. door.
 
-GASPAR (neutral, at End of Time): One up. The grey door… flickered. She said "the age of beasts." Ayla will not need convincing — she will need *restraining*.
+GASPAR (neutral, at End of Time): One seed pulled. And the grey door… flickered. Good.
+FROG (neutral): The Warden spake of "the age of beasts." She goeth for Ayla next.
+GASPAR (neutral): Then Ayla will not need convincing. She will need *restraining*.
 
 ---
 
@@ -479,10 +489,11 @@ AYLA (happy): CRONO! FROG! Ayla knew you come! Shiny men no fun. They no scream,
 FROG (neutral): Ayla, the seed —
 AYLA (angry): Ayla see. Ayla try pull. Seed bite Ayla. (Shows her hand — burn mark.) Seed bad. Ayla break seed.
 Iselle appears on the rim (height 3, tile (2,2)).
-ISELLE (neutral): Entry 9. Ayla of Ioka. Slew the Black Tyrano. Never learned to read. Never needed to. (beat) You can't break it, chief. It's already rooting. In four turns it will hatch, and this crater becomes a nursery.
+ISELLE (neutral): Entry 9. Ayla of Ioka. Slew the Black Tyrano. Never learned to read. Never needed to. (beat) You can't break it, chief. It's already rooting. My bearers feed it, it hatches, and this crater becomes a nursery.
 AYLA (angry): You! Half-shiny girl! You plant bad egg in Ayla's ground!
 ISELLE (sad): It was never your ground. It's *its* ground. It always was, underneath.
 AYLA (determined): Ayla show you whose ground.
+(If Kino came:) KINO (surprised): Kino go… guard back of crater! Very important back! (runs off)
 
 `BATTLE 2 — "Nursery"`
 - MAP: `map_tyrano_crater`.
@@ -491,14 +502,16 @@ AYLA (determined): Ayla show you whose ground.
 - OBJECTIVE: `DEFEAT_ALL(seedbearers)` before hatch counter reaches 4. Banner shows counter *"Hatch in: 4"*. If it hatches: `SPAWN lavos_sprout_large` at `PILLAR` (HP 600, Destruction Rain 5×5) and lava tiles **spread** (every outer ring-0 tile becomes lava; Magus isn't here yet so nobody can float). Objective → `DEFEAT_ALL`.
 - MUSIC: `mus_battle_boss`.
 - TRIGGERS:
-  - `B2_T1 PRE_BATTLE` — LUCCA (radio): "Three carriers are feeding it. Every round they all survive, it grows. Ayla's fast — split up. Frog, keep Crono breathing. And Ayla: the ledges. *Push them off the ledges.*" AYLA (happy): "Ayla like glasses-girl."
+  - `B2_T1 PRE_BATTLE` — LUCCA (radio): "Three bearers are feeding that seed. Drop two and it stops growing. Drop all three and it dies." / "Ayla, you're the fast one. And the ledges — *push them off the ledges.*" AYLA (happy): "Ayla like glasses-girl."
   - `B2_T2 TECH_USED(ayla, rollo_kick)` first time — if the target was knocked to a lower height: AYLA (happy): "Fall down go boom!" (Tutorial popup: knockback + fall damage.)
   - `B2_T3 TURN_START(2)` — ISELLE (neutral): "You don't understand what you're killing. That seed is a *future*. Billions of entries. My people."
     FROG (angry): "Thy people were spared that future!"
     ISELLE (angry): "They were *erased* from it. Do you know the difference? I do. I remember the dome. I remember the smell."
   - `B2_T4 UNIT_DEFEATED(seedbearer_2nd)` (second one down) — AYLA (determined): "One left! Crono — hit it, Ayla hold it!" EFFECT: `APPLY_STATUS(last seedbearer, Slow)` (Ayla grabs it — flavor).
   - `B2_T5 UNIT_ENTERS_ZONE(any_party, RIM)` — ISELLE (determined): "Fine. In person, then." EFFECT: Iselle becomes active (AI: aggressive), `PLAY_MUSIC(mus_battle_boss)` (restart).
-  - `B2_T6 UNIT_HP_BELOW(iselle, 40)` — ISELLE (sad): "…You hit like someone who's never been told no." AYLA (happy): "Ayla told no many times. Ayla no listen." ISELLE (neutral): "Noted." Rift, retreat. ISELLE: "The mage next. Tell him the Curator has an *exhibit* he'll want to see. Tell him her name." EFFECT `DESPAWN(iselle)`.
+  - `B2_T6 UNIT_HP_BELOW(iselle, 40)` — ISELLE (sad): "…You hit like someone who's never been told no." AYLA (happy): "Ayla told no many times. Ayla no listen." ISELLE (neutral): "Noted." Rift, retreat. ISELLE: "The mage is next. Tell him the Curator built an *exhibit* for him. Tell him it's called Schala." EFFECT `DESPAWN(iselle)`, `SET_FLAG(b2_iselle_gone)`.
+  - `B2_T6B COUNT_DEFEATED(seedbearer, 3)` (only if T6 never fired and the seed did not hatch) — ISELLE: "Nest's gone. I won't bleed for an empty crater." / "The mage is next… Tell him it's called Schala." EFFECT `DESPAWN(iselle)`. (Guarantees the Schala hand-off that 2.3 and 3.1 depend on.)
+  - `B2_HATCH HATCH` — AYLA (angry): "Egg open! Ayla smash baby thing before it grow!"
   - `B2_T7 UNIT_HP_BELOW(ayla, 30)` — AYLA (angry): "Ayla not tired! Ayla… little tired." FROG: "Then let a frog carry thee a moment." (Flavor; no effect.)
   - `B2_T8 VICTORY` — `mus_victory`.
   - `DEFEAT` (hatched + wiped) — AYLA (sad): "Ground… all red now." (Retry.)
@@ -512,11 +525,12 @@ AYLA (happy): Ayla have many. Ayla say them loud.
 CHOICE (Crono): [Help her up] / [Sit down next to her]
 - Help: AYLA (happy): "Crono strong. Ayla stronger. But nice."
 - Sit: AYLA (happy): "Good. Sit. Watch fire go out. Then we go find Blue-hair." (Camera holds on the two of them 3 s.)
-AYLA (determined): Half-shiny say "her name." Ayla think Blue-hair not going to like that.
+AYLA (determined): Half-shiny say "Schala." Ayla think Blue-hair not going to like that.
+FROG (sad): His sister. Lost when Zeal fell into the sea.
 
 Reward: `Tyrano Seed (inert)`. Ayla permanently joins. Back to End of Time; 12,000 B.C. door lights.
 
-GASPAR (neutral): Two. The door groans now. (to Ayla) Chief. (to Crono) The mage will not come for you. He will come for the name. Let him.
+GASPAR (neutral): Two. The door groans now. (to Ayla) Chief. (to Crono) Twelve thousand B.C. is next, where Zeal fell into the sea. The mage will not come for you, boy. He will come for the name. Let him.
 
 ---
 
@@ -534,12 +548,12 @@ Party walks to Magus. He does not turn.
 
 MAGUS (neutral): You're late. The frog's stench arrived a full minute before the frog.
 FROG (angry): And thine has been here since dawn, I'm told, and hath not improved.
-MAGUS (neutral): (turns) Crono. A porcelain girl came through the ice last night. She said the thing in the grey future had built an exhibit. She said the exhibit's name was *Schala.* (beat) Then she asked me to come quietly.
+MAGUS (neutral): (turns) Crono. A porcelain girl found me last night. She said the thing in the grey future had built an exhibit. She said the exhibit's name was *Schala.* (beat) Then she asked me to come quietly.
 AYLA (surprised): Blue-hair go quiet?
-MAGUS (angry): I broke her halberd's shaft and she left. (beat, colder) I should have gone with her. Whatever it has — a copy, a memory, a corpse — it has more of my sister than I have had in twenty years.
-CHOICE (Crono): [Draw sword — "then we take it from them"] / [Sheathe sword — "come with us"]
+MAGUS (angry): I broke her halberd's shaft and she left. (beat, colder) Perhaps I should have gone with her. Whatever it has — a copy, a memory, a corpse — it's more of my sister than I've had since I was a child.
+CHOICE (Crono): [Draw sword ("Then we take it back.")] / [Offer a hand ("Come with us.")]
 - Draw: MAGUS (determined): "…Good. I'd have despised you for sympathy."
-- Sheathe: MAGUS (neutral): "Put that away or use it. You've never once done anything in between." (Crono `shrug`.) MAGUS: "…Fine."
+- Hand: MAGUS (neutral): "Keep your hand. I'm not joining anything." (Crono `shrug`.) MAGUS: "…But I'm coming."
 MAGUS (neutral): The seed is in the Zeal wreckage. Deepest hall. She's waiting there. I'll be *civil*.
 FROG (neutral): Thou wilt be nothing of the sort.
 MAGUS (neutral): No.
@@ -572,7 +586,7 @@ ISELLE (angry): I know you will.
 - OBJECTIVE: `DEFEAT_UNIT(iselle)` (she does not retreat this time until scripted). Secondary banner: *"The seed is rooted — destroying the Seedbearer slows it."* Hatch counter: starts 0, +1 per round while the Seedbearer lives; hatches at 6 → `SPAWN lavos_sprout_large`. (Reachable if the player ignores it; not mandatory.)
 - MUSIC: `mus_battle_boss`.
 - TRIGGERS:
-  - `B3_T1 PRE_BATTLE` — LUCCA (radio): "Those glass things are sentinels — heavy, slow, and they'll body-block corridors. Magus can float around them over the water. Also, uh, Magus? Hi. Please don't blow up the radio."
+  - `B3_T1 PRE_BATTLE` — LUCCA (radio): "Those glass cases are sentinels — slow, heavy, and they'll wall off the aisles. Magus can float around them over the water." / "The bearer by the seed is feeding it. Take it out before it roots. Also, uh — Magus? Hi. Please don't blow up the radio."
     MAGUS (neutral): "I'll consider it."
   - `B3_T2 TURN_START(2)` — ISELLE (neutral): "Entry 2, Glenn. Entry 9, Ayla. Entry 1, Crono. And you — Janus. Prince of Zeal. The archive lists you under *lost.*" MAGUS (angry): "Take me off it."
   - `B3_T3 DUAL_TECH_USED(shadow_cyclone)` first time — FROG (surprised): "Thy shadow… and Crono's blade… they *fit.*" MAGUS (neutral): "Don't make it sentimental."
@@ -580,6 +594,7 @@ ISELLE (angry): I know you will.
   - `B3_T5 UNIT_ADJACENT(magus, iselle)` first time — MAGUS (neutral): "Your brother. What was his name." ISELLE (surprised): "…Corin." MAGUS (neutral): "Then say it when you fight. Not the Curator's words. His." (No effect; but Iselle's next line changes: she stops quoting entries for the rest of the battle — swap her generic battle barks to the `iselle_broken` set.)
   - `B3_T6 UNIT_HP_BELOW(iselle, 25)` — MUSIC `mus_magus_theme`. Iselle drops to one knee. The vitrine behind her **cracks** (`sfx_glass_shatter`). The Schala replica's porcelain face flakes to reveal… nothing. Hollow. ISELLE (broken): "It's empty. It was always — I told it she'd be empty and it said the *shape* was enough." MAGUS (neutral): "The shape is never enough." EFFECT: `SET_TEAM(iselle, neutral)`. Objective → `DEFEAT_ALL` (remaining enemies). ISELLE (sad): "Kill the guard. The seed dies with it. I won't stop you. (beat) I won't help you either. Corin —" she doesn't finish.
   - `B3_T7 UNIT_DEFEATED(seedbearer)` — the seed cracks and goes inert. AYLA (determined): "Three eggs. No more eggs?" LUCCA (radio): "That's the last one Gaspar sensed. The grey door should be — hang on. It's not weakening. It's *opening.*"
+  - `B3_HATCH HATCH` — MAGUS (angry): "It hatched. Kill it before it remembers what it's supposed to become."
   - `B3_T8 VICTORY` — `mus_victory` (short), then straight into 3.3.
   - `DEFEAT` — MAGUS (angry): "Pathetic." (Retry.)
 
@@ -596,7 +611,7 @@ MAGUS (neutral): You know the halls. And you owe your brother a better ending th
 ISELLE (sad): It'll know I turned. It knows everything.
 MAGUS (angry): Then let it. I've been *known* by monsters before. It never once helped them.
 CHOICE (Crono): [Offer a hand] / [Wait]
-- Hand: Iselle takes it. ISELLE (determined): "…Corin would have liked you. He liked idiots."
+- Hand: Crono kneels beside her; Iselle takes his hand. ISELLE (determined): "…Corin would have liked you. He liked idiots."
 - Wait: She stands on her own. ISELLE (determined): "Don't help me. I'll walk."
 FROG (neutral): Then we go through the grey door. Together. (looks at Magus) All of us.
 MAGUS (neutral): Don't say "together." (beat) …Fine. Together.
@@ -612,7 +627,13 @@ GASPAR (sad): It has opened its own door. That was always going to be the price 
 Chapter card: **IV. THE MUSEUM OF NEVER — THE HOLLOW**
 
 `[SCENE 4.1 — The grey door]`
-MAP: `map_end_of_time`. The grey door is now wide open, red scanlines pouring out. `sfx_hollow_gate` loops quietly. Party enters. Screen goes white with `sfx_scanline`.
+MAP: `map_end_of_time`. The grey door is now wide open, red scanlines pouring out. `sfx_hollow_gate` loops quietly.
+
+ISELLE (determined): Stay close. Past this door, nothing stays where you left it. Not even you.
+Crono: `nod`.
+GASPAR (sad): Mind the lamp, boy. I'll keep it lit.
+
+Party enters. Screen goes white with `sfx_scanline`.
 
 `[SCENE 4.2 — Atrium]`
 MAP: `map_hollow_atrium` (16×16). MUSIC: `mus_hollow`. A vast white museum atrium. Glass vitrines everywhere (height 1, block sight) containing **stills** of the party's own past: the Millennial Fair (tiny tents), the Masamune on a plinth, a stuffed Kilwala, a diorama of Zeal floating. The party's footsteps echo. ASSET NOTE: vitrine contents are small 16×16 "exhibit" sprites — `exh_fair, exh_masamune, exh_kilwala, exh_zeal, exh_epoch, exh_bell`.
@@ -637,10 +658,11 @@ Vitrines around the party **stand up** and walk (`spr_vitrine_sentinel` ×4). Ec
 - OBJECTIVE: `DEFEAT_UNIT(echo_tyrano)`.
 - MUSIC: `mus_battle`.
 - TRIGGERS:
-  - `B4A_T1 PRE_BATTLE` — AYLA (angry): "BIG WEIRD THING. Ayla know this one! Ayla kill it once already!" ISELLE (neutral): "It's a copy. It's read every fight you ever had with the real one." AYLA (happy): "Then it know Ayla win."
+  - `B4A_T1 PRE_BATTLE` — AYLA (angry): "BIG WEIRD THING. Ayla know this one! Ayla kill it once already!" ISELLE (neutral): "It's a copy. It's read every fight you ever had with the real one. Break it and the tour ends." AYLA (happy): "Then it know Ayla win."
   - `B4A_T2 UNIT_HP_BELOW(echo_tyrano, 50)` — THE CURATOR: ENTRY 9 PERFORMS AS RECORDED. EFFECT: `SPAWN vitrine_sentinel` ×2 at gallery arches.
   - `B4A_T3 ALLY_KO(iselle)` (guest can fall) — ISELLE (sad): "…Go on. I'm — logged. It doesn't matter." MAGUS (angry): "It matters." (Iselle is *not* dead — she's removed for this battle only, returns for 4B at 50% HP.)
   - `B4A_T4 VICTORY` — `mus_victory`.
+  - `DEFEAT` — THE CURATOR: THE TOUR IS OVER. PLEASE REMAIN STILL.
 
 `[SCENE 4.3 — The Archive stacks]`
 MAP: `map_hollow_archive` (16×16). MUSIC: `mus_hollow`. Towering shelves (height 2 walkways connected by ladders — ladders are tiles that let any unit climb regardless of JUMP), each shelf labeled with an era. Iselle leads. She stops at a small shelf labeled **ASHEN DOME — RESIDENTS.**
@@ -660,13 +682,14 @@ The shelves **slide** (`SHAKE`), and the floor splits the party.
 - OBJECTIVE: `DEFEAT_ALL`. Secondary: *"Stop the Seedbearers from reaching the Ledger."*
 - MUSIC: `mus_battle_boss`.
 - TRIGGERS:
-  - `B4B_T1 PRE_BATTLE` — LUCCA (radio, crackling badly): "I'm losing you — the Hollow eats signal. Magus can cross the gap. Everyone else, hold your side. Crono — don't be a hero. (static) …okay be a *little* —" (cuts).
+  - `B4B_T1 PRE_BATTLE` — LUCCA (radio, crackling badly): "I'm losing you — the Hollow eats signal. Magus can cross the gap. Everyone else, hold your side. Crono — don't be a hero. (static) …okay, be a *little* —" (cuts). ISELLE (determined): "Those bearers carry catalogue tablets. If two reach the Ledger up top, it files every one of us. Stop them."
   - `B4B_T2 UNIT_ENTERS_ZONE(magus, WEST)` (he floats across) — AYLA (surprised): "Blue-hair come to Ayla's side?" MAGUS (neutral): "The frog is insufferable when he's protective." (Flavor.)
   - `B4B_T3 DUAL_TECH_USED(beast_toss)` first time — AYLA (happy): "Ayla throw Blue-hair's boom! Good boom!" MAGUS (angry): "You threw *me.*" AYLA: "Little bit."
   - `B4B_T4 ANY_ENEMY_ENTERS_ZONE(LEDGER)` (first Seedbearer) — THE CURATOR: ONE OF TWO. ISELLE (angry): "Kill it before the second gets there!"
   - `B4B_T5` (second Seedbearer in LEDGER) — EFFECT: chasm seals (map rejoins), `APPLY_STATUS(all_party, Catalogued, permanent)`. THE CURATOR: FILED. (Harder, not fatal.)
   - `B4B_T6 UNIT_DEFEATED(last_seedbearer)` — ISELLE (determined): "That's all of its hands. Now it has to use its own." EFFECT: chasm seals (rejoin) *without* the debuff if T5 didn't fire.
   - `B4B_T7 VICTORY` — `mus_victory`.
+  - `DEFEAT` — THE CURATOR: SEPARATION WAS EFFICIENT.
 
 `[SCENE 4.4 — The Core Exhibit]`
 MAP: `map_hollow_core` (16×16 circular platform, height 0, four pedestals at height 2 at the compass points; a red void beyond the edge — falling = KO). MUSIC: `mus_curator`. In the center stands **THE CURATOR** (`spr_curator_p1`) beside an empty vitrine large enough for four people. On the four pedestals: the three inert seeds the party collected are **not there** (they're with the party), but four **placards**: CRONO. GLENN. AYLA. JANUS.
@@ -679,9 +702,10 @@ ISELLE (broken): You solved my *brother.* Look at what you solved. (She holds up
 THE CURATOR: ENTRY 0-B IS INTACT.
 ISELLE (angry): He's *a picture!*
 THE CURATOR: … (a pause — the first pause it has ever taken) …HE IS INTACT.
-MAGUS (neutral): (steps forward) I'm going to say this once, and I'm going to say it to the thing that thought a hollow statue was my sister. Nothing you keep is kept. It's only *stopped.* And I have spent my whole life fighting things that wanted the world stopped.
+MAGUS (neutral): (steps forward) I'll say this once, to the thing that thought a hollow statue was my sister.
+MAGUS (angry): Nothing you keep is kept. It's only *stopped.* And I have spent my whole life killing things that wanted the world stopped.
 CHOICE (Crono): [Draw sword] — this is the only option. (Render the choice box with a single entry, for the drama.)
-Crono `draw_sword`. Frog draws. Ayla cracks knuckles. Magus's scythe ignites with dark fire. Iselle plants her halberd — and steps *back*, out of the battle: ISELLE (determined): "This one's yours. Corin's watching. Make it a good entry."
+Crono `draw_sword`. Frog draws. Ayla cracks knuckles. Magus's scythe ignites with dark fire. Iselle plants her halberd — and steps *back*, out of the battle: ISELLE (sad): "I'm still half its porcelain. In there, it could turn me against you." ISELLE (determined): "So this one's yours. Corin's watching. Make it a good entry."
 
 `BATTLE 5 — "Entry 0" — FINAL BOSS, PHASE 1`
 - MAP: `map_hollow_core`.
@@ -691,7 +715,7 @@ Crono `draw_sword`. Frog draws. Ayla cracks knuckles. Magus's scythe ignites wit
 - OBJECTIVE: `UNIT_HP_BELOW(curator, 0)` → triggers Phase 2 (not victory).
 - MUSIC: `mus_curator`.
 - TRIGGERS:
-  - `B5_T1 PRE_BATTLE` — LUCCA (radio, one clean sentence gets through): "Crono — the pedestals. It built its own weak points. Museums always do." (static)
+  - `B5_T1 PRE_BATTLE` — LUCCA (radio, one clean sentence gets through): "Crono — the pedestals! It built its own weak points; museums always do. Stand on one and hit it with a tech!" (static)
   - `B5_T2 TECH_USED(any, on_pedestal)` first placard shattered — THE CURATOR: THAT WAS A LABEL. LABELS ARE NOT LOAD-BEARING. FROG (determined): "Then why dost thou flinch?"
   - `B5_T3 UNIT_HP_BELOW(curator, 75)` — THE CURATOR: ENTRY 2. GLENN. YOU KEPT CYRUS'S DEATH FOR TEN YEARS. YOU AND I ARE THE SAME. FROG (sad→angry): "Aye. I was. (beat) I put it down on the mountain. Thou shouldst try it."
   - `B5_T4 UNIT_HP_BELOW(curator, 50)` — THE CURATOR: ENTRY 9. AYLA. IN YOUR ERA THE REPTITES LOSE AND YOUR PEOPLE INHERIT THE ASH. I CAN MAKE IT NOT HAPPEN. I CAN MAKE NOTHING HAPPEN. AYLA (angry): "Ayla *like* happen!"
@@ -702,7 +726,7 @@ Crono `draw_sword`. Frog draws. Ayla cracks knuckles. Magus's scythe ignites wit
 - THE CURATOR (Phase 2: HP 2,500, DEF 14, MDEF 30 — **now resists all magic**, SPD 12, MOVE 2 — it moves now, lurching). Techs: **Destruction Rain** (5×5 random tiles, 3 per turn), **Consume** (adjacent, huge physical, heals it), **Erase Era** (every 4 rounds: one *entire quadrant* of the platform becomes void for 2 rounds — banner warns one round ahead: *"The north quadrant is being erased!"*).
 - OBJECTIVE: `DEFEAT_UNIT(curator)`.
 - TRIGGERS:
-  - `B5_T7 TURN_START(phase2, 1)` — MAGUS (determined): "Its magic-hide is thick now. Steel, then. And I have one thing left to give steel." ISELLE (from the edge, shouting): "Together! You said it! *Say it again!*" MAGUS (angry): "…TOGETHER." EFFECT: `UNLOCK_TECH(eclipse_blade)`. Popup: *"Triple Tech unlocked: ECLIPSE BLADE (Crono + Frog + Magus). Ayla, cover them."*
+  - `B5_T7 TURN_START(phase2, 1)` — MAGUS (determined): "Its magic-hide is thick now. Steel, then. And I have one thing left to give steel." ISELLE (from the edge, shouting): "Together! You said it! *Say it again!*" MAGUS (angry): "…TOGETHER." AYLA (determined): "Ayla guard your backs. You three — go!" EFFECT: `UNLOCK_TECH(eclipse_blade)` (its popup names the tech).
   - `B5_T8 TECH_USED(eclipse_blade)` first time — full-screen `vfx_eclipse_blade`: Magus tears a black rift across the sky; Crono and Frog leap through it and strike the Core from both sides. THE CURATOR: THAT… IS NOT… IN THE RECORD. FROG (determined): "Nay. 'Tis new."
   - `B5_T9 UNIT_HP_BELOW(curator, 50)` — AYLA (happy, shouting over the noise): "Big weird thing getting SMALL!" THE CURATOR: ENTRY 9 IS… INCORRECT.
   - `B5_T10 ALLY_KO(any)` — the remaining allies get a line: FROG: "Stand! We stand or we are *shelved!*" / AYLA: "Get UP!" / MAGUS: "Don't you *dare* become an exhibit." (Whichever ally is still up, first match.)
@@ -716,14 +740,14 @@ MUSIC: none, then `mus_ending` fades in slowly. The Core's red knot flickers, sh
 ISELLE (neutral): It's un-happening. All of it. The Hollow, the dome — me.
 Her porcelain half begins to flake to light.
 MAGUS (angry): Iselle —
-ISELLE (broken, but smiling): Don't. It's the right ending. I'm from a year that isn't. (She hands Magus the tablet with Corin's portrait.) Keep this one. Not in a case. In a *pocket.* Somewhere that moves.
+ISELLE (broken, but smiling): Don't. It's the right ending. I'm from a year that isn't. (She hands Magus the tablet with Corin's portrait.) Here. Take Corin. Not in a case — in a *pocket.* Somewhere that moves.
 MAGUS (neutral): (takes it) …I'll misplace it. Constantly.
 ISELLE (happy): Good. That's living.
 FROG (sad): Warden. Thy brother would have been proud.
 ISELLE (neutral): He'd have been *annoyed.* Same thing, in our family. (to Crono) Entry 1. You never said a word to me.
 CHOICE (Crono): [Nod] / [Bow]
 - Nod: ISELLE: "…Yeah. That was enough."
-- Bow: ISELLE (surprised, then laughs): "Corin would've *hated* you."
+- Bow: ISELLE (surprised, then laughs): "Ha! Corin would've *hated* you. Far too gallant."
 AYLA (sad): Half-shiny girl brave. Ayla remember. Ayla tell fire.
 ISELLE: Tell it loud.
 She dissolves into scanlines. The tablet in Magus's hand stays solid.
@@ -746,7 +770,8 @@ MAP: `map_leene_square_night` with a **dawn palette swap** (ASSET NOTE: provide 
 
 MARLE (happy): All your limbs! You listened!
 LUCCA (happy): The radio cut out for six hours. Six. I aged a decade. Robo got here ten minutes ago and has said nothing but "readings nominal."
-ROBO (happy): Readings are nominal. That was not nothing. That was *everything.*
+ROBO (happy): Because they are. Nothing is reading the Gates anymore. Every year is just… a year again.
+ROBO (happy): That is not nothing, Lucca. That is *everything.*
 FROG (happy): Then 'tis done. (He looks at the bell.) I shall go home now, I think. And when I next climb the mountain, it shall only be a mountain.
 AYLA (happy): Ayla go home too. Kino cry when Ayla leave, cry when Ayla come back. Kino good at cry.
 MARLE (neutral): Magus?
