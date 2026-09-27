@@ -44,26 +44,26 @@
     '.....HSjWgSSgWjSj',
     '.....HsSFFsFFSsH',
     '......jSSSjjSSj',
-    '.....pYYjsssjYYp',
-    '....pQnYYYYYYYYnQp',
-    '...pSpQUTnYYnQUUQpSp',
-    '...pSpQUTTUQQUTUUQpSp',
-    '..pSSpQUTUUQUQUTUQpSSp',
-    '..pSFppQUUUUQUUUUQpFSp',
-    '..pSFpbBBBBGBBBBbpFSp',
-    '..prrpQbbbbbbbbbQprrp',
-    '..prrpQUUUTQUUUUQprrp',
-    '..pFFpQUTTUQUTUUQpFFp',
-    '...ppQUUTUUQUUTUUQpp',
-    '.....pQUUUUQUUUUQp',
-    '.....pQUTUQpQUTUQp',
-    '.....pQQUQp.pQUQQp',
-    '......KllLdK.KLLdK',
-    '......KlWlLK.KLlLdK',
-    '.....KllLLdK.KLlLddK',
-    '.....KdlLddK.KdLLddK',
-    '......KddkK..KddkKK',
-    '......KkdkK..KkdkK',
+    '......pYjsssjYp',
+    '.....pQnYYYYYnQp',
+    '..pQQpQUTTnYnUUUQpQQp',
+    '..pQQppUTTUnUUUQppQQp',
+    '..pSSppUTUTUQUUQppSSp',
+    '..pSFp.pUTUQUUQp.pSSp',
+    '..pSFp.pBBBGBBBp.pFSp',
+    '..prrp.pbbbGbbbp.prrp',
+    '..prrppQUTTUQUUQpprrp',
+    '..pFFppQUTUQUUTQppFFp',
+    '...pp.pQUUTQUUTQp.pp',
+    '......pQUUUQUUUQp',
+    '......pQUUQpQUUQp',
+    '......pQQUp.pUQQp',
+    '......KllLK.KLLdK',
+    '......KlWLK.KLlLK',
+    '.....KllLdK.KLlLdK',
+    '.....KdlLdK.KdLLdK',
+    '......KddkK.KddkK',
+    '......KkdkK.KkdkK',
     '.....ZMIMMZ.ZMMIMZ',
     '.....ZMJIMZ.ZMIMMZ',
     '....ZMIMMMZ.ZMMIMMZ',
@@ -102,8 +102,8 @@
     for (const [x, y, c] of hilt) put(x, y, c);
     // scarf ends trailing to the right
     for (const [x, y, c] of [[16, 17, 'n'], [17, 17, 'Y'], [17, 18, 'Y'], [18, 18, 'N'], [18, 19, 'n'], [19, 19, 'p'], [17, 16, 'p'], [18, 17, 'p'], [19, 18, 'p']]) put(x, y, c);
-    // belt pouch on the right hip
-    for (const [x, y, c] of [[14, 24, 'p'], [15, 24, 'p'], [16, 24, 'p'], [14, 25, 'B'], [15, 25, 'z'], [16, 25, 'p'], [14, 26, 'b'], [15, 26, 'B'], [16, 26, 'p'], [14, 27, 'p'], [15, 27, 'p']]) put(x, y, c);
+    // small pouch hanging below the belt on the right hip
+    for (const [x, y, c] of [[13, 26, 'p'], [14, 26, 'p'], [13, 27, 'z'], [14, 27, 'B'], [15, 27, 'p'], [13, 28, 'B'], [14, 28, 'b'], [15, 28, 'p'], [13, 29, 'p'], [14, 29, 'p']]) put(x, y, c);
     return g.map((r) => r.join(''));
   };
 
