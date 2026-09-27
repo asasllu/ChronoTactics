@@ -157,7 +157,8 @@
     f.footY = anchor[1] + 1 - (fr.dy || 0);
     f.ms = fr.ms || 120;
     if (fr.sfx) f.sfx = fr.sfx;
-    const head = def.head || [anchor[0], Math.max(4, anchor[1] - Math.round(def.h * 0.72))];
+    // Portrait crop centre: def.head, else the face of a ~44 px human.
+    const head = def.head || [anchor[0], Math.max(4, anchor[1] - 34)];
     f.J = { head: { x: head[0], y: head[1] } };
     const glow = fr.glow || (anim.glow && anim.glow[i]);
     if (glow) {
