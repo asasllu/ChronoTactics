@@ -1450,7 +1450,7 @@ CT.sheet('dave', {
           '..KGgKKLWLMMMMDDKKKKKKK',
           '...KK.KKKKKKKKKKK',
         ] },
-      { ms: 140, dy: 2, at: [15, 24], rows: [
+      { ms: 140, dy: -2, at: [15, 24], rows: [
           '............KKKKKKK',
           '..........KKWWLLMMMKK',
           '.........KWWLLLMMMMDDK',
@@ -3235,7 +3235,7 @@ CT.sheet('dave', {
           '..KGgKKLLWLMMMDKKKKKKKK',
           '...KK.KKKKKKKKKK',
         ] },
-      { ms: 140, dy: 2, at: [15, 24], rows: [
+      { ms: 140, dy: -2, at: [15, 24], rows: [
           '............KKKKKKK',
           '..........KKWWLLMMMKK',
           '.........KWWLLLMMMMDDK',

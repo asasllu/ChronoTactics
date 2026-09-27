@@ -1662,7 +1662,7 @@ CT.sheet('iselle', {
           '..aza..KKKKKKK',
           '...a',
         ] },
-      { ms: 80, dy: 4, at: [16, 18], rows: [
+      { ms: 80, dy: -4, at: [16, 18], rows: [
           '...a',
           '..aXa',
           '..axa',
@@ -1712,7 +1712,7 @@ CT.sheet('iselle', {
           '..........KMmBBBKKKKK',
           '..........KKKKKKK',
         ] },
-      { ms: 220, dy: 12, at: [16, 17], rows: [
+      { ms: 220, dy: -12, at: [16, 17], rows: [
           '...a',
           '..aXa',
           '..axa',
@@ -4385,7 +4385,7 @@ CT.sheet('iselle', {
           '..aza..KKKKKK',
           '...a',
         ] },
-      { ms: 80, dy: 4, at: [16, 18], rows: [
+      { ms: 80, dy: -4, at: [16, 18], rows: [
           '...a',
           '..aXa',
           '..axa',
@@ -4435,7 +4435,7 @@ CT.sheet('iselle', {
           '..........KMmMmKKKK',
           '..........KKKKKK',
         ] },
-      { ms: 220, dy: 12, at: [16, 17], rows: [
+      { ms: 220, dy: -12, at: [16, 17], rows: [
           '...a',
           '..aXa',
           '..axa',
