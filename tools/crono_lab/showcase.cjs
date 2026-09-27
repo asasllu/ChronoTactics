@@ -32,7 +32,9 @@ const { execFileSync } = require('child_process');
     await ctl.transition();
     CT.UI.battleHud(false);
     const B = ctl.b;
-    let u = B.units.find((v) => v.key === key || v.sprite === key);
+    let u = B.units.find((v) => v.key === key || v.sprite === key || v.sprite === 'echo_' + key);
+    // Not in this battle: a party member stands in wearing the sprite.
+    if (!u) { u = B.units.find((v) => v.hero) || B.units[0]; u.sprite = key; }
     const foes = B.units.filter((v) => v !== u && B.hostile(u, v));
     // Put one foe on a free tile beside the unit, facing each other.
     const near = [[1, 0], [0, 1], [-1, 0], [0, -1]].map(([dx, dy]) => ({ x: u.x + dx, y: u.y + dy })).find((t) => B.tile(t.x, t.y) && !B.unitAt(t.x, t.y) && !CT.TERRAIN[B.tile(t.x, t.y).t].void);
