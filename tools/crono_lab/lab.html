@@ -1,0 +1,57 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Crono lab</title>
+<style>
+  body { margin: 0; background: #1c1a26; color: #e8e6f0; font: 14px/1.4 monospace; }
+  .row { display: flex; gap: 28px; padding: 18px 24px; align-items: flex-end; }
+  .col { display: flex; flex-direction: column; gap: 10px; align-items: center; }
+  h2 { margin: 0; padding: 14px 24px 0; font-size: 20px; color: #f2c43e; }
+  .cap { color: #9c98b0; font-size: 12px; }
+  canvas { image-rendering: pixelated; display: block; }
+  .tile { background: #3d7a3a; padding: 10px 14px 6px; }
+</style>
+<script src="kit.js"></script>
+<script src="crono_a.js"></script>
+<script src="crono_b.js"></script>
+<body>
+<script>
+// Grass tile with a simple iso diamond under the sprite (1x, as in game at 480x300).
+function onTile(buf, pal) {
+  const K = window.KIT;
+  const spr = K.toCanvas(buf, pal, 1);
+  const cv = document.createElement('canvas');
+  cv.width = 64; cv.height = spr.height + 10;
+  const g = cv.getContext('2d');
+  g.fillStyle = '#26221e'; g.fillRect(0, 0, cv.width, cv.height);
+  const cx = 32, cy = cv.height - 9;
+  for (let y = -8; y < 8; y++) {
+    const k = y < 0 ? y + 8 : 7 - y, half = 2 * k + 2;
+    g.fillStyle = y < -5 ? '#6fb44c' : (y + 8) % 3 ? '#488c34' : '#3f7c2e';
+    g.fillRect(cx - half, cy + y, half * 2, 1);
+  }
+  g.drawImage(spr, Math.round(cx - spr.width / 2), cy - spr.height + 3);
+  return cv;
+}
+const sections = [['A — hand-pixelled, SNES-authentic', window.CRONO_A.build()], ['B — illustrated, then pixelized (HD pixel)', window.CRONO_B.build()]];
+for (const [title, v] of sections) {
+  const K = window.KIT;
+  const h = document.createElement('h2'); h.textContent = title; document.body.appendChild(h);
+  const row = document.createElement('div'); row.className = 'row'; document.body.appendChild(row);
+  const add = (cv, cap, cls) => {
+    const c = document.createElement('div'); c.className = 'col';
+    const wrap = document.createElement('div'); if (cls) wrap.className = cls; wrap.appendChild(cv); c.appendChild(wrap);
+    const t = document.createElement('div'); t.className = 'cap'; t.textContent = cap; c.appendChild(t);
+    row.appendChild(c);
+  };
+  const ps = Math.round(240 / v.portrait.w);
+  add(K.toCanvas(v.portrait, v.pal, ps), `portrait ${v.portrait.w}x${v.portrait.h} @${ps}x`);
+  add(K.toCanvas(v.sprite, v.pal, 8), `sprite ${v.sprite.w}x${v.sprite.h} @8x`, 'tile');
+  add(K.toCanvas(v.sprite, v.pal, 4), 'sprite @4x', 'tile');
+  const t1 = onTile(v.sprite, v.pal);
+  const big = document.createElement('canvas'); big.width = t1.width * 3; big.height = t1.height * 3;
+  const bg = big.getContext('2d'); bg.imageSmoothingEnabled = false; bg.drawImage(t1, 0, 0, big.width, big.height);
+  add(big, 'in game: 1 game px = 3 screen px');
+}
+window.READY = true;
+</script>
+</body>
