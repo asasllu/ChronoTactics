@@ -6,7 +6,7 @@
 
   // ---- 600 A.D. farmer: green cap with a drooping tip, brown vest over linen, belt.
   CAST.villager_600 = {
-    name: 'Farmer (600)', group: 'villagers', w: 22, h: 41,
+    name: 'Farmer (600)', group: 'villagers', w: 22, h: 40,
     pal: Object.assign({}, SKIN, {
       C: '#12301a', c: '#2c6430', v: '#488c34', V: '#78b848', w: '#b0e070',
       H: '#2a140a', h: '#4a2a16', r: '#6e4222', R: '#9c6434',
@@ -63,7 +63,7 @@
 
   // ---- 600 A.D. market wife: cream kerchief, red dress, white apron, basket on her arm.
   CAST.villager_600_b = {
-    name: 'Market wife (600)', group: 'villagers', w: 24, h: 41,
+    name: 'Market wife (600)', group: 'villagers', w: 24, h: 39,
     pal: Object.assign({}, SKIN, {
       X: '#5a3416', A: '#fff4c0', a: '#e8c878', n: '#b88c48',
       H: '#2a140a', h: '#4a2a16', r: '#6e4222', R: '#9c6434',
@@ -120,7 +120,7 @@
   // ---- 600 A.D. old man: bald dome, grey fringe, bushy brows and moustache, blue tunic,
   // brown vest, stooped over a walking stick.
   CAST.villager_600_c = {
-    name: 'Old man (600)', group: 'villagers', w: 22, h: 40,
+    name: 'Old man (600)', group: 'villagers', w: 22, h: 37,
     pal: Object.assign({}, SKIN, {
       E: '#fff0dc',
       H: '#34344c', h: '#6e7090', r: '#a4a8c4', R: '#e8ecf4',
@@ -174,7 +174,7 @@
 
   // ---- 65,000,000 B.C. Ioka hunter: wild black mane, bare chest, hide strap, fur shorts.
   CAST.villager_ioka = {
-    name: 'Ioka hunter', group: 'villagers', w: 24, h: 44,
+    name: 'Ioka hunter', group: 'villagers', w: 24, h: 43,
     pal: {
       H: '#0c0a1a', q: '#1e1c36', h: '#34325e', r: '#6064a4', R: '#b4bcf0',
       F: '#f0b07c', S: '#cc7c4c', s: '#8c4a2c', j: '#2a0e06', W: '#ffffff', e: '#d8c8a8',
@@ -233,7 +233,7 @@
   // ---- 65,000,000 B.C. Ioka woman: long auburn hair parted in the middle, fur top and
   // skirt, bone-bead necklace.
   CAST.villager_ioka_b = {
-    name: 'Ioka woman', group: 'villagers', w: 24, h: 41,
+    name: 'Ioka woman', group: 'villagers', w: 26, h: 41,
     pal: Object.assign({}, SKIN, {
       H: '#2c0808', h: '#6c1a14', r: '#a03020', R: '#d86038', Y: '#f8a060',
       F: '#f4bc8c', S: '#d88c5c', s: '#9c5434', j: '#2a0e06',
@@ -288,7 +288,7 @@
 
   // ---- 65,000,000 B.C. Ioka elder: grey mane, long beard, dark pelt, bone-topped staff.
   CAST.villager_ioka_c = {
-    name: 'Ioka elder', group: 'villagers', w: 24, h: 42,
+    name: 'Ioka elder', group: 'villagers', w: 25, h: 40,
     pal: Object.assign({}, SKIN, {
       F: '#f4bc8c', S: '#d08458', s: '#94502e', j: '#2a0e06',
       H: '#262438', h: '#62647e', r: '#9c9eb8', R: '#e4e6f2',
@@ -344,7 +344,7 @@
   // ---- 12,000 B.C. Last Village elder-ish robed man: slate hood and mantle with white fur
   // trim, hands tucked into his sleeves, long brown wool robe.
   CAST.villager_last = {
-    name: 'Robed man (12000 BC)', group: 'villagers', w: 22, h: 41,
+    name: 'Robed man (12000 BC)', group: 'villagers', w: 22, h: 40,
     pal: Object.assign({}, SKIN, {
       X: '#16142a', u: '#6a5a8c', U: '#4a3c68', V: '#30264a',
       I: '#f6f8ff', i: '#c8cce4', J: '#8488a8',
@@ -401,7 +401,7 @@
   // ---- 12,000 B.C. Last Village woman: rounded white wool hood with tan fur, teal shawl
   // pinned by her hands, long brown dress.
   CAST.villager_last_b = {
-    name: 'Shawl woman (12000 BC)', group: 'villagers', w: 22, h: 40,
+    name: 'Shawl woman (12000 BC)', group: 'villagers', w: 22, h: 39,
     pal: Object.assign({}, SKIN, {
       X: '#34345a', u: '#f8faff', U: '#cfd4ea', V: '#9498ba',
       I: '#ecd4aa', i: '#c4a27a', J: '#8a6848',
