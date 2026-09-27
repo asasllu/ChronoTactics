@@ -483,6 +483,21 @@
     async anim(id, name) {
       const u = this.actor(id);
       if (!u) return;
+      // A hand-pixelled sheet that authors this gesture plays it as drawn.
+      const spr = CT.getSprite(u.sprite || u.key || u.id);
+      const authored = spr && spr.sheet && ((spr.def.se || {})[name] || (spr.def.ne || {})[name]);
+      if (authored && name !== 'run_off' && name !== 'stand') {
+        if (name === 'draw_sword') sfx('sfx_sword_swing');
+        if (name === 'jump') sfx('sfx_step');
+        const hold = name === 'kneel' || name === 'fall';
+        const ms = this.r.anim(u, name, { hold }) || 600;
+        if (name === 'jump') await tween(Math.max(400, ms), (k) => (u.oz = Math.sin(k * Math.PI) * 10));
+        else await wait(name === 'kneel' ? Math.min(ms, 400) : ms);
+        if (name === 'dissolve') u.hidden = true;
+        if (!hold && name !== 'dissolve') this.r.stopAnim(u);
+        u.oz = 0;
+        return;
+      }
       switch (name) {
         case 'nod':
           for (let i = 0; i < 2; i++) await tween(180, (k) => (u.oz = -Math.sin(k * Math.PI) * 3));

@@ -497,7 +497,10 @@
   const halfFrame = (cv) => frameOf(CT.PX.halve(cv));
   CT.getSprite = function (key) {
     if (cache[key] && !cache[key].legacyRaw) return cache[key];
-    if (CT.SHEETS && CT.SHEETS[key]) return (cache[key] = CT.makeSheetSprite(key));
+    if (CT.SHEETS && CT.SHEETS[key]) {
+      // A broken sheet falls back to the older art instead of stopping the game.
+      try { return (cache[key] = CT.makeSheetSprite(key)); } catch (e) { console.error('sheet', key, e.message); delete CT.SHEETS[key]; }
+    }
     if (CT.RIGS && CT.RIGS[key]) return (cache[key] = CT.RIG.makeSprite(CT.RIGS[key]));
     if (cache[key] && cache[key].legacyRaw) {
       // PixelLab export with no rig yet.

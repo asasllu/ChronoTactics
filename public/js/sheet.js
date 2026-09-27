@@ -286,7 +286,7 @@
       const s = document.createElement('script');
       s.src = `js/sheets/${f}.js`;
       s.onload = res;
-      s.onerror = () => { console.error('missing sheet file', f); res(); };
+      s.onerror = () => { console.warn('sheet file not found (not authored yet?)', f); res(); };
       document.head.appendChild(s);
     })));
     ensurePalette();
