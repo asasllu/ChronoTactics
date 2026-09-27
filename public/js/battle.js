@@ -25,7 +25,7 @@
     const H = CT.HEROES[member.id];
     const L = member.level;
     const s = {};
-    for (const k of Object.keys(H.base)) s[k] = Math.round(H.base[k] + (H.growth[k] || 0) * (L - 1));
+    for (const k of Object.keys(H.base)) s[k] = Math.round(H.base[k] + (H.growth[k] || 0) * (CT.powerLevel(L) - 1));
     for (const slot of Object.values(member.equip || {})) {
       const e = CT.EQUIPMENT[slot];
       if (e) for (const [k, v] of Object.entries(e.stats)) s[k] += v;
@@ -107,7 +107,7 @@
         return null;
       }
       let st = base;
-      const lvl = spec.scale === 'party' && this.game ? this.game.avgLevel() : spec.level || (!base.fixed && this.def.enemyLevel) || 0;
+      const lvl = spec.scale === 'party' && this.game ? CT.powerLevel(this.game.avgLevel()) : spec.level || (!base.fixed && this.def.enemyLevel) || 0;
       st = lvl ? CT.scaleEnemy(base, lvl) : { ...base };
       if (spec.hp) st.hp = spec.hp;
       for (const k of ['atk', 'def', 'mag', 'mdef', 'spd']) if (spec[k] != null) st = { ...st, [k]: spec[k] };
@@ -716,7 +716,7 @@
       }
       this.events.push({ type: 'defeated', unit: v, fell: info.fell });
       if (v.team === 1 && this.game) {
-        this.game.pendingXp = (this.game.pendingXp || 0) + (v.xp || 0);
+        this.game.pendingXp = (this.game.pendingXp || 0) + CT.killXp(v);
         this.game.pendingGold = (this.game.pendingGold || 0) + (v.gold || 0);
       }
     }

@@ -10,27 +10,27 @@
       name: 'Crono', weapon: 'Katana', elem: 'lightning',
       base: { hp: 120, mp: 20, atk: 12, def: 8, mag: 8, mdef: 7, spd: 9, move: 4, jump: 2 },
       growth: { hp: 17.6, mp: 2.2, atk: 1.35, def: 0.9, mag: 0.85, mdef: 0.75, spd: 0.12 },
-      techs: [['cyclone', 1], ['slash', 3], ['lightning', 5], ['spincut', 9], ['lightning2', 13], ['luminaire', 18]],
+      techs: [['cyclone', 1], ['slash', 3], ['lightning', 5], ['spincut', 7], ['lightning2', 9], ['luminaire', 11]],
       affinity: { lightning: 0.5 },
     },
     frog: {
       name: 'Frog', weapon: 'Masamune', elem: 'water',
       base: { hp: 140, mp: 22, atk: 11, def: 11, mag: 9, mdef: 9, spd: 7, move: 3, jump: 2 },
       growth: { hp: 18.9, mp: 2.2, atk: 1.2, def: 1.1, mag: 0.95, mdef: 0.9, spd: 0.1 },
-      techs: [['slurp', 1], ['slurp_cut', 2], ['water', 5], ['heal', 8], ['leap_slash', 11], ['frog_squash', 16]],
+      techs: [['slurp', 1], ['slurp_cut', 3], ['water', 5], ['heal', 7], ['leap_slash', 9], ['frog_squash', 11]],
       affinity: { water: 0.5 }, swim: true,
     },
     ayla: {
       name: 'Ayla', weapon: 'Fists', elem: 'none',
       base: { hp: 150, mp: 12, atk: 15, def: 9, mag: 5, mdef: 5, spd: 8, move: 5, jump: 3 },
       growth: { hp: 20.2, mp: 1.4, atk: 1.55, def: 0.95, mag: 0.4, mdef: 0.55, spd: 0.12 },
-      techs: [['kiss', 1], ['rollo_kick', 3], ['cat_attack', 6], ['tail_spin', 9], ['charm', 12], ['triple_kick', 17]],
+      techs: [['kiss', 1], ['rollo_kick', 3], ['cat_attack', 5], ['tail_spin', 7], ['charm', 9], ['triple_kick', 11]],
     },
     magus: {
       name: 'Magus', weapon: 'Scythe', elem: 'shadow',
       base: { hp: 100, mp: 40, atk: 9, def: 6, mag: 16, mdef: 12, spd: 8, move: 4, jump: 2 },
       growth: { hp: 13.5, mp: 3.4, atk: 0.8, def: 0.6, mag: 1.55, mdef: 1.1, spd: 0.12 },
-      techs: [['m_lightning2', 1], ['ice2', 1], ['fire2', 1], ['dark_bomb', 4], ['dark_mist', 8], ['black_hole', 14], ['dark_matter', 20]],
+      techs: [['m_lightning2', 1], ['ice2', 1], ['fire2', 1], ['dark_bomb', 5], ['dark_mist', 9], ['black_hole', 11], ['dark_matter', 12]],
       affinity: { shadow: 0.5 }, float: true,
     },
   };
@@ -50,19 +50,27 @@
   };
 
   // XP needed to go from level L to L+1.
-  CT.xpToNext = (L) => Math.round(10 * Math.pow(L, 1.5));
+  // Progression: a flat 100 EXP per level (as in Final Fantasy Tactics), about one or two
+  // levels and one new tech per story battle. Stats grow with the *power level*
+  // 2L - 1, so party Lv L matches enemies scaled to level 2L - 1 (CT.BATTLE_LEVEL is
+  // on that enemy scale; CT.PARTY_LEVEL is the party level each battle is built for).
+  CT.xpToNext = () => 100;
+  CT.powerLevel = (L) => 2 * L - 1;
+  CT.PARTY_LEVEL = { B0: 1, B1: 3, B2: 6, B3: 8, B4A: 10, B4B: 11, B5: 12 };
+  // EXP for defeating a foe; story battles pay the rest as a victory reward.
+  CT.killXp = (u) => (u.boss || u.big ? 20 : 5);
   // Intended party level per story battle (§3.9); enemies scale to it.
   CT.BATTLE_LEVEL = { B0: 1, B1: 5, B2: 9, B3: 14, B4A: 20, B4B: 22, B5: 23 };
   // Per-battle difficulty knobs, tuned with batch simulations (tools/balance).
   CT.BATTLE_TUNE = {
     B0: { atk: 0.75 },
     B1: { atk: 0.72, def: 0.55, hp: 0.9 },
-    B4A: { hp: 1.6, atk: 0.75 },
-    B2: { atk: 0.76 },
+    B4A: { hp: 1.35, atk: 0.68 },
+    B2: { atk: 0.72 },
     B5: { atk: 0.8, hp: 0.85 },
     B4B: { atk: 1.7, hp: 1.3 },
   };
-  CT.LEVEL_CAP = 30;
+  CT.LEVEL_CAP = 15;
 
   // ---- Techs ------------------------------------------------------------------------
   // shape: single | square (Chebyshev r) | radius (Manhattan r) | ring (around caster)
@@ -103,10 +111,10 @@
     dark_matter: T({ name: 'Dark Matter', mp: 24, range: [1, 6], shape: 'cross', r: 5, kind: 'mag', stat: 'mag', mult: 2.1, elem: 'shadow', vfx: 'shadow', big: 'darkmatter', sfx: 'sfx_black_hole', desc: 'Cross-shaped annihilation, 5 tiles each arm.' }),
     // Dual & triple techs (listed in the initiator's menu). `members` = [initiator, partners...].
     x_strike: T({ name: 'X-Strike', dual: ['crono', 'frog'], mp: 6, mult: 1.25, stat: 'pair_atk', unlock: true, vfx: 'slash', sfx: 'sfx_sword_hit', desc: 'Crono & Frog cross blades. Combined ATK×2.5.' }),
-    sword_stream: T({ name: 'Sword Stream', dual: ['crono', 'frog'], mp: 5, lv: 5, range: [1, 1], shape: 'line', r: 4, kind: 'mag', stat: 'pair_mag', mult: 1.0, elem: 'water', vfx: 'water', sfx: 'sfx_water_splash', desc: 'A 4-tile line of water and lightning.' }),
+    sword_stream: T({ name: 'Sword Stream', dual: ['crono', 'frog'], mp: 5, lv: 3, range: [1, 1], shape: 'line', r: 4, kind: 'mag', stat: 'pair_mag', mult: 1.0, elem: 'water', vfx: 'water', sfx: 'sfx_water_splash', desc: 'A 4-tile line of water and lightning.' }),
     drop_kick: T({ name: 'Drop Kick', dual: ['crono', 'ayla'], mp: 5, range: [1, 2], stat: 'pair_atk', mult: 1.1, elem: 'lightning', vfx: 'lightning', sfx: 'sfx_kick', desc: 'Crono launches Ayla into a lightning kick.' }),
     slurp_kiss: T({ name: 'Slurp Kiss', dual: ['frog', 'ayla'], mp: 5, range: [0, 0], shape: 'aura', r: 2, kind: 'heal', stat: 'pair_mag', mult: 1.3, target: 'ally', vfx: 'heal', sfx: 'sfx_heal_chime', desc: 'Big heal for all allies within 2 tiles.' }),
-    beast_toss: T({ name: 'Beast Toss', dual: ['ayla', 'magus'], mp: 8, lv: 10, range: [1, 5], shape: 'square', r: 1, kind: 'mag', stat: 'pair_both', mult: 1.2, elem: 'shadow', vfx: 'shadow', sfx: 'sfx_dark_bomb', desc: 'Ayla hurls Magus\'s Dark Bomb. 3×3, range 5.' }),
+    beast_toss: T({ name: 'Beast Toss', dual: ['ayla', 'magus'], mp: 8, lv: 8, range: [1, 5], shape: 'square', r: 1, kind: 'mag', stat: 'pair_both', mult: 1.2, elem: 'shadow', vfx: 'shadow', sfx: 'sfx_dark_bomb', desc: 'Ayla hurls Magus\'s Dark Bomb. 3×3, range 5.' }),
     shadow_cyclone: T({ name: 'Shadow Cyclone', dual: ['crono', 'magus'], mp: 8, unlock: true, range: [0, 0], shape: 'square', r: 2, stat: 'pair_both', mult: 0.95, elem: 'shadow', vfx: 'shadow', sfx: 'sfx_spin', desc: 'Cyclone infused with shadow — ring plus one tile.' }),
     ice_water: T({ name: 'Ice Water', dual: ['frog', 'magus'], mp: 7, unlock: true, range: [1, 1], shape: 'line', r: 3, kind: 'mag', stat: 'pair_mag', mult: 1.1, elem: 'ice', status: ['slow', 1, 3], vfx: 'ice', sfx: 'sfx_ice_crack', desc: 'Freezes a 3-tile line; Slows all caught.' }),
     eclipse_blade: T({ name: 'Eclipse Blade', dual: ['crono', 'frog', 'magus'], mp: 15, unlock: true, range: [0, 0], shape: 'map', stat: 'triple', mult: 1.2, elem: 'shadow', vfx: 'shadow', big: 'eclipse', sfx: 'sfx_black_hole', desc: 'Magus opens a rift; Crono & Frog strike through it. Hits every foe.' }),
@@ -232,7 +240,7 @@
 
   // ---- Extra mode: the original Zenan skirmish ------------------------------------
   CT.SKIRMISH = {
-    name: 'Zenan Skirmish', map: 'zenan', music: 'mus_battle', level: 12,
+    name: 'Zenan Skirmish', map: 'zenan', music: 'mus_battle', level: 6,
     partyOverride: ['crono', 'frog', 'ayla', 'magus', 'dave', 'mat'],
     party: { crono: [2, 5], frog: [3, 7], ayla: [3, 2], magus: [1, 3], dave: [3, 9], mat: [0, 4] },
     partyFace: 'E',

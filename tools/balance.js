@@ -6,13 +6,13 @@ const path = require('path');
 const url = 'file://' + path.resolve(__dirname, '../public/index.html') + '?sim&test&autoplay';
 const SETUP = {
   B0: { level: 1, party: ['crono', 'frog'], gear: [] },
-  B1: { level: 5, party: ['crono', 'frog'], gear: [] },
-  B2: { level: 9, party: ['crono', 'frog', 'ayla'], gear: ['steel_saber', 'iron_sword'] },
-  B3: { level: 14, party: ['crono', 'frog', 'ayla', 'magus'], gear: ['steel_saber', 'iron_sword', 'bone_guard', 'fist_2'] },
-  B4A: { level: 20, party: ['crono', 'frog', 'ayla', 'magus'], gear: ['rainbow', 'brave_sword', 'giants_hand', 'dark_scythe', 'lumin_robe', 'beret'], guests: ['iselle'] },
-  B4B: { level: 22, party: ['crono', 'frog', 'ayla', 'magus'], gear: ['steel_saber', 'iron_sword', 'bone_guard', 'fist_2', 'rainbow', 'lumin_robe', 'brave_sword'], guests: ['iselle'] },
-  B5: { level: 23, party: ['crono', 'frog', 'ayla', 'magus'], gear: ['steel_saber', 'iron_sword', 'bone_guard', 'fist_2', 'rainbow', 'lumin_robe', 'brave_sword', 'dark_scythe'] },
-  OPT1: { level: 10, party: ['crono', 'frog', 'ayla', 'magus'], gear: [] },
+  B1: { level: 3, party: ['crono', 'frog'], gear: [] },
+  B2: { level: 6, party: ['crono', 'frog', 'ayla'], gear: ['steel_saber', 'iron_sword'] },
+  B3: { level: 8, party: ['crono', 'frog', 'ayla', 'magus'], gear: ['steel_saber', 'iron_sword', 'bone_guard', 'fist_2'] },
+  B4A: { level: 10, party: ['crono', 'frog', 'ayla', 'magus'], gear: ['rainbow', 'brave_sword', 'giants_hand', 'dark_scythe', 'lumin_robe', 'beret'], guests: ['iselle'] },
+  B4B: { level: 11, party: ['crono', 'frog', 'ayla', 'magus'], gear: ['steel_saber', 'iron_sword', 'bone_guard', 'fist_2', 'rainbow', 'lumin_robe', 'brave_sword'], guests: ['iselle'] },
+  B5: { level: 12, party: ['crono', 'frog', 'ayla', 'magus'], gear: ['steel_saber', 'iron_sword', 'bone_guard', 'fist_2', 'rainbow', 'lumin_robe', 'brave_sword', 'dark_scythe'] },
+  OPT1: { level: 5, party: ['crono', 'frog', 'ayla', 'magus'], gear: [] },
 };
 async function runOne(browser, id, tune) {
   const p = await browser.newPage();
@@ -26,9 +26,9 @@ async function runOne(browser, id, tune) {
     g.setParty(S.party);
     g.gold = 1e6;
     for (const gear of S.gear) for (let i = 0; i < 4; i++) g.buyGear(gear);
-    g.inventory = { tonic: 4, mid_tonic: S.level > 6 ? 3 : 0, ether: 2, revive: 1 };
+    g.inventory = { tonic: 4, mid_tonic: S.level > 3 ? 3 : 0, ether: 2, revive: 1 };
     g.unlock('x_strike');
-    if (S.level >= 12) { g.unlock('shadow_cyclone'); g.unlock('ice_water'); }
+    if (S.level >= 7) { g.unlock('shadow_cyclone'); g.unlock('ice_water'); }
     g.guests = S.guests || [];
     CT.game = g;
     if (tune) CT.BATTLE_TUNE[id] = tune;

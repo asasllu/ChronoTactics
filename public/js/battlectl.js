@@ -1290,8 +1290,10 @@
         if (window.TEST_LOG) window.TEST_LOG.push({ battle: def.name, result: 'victory', round: ctl.b.round, lv: g.avgLevel(), hp: ctl.b.party().map((u) => Math.round((u.hp / u.maxHp) * 100)) });
         if (CT.audio && !def.noFanfare) CT.audio.playMusic('mus_victory');
         g.syncFromBattle(ctl.b);
+        // Everyone walks away from a won battle at full HP and MP (KO'd members too).
+        g.fullHeal();
         const guestHp = {};
-        for (const u of ctl.b.units) if (u.guest) guestHp[u.id] = u.alive ? u.hp / u.maxHp : 0.5;
+        for (const u of ctl.b.units) if (u.guest) guestHp[u.id] = 1;
         g.guestHp = guestHp;
         const rw = def.rewards || {};
         const xp = (g.pendingXp || 0) + (rw.xp || 0);
