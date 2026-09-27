@@ -71,10 +71,14 @@ The rules follow `docs/SCRIPT.md` §3.
 | --- | --- |
 | `docs/SCRIPT.md` | The game bible: story, characters, rules, every scene and battle. |
 | `docs/ENGINE_SPEC.md` | The data contract between the engine and the content modules. |
-| `public/js/pixel.js` | Pixel-art toolkit: letter grids, outline and cel-shading pass, Echo effect. |
-| `public/js/sprites.js`, `sprites_cast.js` | Character, enemy, NPC and prop sprites (plus PixelLab exports). |
+| `docs/ART_SPEC.md` | The art contract: palette, resolution, rigs, animations, terrain and decor. |
+| `public/js/pal.js` | The 66-colour master palette, the frame quantiser, pixel primitives and the 5×7 font. |
+| `public/js/pixel.js` | Pixel-art toolkit: letter grids, outline and ramp-aware cel shading, Echo effect. |
+| `public/js/rig.js` | Pose-driven sprites: skeleton, standard animations, bake with rim light. |
+| `public/js/rigs_party.js`, `rigs_allies.js`, `rigs_enemies.js`, `rigs_npcs.js` | Every character as an animated rig. |
+| `public/js/sprites.js`, `sprites_cast.js` | Sprite registry and legacy fallback art. |
 | `public/js/portraits.js` | 64×64 dialogue portraits for 17 characters, with 6 emotions each. |
-| `public/js/terrain.js`, `terrain_ext.js` | Terrain materials (pixel-shaded per tile) and decoration art. |
+| `public/js/terrain.js`, `terrain_ext.js`, `terrain_px.js`, `decor_px.js` | Terrain materials and decorations (`*_px.js` are the native-resolution versions). |
 | `public/js/maps.js` | All maps: heights, terrain, decor, zones and markers. |
 | `public/js/audio.js` | WebAudio chiptune synth: 21 original tracks and 40 sound effects. |
 | `public/js/data.js` | Heroes, growth, techs, enemies, items, equipment, shops and balance knobs. |
@@ -82,11 +86,12 @@ The rules follow `docs/SCRIPT.md` §3.
 | `public/js/battle.js` | Tactics rules: pathfinding, CT, damage, statuses, special techs, AI. |
 | `public/js/battlectl.js` | Battle flow: input, animation and the mid-battle trigger engine. |
 | `public/js/scene.js` | Cutscene runner and field exploration. |
-| `public/js/render.js` | Isometric renderer: themes, lighting, weather, effects and camera. |
+| `public/js/render.js` | Isometric renderer: themes, lighting, weather, pixel effects, camera, palette present. |
 | `public/js/ui.js`, `main.js` | Dialogue, menus, HUD, title and credits; boot and input. |
 | `tools/dev.html` | Previews maps, sprites, portraits, decor and audio in isolation. |
 | `tools/balance.js` | Batch battle simulator used to tune difficulty. |
-| `tools/build-assets.mjs` | Bakes PixelLab exports from `assets/characters/` into `public/js/assets.js`. |
+| `tools/rig.html`, `tools/shot.cjs` | Rig animation sheets and screenshots of maps, battles and galleries. |
+| `tools/build-assets.mjs` | Bakes PixelLab exports from `assets/characters/` (reference art, no longer loaded). |
 
 ### Testing hooks
 
@@ -102,8 +107,18 @@ The game is the static files in `public/`, deployed as a Cloudflare Worker with 
 assets (see `wrangler.jsonc`): run `npm install && npx wrangler login && npm run deploy`, or
 connect the repo in the Cloudflare dashboard so every push to `main` redeploys.
 
-## Character art (PixelLab exports)
+## Graphics pipeline
 
-Frog, Ayla, Magus, Dave, Mat and the Mystic Knight use 48×48, 8-direction PixelLab
-exports. To replace any other character, unzip an export into `assets/characters/<id>/`
-and run `npm run assets`.
+The game renders at **480×300** and is scaled up by a whole number, so every pixel stays
+square and crisp. Each frame is quantised onto a fixed **66-colour palette** with a light
+ordered dither, so every pixel on screen comes from it. Tiles are 32×16 with 8 px per
+height level.
+
+Every character is a **rig**: a function that draws the character from a pose. Standard
+animations (idle, walk, attack, cast, shoot, hurt, KO, kneel, victory) are baked into
+sprite frames with a dark outline, cel shading along each colour's palette ramp, and a
+magic rim light while casting. `docs/ART_SPEC.md` is the contract, and
+`public/magus-wizard.html` is the standalone quality reference.
+
+The PixelLab exports in `assets/characters/` (Frog, Ayla, Magus, Dave, Mat and the
+Mystic Knight) served as references for their rigs and are no longer loaded by the game.

@@ -1,8 +1,10 @@
-// Character & decoration sprites.
+// Character sprite registry.
 //
-// Two sources:
-//  1. PixelLab exports baked into CT.ASSETS (see tools/build-assets.mjs) —
-//     8-directional, used whenever a character has one.
+// Characters are rigs (CT.RIGS, see rig.js and docs/ART_SPEC.md): pose-driven,
+// animated, drawn at the logical resolution. Legacy sources remain as fallbacks,
+// halved to the logical resolution:
+//  1. PixelLab exports baked into CT.ASSETS (tools/build-assets.mjs; not loaded
+//     by the game any more, the source art lives in assets/characters/).
 //  2. Built-in sprites composed here from shape primitives and hand-placed
 //     detail on a letter grid, then run through an automatic outline + cel
 //     shading pass (light from the top-left) so flat colour regions read as
@@ -453,7 +455,7 @@
     CT.SPRITE_BUILDERS[key] = fn;
     delete cache[key];
   };
-  CT.hasSprite = (key) => !!(cache[key] || CT.SPRITE_BUILDERS[key] || (CT.ASSETS && CT.ASSETS[key]) || (key.startsWith('echo_') && CT.hasSprite(key.slice(5))));
+  CT.hasSprite = (key) => !!(cache[key] || (CT.RIGS && CT.RIGS[key]) || CT.SPRITE_BUILDERS[key] || (CT.ASSETS && CT.ASSETS[key]) || (key.startsWith('echo_') && CT.hasSprite(key.slice(5))));
 
   function loadImage(src) {
     return new Promise((res, rej) => {
