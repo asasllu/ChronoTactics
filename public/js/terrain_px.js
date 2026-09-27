@@ -278,12 +278,16 @@
   // Water family (animated over 8 frames).
   // ======================================================================================
   // opts: base, deep, lite, glint, foam
+  // Sides get no frame number; tops are rasterised first, so remember it here.
+  let curFrame = 0;
   function waterTop(p, o) {
     px(p);
-    const f = p.frame | 0;
+    const f = (curFrame = p.frame | 0);
     // Static depth variance (two tones, clean boundaries).
     const n = vnoise(p.wx * 0.9, p.wy * 0.9, 61) * 0.7 + vnoise(p.wx * 2.3, p.wy * 2.3, 62) * 0.3;
     let c = n < 0.42 ? o.deep : o.base;
+    const bed = o.bed && o.bed(p);
+    if (bed) c = bed;
     // Slow swell bands: thin lighter crests drifting down the screen.
     const sw = mod(p.GY * 2 + p.GX + Math.floor(n * 10) * 2 - f * 3, 24);
     if (sw < 2 && n > 0.36) c = o.lite;
@@ -312,11 +316,9 @@
     return out(p, c);
   }
   function waterSide(sp, o) {
-    const f = sp.t && sp.t._f;
-    void f;
     if (sp.pv === 0) return o.lite;
     if (bottom(sp)) return o.edge;
-    const streak = mod(sp.pwu * 3, 7) === 0;
+    const streak = mod(sp.pwu * 3, 7) === 0 && mod(sp.pv - curFrame, 8) < 5;
     const c = L(sp) ? o.deep : o.base;
     if (streak && sp.pv > 1) return L(sp) ? o.edge : o.deep;
     return c;
@@ -327,21 +329,15 @@
 
   // f — Shallows: lighter water over a sandy/pebbly bed.
   const SHALLOW = { base: BL[4], deep: BL[3], lite: BL[5], glint: BL[6], foam: [WH, BL[6]], edge: BL[2] };
-  T.f.top = (p) => {
-    px(p);
-    // Bed stones visible through the water (static, on the lattice).
+  SHALLOW.bed = (p) => {
+    // Bed stones seen through the water (static, on the lattice).
     const ci = Math.floor(p.tx / 4), cj = Math.floor(p.ty / 4);
     const h = hash(ci, cj, 71);
-    const c = waterTop(p, SHALLOW);
-    if (h > 0.8 && c === undefined) return c;
-    if (h > 0.82) {
-      const li = mod(p.tx, 4), lj = mod(p.ty, 4);
-      const base = [c[0] / p._L, c[1] / p._L, c[2] / p._L];
-      const isBase = base[0] === SHALLOW.base[0] && base[2] === SHALLOW.base[2];
-      if (isBase && li > 0 && lj > 0 && li + lj < 6) return out(p, h > 0.92 ? TE[2] : SL[3]);
-    }
-    return c;
+    if (h < 0.82) return null;
+    const li = mod(p.tx, 4), lj = mod(p.ty, 4);
+    return li > 0 && lj > 0 && li + lj < 6 ? (h > 0.92 ? TE[2] : SL[3]) : null;
   };
+  T.f.top = (p) => waterTop(p, SHALLOW);
   T.f.side = (sp) => waterSide(sp, SHALLOW);
 
   // W — Deep sea.
@@ -662,7 +658,7 @@
   // ======================================================================================
   T.l.top = (p) => {
     px(p);
-    const f = p.frame | 0;
+    const f = (curFrame = p.frame | 0);
     const ph = (f / 8) * Math.PI * 2;
     // Plates bob a pixel back and forth; the melt between them pulses.
     const dx = Math.round(Math.sin(ph) * 1.1), dy = Math.round(Math.cos(ph) * 1.1);
@@ -686,9 +682,7 @@
     return out(p, w.id < 0.4 ? IN[2] : ST[0]);
   };
   T.l.side = (sp) => {
-    const f = sp.t ? (sp._f | 0) : 0;
-    void f;
-    const s = mod(sp.pv + Math.floor(hash(sp.pwu >> 1, 0, 472) * 8), 8);
+    const s = mod(sp.pv - curFrame + Math.floor(hash(sp.pwu >> 1, 0, 472) * 8), 8);
     if (sp.pv === 0) return GD[3];
     const i = s < 2 ? 3 : s < 5 ? 2 : 1;
     const c = [RD[2], GD[0], GD[1], GD[2]][i - (L(sp) ? 1 : 0)];
@@ -698,20 +692,21 @@
   // ======================================================================================
   // m — Zeal marble: white-blue slabs, soft veins, tarnished gold joints.
   // ======================================================================================
-  const mPat = bond(8, 8, 485);
+  const mPat = (i, j) => (mod(i, 8) === 0 || mod(j, 8) === 0 ? -1 : Math.floor(i / 8) * 1000 + Math.floor(j / 8));
   function marble(p) {
     const [id, e] = bevel(p, mPat);
     if (id < 0) {
-      const verd = vnoise(p.wx * 2, p.wy * 2, 482) > 0.66;
-      return verd ? TE[1] : WD[4];
+      // Gold trim on every other course line, plain seams elsewhere.
+      if (mod(p.ty, 16) === 0 || mod(p.tx, 16) === 0) return vnoise(p.wx * 2, p.wy * 2, 482) > 0.7 ? TE[1] : WD[4];
+      return SL[3];
     }
-    const k = (id % 83) / 83;
-    let i = k < 0.5 ? 4 : 5;
+    const light = hash(id, 3, 486) >= 0.35;
+    let c = light ? SL[5] : SL[4];
     const v = Math.abs(Math.sin((p.wx * 0.7 + p.wy * 0.4) * 5 + vnoise(p.wx * 1.5, p.wy * 1.5, 481) * 6));
-    if (v < 0.1) i -= 1;
-    if (e > 0) i = 5;
-    else if (e < 0) i -= 1;
-    return i >= 5 && e > 0 && k >= 0.5 ? WH : SL[Math.max(3, i)];
+    if (v < 0.08) c = light ? SL[4] : SL[3];
+    if (e > 0) c = light ? WH : SL[5];
+    else if (e < 0) c = SL[3];
+    return c;
   }
   T.m.top = (p) => {
     px(p);
@@ -749,19 +744,25 @@
   // k — Hollow ceramic: glossy white tiles; K — split by red Lavos veins; O — inlay.
   // ======================================================================================
   // Tiles 8x8 lattice (2x2 per tile), seams on the lattice.
-  const kPat = (i, j) => (mod(i + 4, 8) === 0 || mod(j + 4, 8) === 0 ? -1 : Math.floor((i + 4) / 8) * 1000 + Math.floor((j + 4) / 8));
+  const kPat8 = (i, j) => (mod(i + 4, 8) === 0 || mod(j + 4, 8) === 0 ? -1 : Math.floor((i + 4) / 8) * 1000 + Math.floor((j + 4) / 8));
+  const kPat16 = (i, j) => (mod(i + 8, 16) === 0 || mod(j + 8, 16) === 0 ? -1 : Math.floor((i + 8) / 16) * 1000 + Math.floor((j + 8) / 16));
+  // White glazed tiles, one per map tile (k/K), or small dark-blue inlay tiles (O).
   function ceramic(p, dark) {
-    const [id, e] = bevel(p, kPat);
-    if (id < 0) return dark ? SL[3] : SL[3];
-    const chk = (Math.floor((p.tx + 4) / 8) + Math.floor((p.ty + 4) / 8)) & 1;
-    const R = dark ? [IN[2], SL[0], SL[1], SL[2]] : [SL[3], SL[4], SL[5], WH];
-    let i = chk ? 2 : 1;
+    const n = dark ? 8 : 16, o = n >> 1;
+    const [id, e] = bevel(p, dark ? kPat8 : kPat16);
+    if (id < 0) return dark ? BL[4] : SL[3];
+    const chk = (Math.floor((p.tx + o) / n) + Math.floor((p.ty + o) / n)) & 1;
+    const R = dark ? [IN[2], BL[1], BL[1], BL[2]] : [SL[4], SL[4], SL[5], WH];
+    let i = dark ? (chk ? 1 : 2) : 2;
     if (e > 0) i = 3;
     else if (e < 0) i = 0;
-    // Glossy glint: a short diagonal near the lit corner (screen space).
-    const a = mod(p.tx + 4, 8), b = mod(p.ty + 4, 8);
-    const [va, vb] = INV[p._r](a - 4, b - 4);
-    if (e === 0 && va === -2 && vb >= -2 && vb <= 0) i = 3;
+    // Glossy glint: a short diagonal streak near the lit corner (view space).
+    const a = mod(p.tx + o, n) - o, b = mod(p.ty + o, n) - o;
+    const [va, vb] = INV[p._r](a, b);
+    if (e === 0) {
+      if (dark ? va === -2 && vb >= -2 && vb <= 0 : (va === -4 || va === -5) && vb >= -5 && vb <= -1) i = 3;
+      else if (!dark && va + vb > 3 && (chk || va + vb > 6)) i = 1;
+    }
     return R[i];
   }
   T.k.top = (p) => {
@@ -816,16 +817,16 @@
     if (e < 0.1) return out(p, IN[0]);
     const lit = facetLit(p, w);
     const hi = w.id > 0.5;
-    let c = hi ? SL[0] : IN[2];
-    if (e < 0.2 && lit > 0) c = hi ? SL[1] : SL[0];
-    else if (e < 0.2 && lit < 0) c = IN[1];
-    else if (hash(p.tx >> 1, p.ty >> 1, 534) > 0.97) c = hi ? SL[1] : SL[0];
+    let c = hi ? SL[1] : SL[0];
+    if (e < 0.2 && lit > 0) c = hi ? SL[2] : SL[1];
+    else if (e < 0.2 && lit < 0) c = IN[2];
+    else if (hash(p.tx >> 1, p.ty >> 1, 534) > 0.97) c = hi ? SL[2] : SL[1];
     return out(p, c);
   };
   T.o.side = (sp) => {
     const cut = Math.floor(sp.pdepth * (0.55 + 0.45 * vnoise(sp.pwu * 0.25, 0, 532))) + 3;
     if (sp.pv > cut) return null;
-    if (sp.pv === 0) return fc(sp, SL, 1);
+    if (sp.pv === 0) return fc(sp, SL, 2);
     if (sp.pv >= cut - 1) return IN[0];
     const band = Math.floor(sp.pv / 4);
     const k = hash(band, sp.pwu >> 2, 533);

@@ -209,7 +209,7 @@
       hurt: { frames: [{ ms: 300, crouch: 2, lean: -0.4, x: -2, armF: [-0.4, 0.8], armB: [1.0, 0.5], wpn: -0.4, tilt: -1, nod: 1, footF: [1, 0], footB: [-3, 1], hurt: true }] },
       ko: { frames: [{ ms: 1000, lean: -0.2, crouch: 2, armF: [0.2, 0.1], armB: [0.3, 0.1], wpn: 2.4, nod: 1, ko: true }] },
       // One knee down, blade planted point-first in front.
-      kneel: { frames: [{ ms: 1000, lean: 0.25, crouch: 4, footF: [3, 0], footB: [-4, 0], armF: [0.9, 0.5], armB: [0.4, 0.6], wpn: 3.14, nod: 1 }] },
+      kneel: { frames: [{ ms: 1000, lean: 0.25, crouch: 4, footF: [3, 0], footB: [-4, 0], armF: [1.2, 0.2], armB: [0.4, 0.6], wpn: 3.14, nod: 1 }] },
       // Masamune thrust to the sky.
       victory: {
         loop: true,
@@ -328,8 +328,8 @@
       // Charm: hands clasped at the cheek with a hip sway, then a blown kiss.
       cast: {
         frames: [
-          { ms: 170, crouch: 1, hipX: 1, lean: -0.08, armF: [2.3, 1.4], armB: [2.1, 1.5], tilt: 1, footF: [1, 0], footB: [-2, 1] },
-          { ms: 170, crouch: 1, hipX: -1, lean: 0.08, armF: [2.3, 1.5], armB: [2.1, 1.6], tilt: 1, bob: -1, footF: [2, 0], footB: [-3, 2] },
+          { ms: 170, crouch: 1, hipX: 1, lean: -0.08, armF: [1.3, 1.9], armB: [1.5, 1.7], tilt: 1, footF: [1, 0], footB: [-2, 1] },
+          { ms: 170, crouch: 1, hipX: -1, lean: 0.08, armF: [1.4, 1.85], armB: [1.6, 1.65], tilt: 1, bob: -1, footF: [2, 0], footB: [-3, 2] },
           { ms: 260, lean: 0.2, armF: [1.75, -0.15], armB: [-0.5, 0.6], tilt: 1, footF: [3, 0], footB: [-3, 4] },
         ],
         charge: [0, 1], release: 2, rim: true,
@@ -443,11 +443,11 @@
     g.px(h.x - d.x * 10, h.y - d.y * 10, 'G');
     g.capsule(top.x - d.x * 1.5, top.y - d.y * 1.5, top.x - d.x * 0.5, top.y - d.y * 0.5, 0.9, 'G');
     // Curved blade: sweeps forward from the top and hooks down toward the haft.
-    const L = 12;
+    const L = 13;
     for (let i = 0; i <= L; i += 0.5) {
-      const t = i / L, bend = t * t * 6;
+      const t = i / L, bend = t * t * 7;
       const bx = top.x + n.x * i - d.x * bend, by = top.y + n.y * i - d.y * bend;
-      const w = Math.max(1, Math.round(3 * (1 - t) + 0.4));
+      const w = Math.max(1, Math.round(4 * (1 - t) + 0.3));
       for (let k = 0; k < w; k++) g.px(bx + d.x * k, by + d.y * k, k === 0 ? 'v' : k === w - 1 && w > 2 ? 'X' : 'x');
     }
     g.px(top.x - d.x, top.y - d.y, 'G');
@@ -472,18 +472,20 @@
   function magusHair(g, J, view, pose) {
     const H = J.head, x = H.x, y = H.y;
     const fly = Math.min(3, Math.max(-1, (pose.x || 0) * 0.5 + (pose.lean || 0) * 4)), sw = pose.bob ? 1 : 0;
-    g.ell(x - 1, y - 3, 5.5, 3.2, 'h');
     if (view === 'se') {
+      g.ell(x - 1, y - 4, 5.2, 2.4, 'h');
+      g.ell(x - 4, y - 2, 2.6, 3.4, 'h');
       g.poly([[x - 1, y - 6], [x - 6, y - 4], [x - 8 - fly, y + 2], [x - 9 - fly, y + 10], [x - 7 - fly, y + 15 - sw], [x - 4, y + 9], [x - 2, y + 2]], 'h');
       for (const [x0, y0, x1, y1, w] of [[-8, 8, -11, 14, 3], [-6, 11, -7, 17, 2], [-7, 1, -11, 4, 3]]) g.spike(x + x0 - fly, y + y0, x + x1 - fly, y + y1 - sw, w, 'h');
       // Bangs swept to the side over the brow, one long lock by the face.
-      for (const [x0, y0, x1, y1, w] of [[0, -5, 3, -2, 3], [3, -5, 6, -2, 2], [-1, -4, -1, 1, 2]]) g.spike(x + x0, y + y0, x + x1, y + y1, w, 'h');
+      for (const [x0, y0, x1, y1, w] of [[1, -5, 4, -3, 2], [3, -5, 6, -3, 2], [-2, -3, -2, 3, 2]]) g.spike(x + x0, y + y0, x + x1, y + y1, w, 'h');
       for (const [x0, y0, x1, y1] of [[-3, -5, -7, -1], [-5, 0, -8, 9], [-3, 3, -5, 10]]) g.line(x + x0, y + y0, x + x1 - fly, y + y1, 'H');
       for (const [x0, y0, x1, y1] of [[-2, -6, 2, -6], [-6, -2, -7, 3]]) g.line(x + x0, y + y0, x + x1, y + y1, 'R');
       // Long pointed ear sweeping back.
       g.spike(x - 2, y + 0.5, x - 7, y - 3, 2.5, 's');
       g.px(x - 3, y, 'S');
     } else {
+      g.ell(x - 1, y - 3, 5.5, 3.2, 'h');
       g.ell(x, y - 1, 5.4, 5.3, 'h');
       g.poly([[x - 5, y - 2], [x + 5, y - 2], [x + 4, y + 10], [x + 1, y + 16 - sw], [x - 3, y + 12], [x - 7 - fly, y + 14 - sw], [x - 7 - fly, y + 4]], 'h');
       for (const [x0, y0, x1, y1, w] of [[-6, 10, -9 - fly, 15, 3], [0, 12, 0, 18, 3], [3, 9, 5, 14, 2]]) g.spike(x + x0, y + y0, x + x1, y + y1 - sw, w, 'h');
@@ -502,10 +504,10 @@
       s: '#bcc0d4', S: '#9294b0', A: '#bcc0d4', a: '#9294b0', F: '#bcc0d4', f: '#9294b0',
       e: '#d43c3c', E: '#f06c4c', m: '#6e7090', K: '#52526e',
       h: '#5c90dc', H: '#3c64b4', R: '#8cc0f0',
-      c: '#52526e', C: '#3a3a52', d: '#52526e', D: '#3a3a52', y: '#f8bc3c',
+      c: '#52526e', C: '#3a3a52', d: '#6e7090', D: '#3a3a52', y: '#f8bc3c',
       p: '#52526e', q: '#3a3a52', b: '#3a3a52', o: '#2a2038',
       r: '#4a1c6c', P: '#6c3094', L: '#a02030',
-      g: '#6e4222', G: '#f8bc3c', x: '#bcc0d4', X: '#9294b0', v: '#ffffff',
+      g: '#6e4222', G: '#f8bc3c', x: '#e4e8f0', X: '#9294b0', v: '#ffffff',
     },
     detail: 'eEmKHRPCyv',
     magic: '#bc84e4', // shadow
@@ -532,9 +534,9 @@
       // Shadow magic: scythe held upright, free hand raised, then thrust forward.
       cast: {
         frames: [
-          { ms: 180, lean: -0.1, armF: [0.4, 0.9], armB: [2.7, -0.2], wpn: 0.05, tilt: -1, nod: -1, footF: [1, 0], footB: [-2, 0] },
-          { ms: 180, lean: -0.1, bob: -1, armF: [0.4, 0.9], armB: [2.9, -0.3], wpn: 0.05, tilt: -1, nod: -1, footF: [1, 0], footB: [-2, 0] },
-          { ms: 280, lean: 0.2, armF: [0.5, 0.8], armB: [1.6, -0.05], wpn: 0.25, tilt: 1, footF: [3, 0], footB: [-3, 0] },
+          { ms: 180, lean: -0.1, armF: [0.4, 0.9], armB: [2.0, 0.5], wpn: 0.05, tilt: -1, nod: -1, footF: [1, 0], footB: [-2, 0] },
+          { ms: 180, lean: -0.1, bob: -1, armF: [0.4, 0.9], armB: [2.2, 0.4], wpn: 0.05, tilt: -1, nod: -1, footF: [1, 0], footB: [-2, 0] },
+          { ms: 280, lean: 0.2, armF: [1.45, -0.05], armB: [1.6, 0], wpn: 0.4, tilt: 1, footF: [3, 0], footB: [-3, 0] },
         ],
         charge: [0, 1], release: 2, rim: true,
       },
@@ -545,7 +547,7 @@
           { ms: 150, lean: -0.15, x: -1, armF: [1.4, 0.2], armB: [1.1, 0.4], wpn: 1.0, footF: [2, 0], footB: [-3, 0], tilt: -1 },
         ],
       },
-      hurt: { frames: [{ ms: 300, lean: -0.3, x: -2, crouch: 1, armF: [-0.3, 0.9], armB: [0.8, 0.5], wpn: -0.5, tilt: -1, nod: 1, footF: [1, 0], footB: [-3, 0], hurt: true }] },
+      hurt: { frames: [{ ms: 300, lean: -0.3, x: -2, crouch: 1, armF: [0.1, 0.5], armB: [0.8, 0.5], wpn: 0.7, tilt: -1, nod: 1, footF: [1, 0], footB: [-3, 0], hurt: true }] },
       ko: { frames: [{ ms: 1000, lean: -0.2, crouch: 2, armF: [0.2, 0.2], armB: [0.2, 0.1], wpn: 2.6, nod: 1, ko: true }] },
       // Down on one knee, leaning on the upright scythe.
       kneel: { frames: [{ ms: 1000, lean: 0.25, crouch: 6, footF: [3, 0], footB: [-5, 0], armF: [0.9, 0.9], armB: [0.2, 0.5], wpn: 0.05, nod: 1 }] },
@@ -553,8 +555,8 @@
       victory: {
         loop: true,
         frames: [
-          { ms: 340, armF: [2.8, 0.2], armB: [-0.4, 0.4], wpn: -0.25, tilt: -1, footF: [1, 0], footB: [-2, 0] },
-          { ms: 340, bob: 1, armF: [2.9, 0.15], armB: [-0.45, 0.4], wpn: -0.3, tilt: -1, footF: [1, 0], footB: [-2, 0] },
+          { ms: 340, armF: [1.9, 0.8], armB: [-1.1, 0.3], wpn: 0.15, tilt: -1, footF: [1, 0], footB: [-2, 0] },
+          { ms: 340, bob: 1, armF: [1.95, 0.8], armB: [-1.25, 0.3], wpn: 0.1, tilt: -1, footF: [1, 0], footB: [-2, 0] },
         ],
       },
     },
@@ -573,7 +575,7 @@
           // High collar: tall back flare (purple outside, red inside) and a short front flare.
           g.poly([[c.x - 2, c.y + 1], [c.x - 7, H.y - 5], [c.x - 5, H.y - 4], [c.x, c.y - 2]], 'r');
           g.poly([[c.x - 3, c.y], [c.x - 6, H.y - 3], [c.x - 1, c.y - 2]], 'L');
-          g.poly([[c.x + 1, c.y + 1], [c.x + 6, H.y + 1], [c.x + 5, c.y - 1]], 'r');
+          g.poly([[c.x + 1, c.y + 1], [c.x + 6, H.y + 4], [c.x + 5, c.y]], 'r');
           g.px(c.x + 4, c.y - 1, 'L');
           g.px(c.x - 2, c.y, 'y'); g.px(c.x + 2, c.y, 'y');
         } else {

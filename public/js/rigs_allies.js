@@ -691,10 +691,10 @@
     // Feet.
     g.ell(bx - 3.5 + fB[0] * 0.5, RY + (pose.y || 0) - 1 - fB[1], 2.6, 1.5, 'o');
     // Far arm and ear.
-    const arm = (a, sx, sy, L) => { const ax = sx + Math.sin(a[0]) * 4, ay = sy + Math.cos(a[0]) * 4; g.capsule(sx, sy, ax, ay, 2.3, 'P'); g.capsule(sx, sy, ax, ay, 1.4, L); };
+    const arm = (a, sx, sy, L) => { const ax = sx + Math.sin(a[0]) * 5.5, ay = sy + Math.cos(a[0]) * 5.5; g.capsule(sx, sy, ax, ay, 2.3, 'P'); g.capsule(sx, sy, ax, ay, 1.4, L); };
     const aF = pose.armF || [0.4, 0], aB = pose.armB || [-0.4, 0];
     g.spike(cx - rx + 3, cy - ry * 0.45 + ey * 0.5, cx - rx - 3, cy - ry * 0.2 + ey * 0.5 + (c > 1 ? 2 : 0), 4, 'u');
-    if (view === 'se') arm(aB, cx - rx + 2, cy + 3, 'a');
+    if (view === 'se') arm(aB, cx - rx + 1, cy + 1, 'a');
     // Far horn behind.
     g.spike(cx - 3 + ex * 0.5, cy - ry + 2, cx - 7 + ex * 0.5, cy - ry - 6, 3.6, 'h');
     // Body: shadow crescent bottom-right, highlight top-left.
@@ -740,8 +740,8 @@
     g.spike(cx + 3 + ex * 0.5, cy - ry + 2, cx + 7 + ex * 0.5, cy - ry - 6, 3.6, 'n');
     for (const [dx, tx, ty] of [[-1, -2, -6], [0.5, 1, -7], [1.5, 3.5, -5]]) g.spike(cx + dx + ex * 0.5, cy - ry + 2, cx + tx + ex * 0.5, cy - ry + ty + 2, 2.4, 't');
     g.line(cx + ex * 0.5, cy - ry + 1, cx + 1 + ex * 0.5, cy - ry - 3, 'T');
-    if (view === 'se') arm(aF, cx + rx - 2, cy + 3, 'A');
-    else { arm(aB, cx - rx + 2, cy + 3, 'a'); arm(aF, cx + rx - 2, cy + 3, 'A'); }
+    if (view === 'se') arm(aF, cx + rx - 1, cy + 1, 'A');
+    else { arm(aB, cx - rx + 1, cy + 1, 'a'); arm(aF, cx + rx - 1, cy + 1, 'A'); }
   }
   define('spekkio', {
     pal: {
@@ -774,8 +774,8 @@
       ] },
       // Arms up, gathering; then a two-handed push.
       cast: { frames: [
-        { ms: 160, crouch: -1, armF: [2.8, 0], armB: [-2.8, 0], shut: true, nod: -1 },
-        { ms: 160, crouch: -1.5, y: -1, armF: [2.9, 0], armB: [-2.9, 0], shut: true, nod: -1 },
+        { ms: 160, crouch: -1, armF: [2.3, 0], armB: [-2.3, 0], shut: true, nod: -1 },
+        { ms: 160, crouch: -1.5, y: -1, armF: [2.45, 0], armB: [-2.45, 0], shut: true, nod: -1 },
         { ms: 260, crouch: 1, x: 2, lean: 0.3, armF: [1.6, 0], armB: [1.5, 0], grin: true },
       ], charge: [0, 1], release: 2, rim: true },
       // Wind-up and throw.
@@ -788,7 +788,7 @@
       kneel: { frames: [{ ms: 1000, crouch: 1.5, lean: 0.35, nod: 2, armF: [0.2, 0], armB: [-0.2, 0], shut: true }] },
       victory: { loop: true, frames: [
         { ms: 260, crouch: 2.5, armF: [2.4, 0], armB: [-2.4, 0], grin: true },
-        { ms: 260, crouch: -1.5, y: -6, footF: [1, 2], footB: [-1, 2], armF: [3.0, 0], armB: [-3.0, 0], grin: true },
+        { ms: 260, crouch: -1.5, y: -6, footF: [1, 2], footB: [-1, 2], armF: [2.5, 0], armB: [-2.5, 0], grin: true },
       ] },
     },
     draw: spekkioDraw,

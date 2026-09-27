@@ -28,7 +28,7 @@ for (const key of keys) {
     rows.push({ key, dir, row });
   }
 }
-const fw = CT.RIG.SIZE + 2, fh = CT.RIG.SIZE + 2;
+const fw = Math.max(...rows.flatMap((r) => r.row.map(({ f }) => f.img.width))), fh = fw;
 const cols = Math.max(...rows.map((r) => r.row.length));
 cv.width = cols * fw * S; cv.height = rows.length * fh * S;
 g.imageSmoothingEnabled = false;
@@ -37,7 +37,7 @@ rows.forEach((r, j) => r.row.forEach(({ f }, i) => {
   g.fillRect(i * fw * S, j * fh * S, fw * S, fh * S);
   g.fillStyle = '#6e7090';
   g.fillRect(i * fw * S, (j * fh + f.footY) * S, fw * S, S); // ground line
-  g.drawImage(f.img, i * fw * S, j * fh * S, fw * S, fh * S);
+  g.drawImage(f.img, i * fw * S, j * fh * S, f.img.width * S, f.img.height * S);
 }));
 window.READY = true;
 </script>

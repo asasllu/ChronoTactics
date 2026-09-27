@@ -88,6 +88,17 @@ CT.RIG.define('key', {
   keep `charge: [0,1], release: 2, rim: true`. A frame is a pose object plus `ms`. Monsters
   should override to suit their body (a biting lunge, a slam, a pulse) while keeping the
   same names.
+- Optional per-rig fields:
+  - `size`: the frame edge. The default is 56; bosses can use 72–96. The root sits 6 px
+    above the bottom, centred.
+  - `rimAt(J, pose, view) -> [x, y]`: where the cast rim light comes from. The default is
+    the hands.
+  - `portrait: {x, y, side}`: the turn-bar icon crop in frame coordinates. The default is
+    around `J.head`.
+  - `koRotate: false`: draw the `ko` animation as authored instead of rotating the sprite
+    90°. Use it for blobs, boxes and domes.
+- In `shadeGrid` the letter `k` is always drawn in the outline colour, whatever the
+  palette says.
 - A non-humanoid `draw(g, J, view, pose)` should still move with the pose. Use
   `pose.bob`/`crouch` (squash), `pose.lean`/`x` (lunge), `pose.hurt` (recoil and wince),
   and `J.head`/`J.chest`/`J.hip` as anchors, or compute its own anchors from `CT.RIG.RX/RY`.

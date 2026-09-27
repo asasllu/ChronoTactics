@@ -923,7 +923,8 @@
       const dy = Math.round(sy - f.footY + 2);
       if (u.flicker && Math.floor(now / 70 + u.id * 3) % 7 === 0) ctx.globalAlpha = u.alpha * 0.5;
       if (u.status && u.status.stasis) ctx.globalAlpha *= 0.85;
-      if (u.koPose) {
+      const spr = CT.getSprite(u.sprite || u.key);
+      if (u.koPose && spr.koRotate !== false) {
         // Lying down: an exact quarter turn of the sprite (lossless for pixel art).
         const west = this.screenDir(u.face).endsWith('west');
         ctx.translate(sx, sy - 3);

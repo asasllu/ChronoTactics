@@ -76,9 +76,9 @@
   }
 
   // pose -> joints (sprite-local coordinates, root at RX,RY)
-  function solve(p, body) {
+  function solve(p, body, rx = RX, ry = RY) {
     const B = Object.assign({}, BODY, body);
-    const root = V(RX + (p.x || 0), RY + (p.y || 0));
+    const root = V(rx + (p.x || 0), ry + (p.y || 0));
     const hip = V(root.x + (p.hipX || 0), root.y - B.leg + (p.crouch || 0) + (p.bob || 0));
     const lean = p.lean || 0;
     const up = V(Math.sin(lean), -Math.cos(lean));
@@ -192,22 +192,30 @@
   }
 
   // def: { body, pal, detail, draw(g, J, view, pose, def), anims, magic, hi }
+  // Frame geometry per rig: def.size (square, default 56) with the root 6px above the bottom.
+  const geom = (def) => {
+    const S = def.size || SIZE;
+    return { S, rx: Math.round(S / 2), ry: S - 6 };
+  };
+
   function bakeFrame(def, pose, view, animName, frameIdx) {
-    const g = new Grid(SIZE, SIZE);
-    const J = solve(pose, def.body);
+    const { S, rx, ry } = geom(def);
+    const g = new Grid(S, S);
+    const J = solve(pose, def.body, rx, ry);
     def.draw(g, J, view, pose, def);
     const cv = shadeGrid(g, def.pal, def.detail || '', def.hi !== false);
     CT.PAL.snapCanvas(cv);
     const f = CT.PX.frameOf(cv);
     // Anchor at the rig root, not the bbox: feet stay planted through lunges.
-    f.footY = RY + 1 + 1; // +1 outline pad, +1 below the ground row
-    f.cx = RX + 1;
+    f.footY = ry + 1 + 1; // +1 outline pad, +1 below the ground row
+    f.cx = rx + 1;
     f.J = J;
     const a = def.anims[animName];
     if (a.rim && def.magic !== false) {
-      // Magic rim light from the gathered hands.
-      const hx = (J.handF.x + J.handB.x) / 2 + 1, hy = Math.min(J.handF.y, J.handB.y) - 1;
-      const rim = rimLight(copyCanvas(cv), hx, hy, def.magic || '#e0c0fc', frameIdx === a.release ? 26 : 18);
+      // Magic rim light from the gathered hands, or from def.rimAt(J, pose) -> [x, y].
+      const at = def.rimAt ? def.rimAt(J, pose, view) : [(J.handF.x + J.handB.x) / 2, Math.min(J.handF.y, J.handB.y) - 1];
+      const hx = at[0] + 1, hy = at[1] + 1;
+      const rim = rimLight(copyCanvas(cv), hx, hy, def.magic || '#e0c0fc', (frameIdx === a.release ? 26 : 18) * (S / SIZE));
       f.img = rim;
       f.flash = flashOf(rim);
       f.glow = { x: hx, y: hy, color: def.magic || '#e0c0fc' };
@@ -255,6 +263,8 @@
     }
     const spr = {
       rig: true,
+      def,
+      koRotate: def.koRotate !== false, // false: the 'ko' animation is drawn as authored
       anims: dirs,
       // t = ms since the animation started. Non-looping anims hold their last frame.
       frame(anim, dir, t = 0, opts = {}) {

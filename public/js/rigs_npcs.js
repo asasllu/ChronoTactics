@@ -347,7 +347,8 @@
     },
     balloon(g, J, view, o, pose) {
       const h = J.handF, s = pose.bob ? 1 : 0;
-      const bx = h.x + 3 + s, by = h.y - 19;
+      const bx = h.x + 3 + s, by = Math.max(6, h.y - 19);
+      if (by > h.y - 6) return; // hand raised high: the balloon has floated off the frame edge
       g.line(h.x, h.y, bx, by + 4, 'M');
       g.ell(bx, by, 3.6, 4.2, 'j');
       g.px(bx, by + 5, 'j');
@@ -520,6 +521,13 @@
     },
     detail: 'y',
     anims: {
+      victory: {
+        loop: true,
+        frames: [
+          { ms: 300, armF: [2.0, 0.3], armB: [-0.3, 0.4], tilt: -1, bob: -1 },
+          { ms: 300, armF: [2.1, 0.25], armB: [-0.3, 0.4], tilt: -1, y: -2 },
+        ],
+      },
       // Spear thrust instead of a sword swing.
       attack: {
         frames: [
@@ -611,7 +619,7 @@
     body: { leg: 11, torso: 8 },
     prop: 'cane', hold: [0.4, 0.2],
     pal: {
-      h: '#e4e8f0', H: '#bcc0d4', R: '#9294b0', w: '#ffffff', v: '#3e3230', V: '#2a2038', y: '#94602e',
+      h: '#e4e8f0', H: '#bcc0d4', R: '#9294b0', w: '#ffffff', v: '#3e3230', V: '#2a2038', y: '#a02030',
       c: '#dcb468', d: '#dcb468', D: '#bc8844', t: '#bc8844', T: '#94602e', Y: '#6e4222', M: '#fff0dc',
       x: '#6e4222', b: '#4a2a16', o: '#2a160e',
     },

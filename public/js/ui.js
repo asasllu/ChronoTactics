@@ -41,15 +41,16 @@
     return pixURL(rows, { a, b });
   }
   const HAND = [
-    '..kkkk........',
-    '.kwwwwkkkkkkk.',
-    'kwwwwwwwwwwwwk',
-    'kwwwwwkkkkkkk.',
-    'kgwwwwwwk.....',
-    'kgwwwwkk......',
-    'kggwwwwwk.....',
-    '.kgggggk......',
-    '..kkkkk.......',
+    '..kkkkkk........',
+    '.kwwwwwwkkkkkkk.',
+    'kwwwwwwwwwwwwwwk',
+    'kwwwwwwkkkkkkkk.',
+    'kwwwwwwwwwk.....',
+    'kgwwwwkkkk......',
+    'kgwwwwwwwk......',
+    'kggwwwkkk.......',
+    '.kgggggggk......',
+    '..kkkkkkk.......',
   ];
   const MORE = ['kkkkkkk', 'kwwwwwk', '.kwwwk.', '..kgk..', '...k...'];
   const GEM = ['...k...', '..kYk..', '.kyWyk.', 'kYWWWYk', '.kyWyk.', '..kYk..', '...k...'];
@@ -384,8 +385,9 @@
         <div class="name"><span class="team${u.guest ? 'g' : u.team}">${esc(u.name)}</span>${u.level ? ` <small>Lv${u.level}</small>` : ''}</div>
         <div class="bar-row"><b>HP</b><div class="bar hp"><i style="width:${hp}%"></i></div><span>${u.hp}<small>/${u.maxHp}</small></span></div>
         ${u.maxMp && u.maxMp < 999 ? `<div class="bar-row"><b>MP</b><div class="bar mp"><i style="width:${mp}%"></i></div><span>${u.mp}<small>/${u.maxMp}</small></span></div>` : ''}
-        <div class="stats">ATK${u.atk} DEF${u.def} MAG${u.mag} MDF${u.mdef} SPD${u.spd}</div>
-        <div class="stats">Mv${u.move} ${u.float ? 'Float' : 'Jp' + u.jump} · CT${Math.min(100, Math.floor(u.ct))} · H${t ? t.h : '?'} ${t ? CT.TERRAIN[t.t].name : ''}</div>
+        <div class="stats">ATK${u.atk} DEF${u.def} MAG${u.mag}</div>
+        <div class="stats">MDF${u.mdef} SPD${u.spd} Mv${u.move} ${u.float ? 'Float' : 'Jp' + u.jump}</div>
+        <div class="stats">CT${Math.min(100, Math.floor(u.ct))} · H${t ? t.h : '?'} ${t ? CT.TERRAIN[t.t].name : ''}</div>
         ${st ? `<div class="stline">${st}</div>` : ''}
         ${extra}
       </div>`;

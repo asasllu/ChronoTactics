@@ -1,6 +1,6 @@
 // Screenshot helper for art work. Renders through the real game pipeline.
 //   node tools/shot.cjs map <mapId> [rot] [out.png]        whole map, 960x600 (2x)
-//   node tools/shot.cjs battle <B0..B5|OPT1> [ms] [out.png] battle after ms (AI plays)
+//   node tools/shot.cjs battle <B0..B5|OPT1|SKIRMISH> [ms] [out.png] battle after ms (AI plays)
 //   node tools/shot.cjs rig <key[,key]> [anims] [out.png]    animation sheet (tools/rig.html)
 //   node tools/shot.cjs dev <hash> [out.png]                 tools/dev.html#<hash> (sprites, portraits, decor)
 // Add ZOOM=x,y,w,h to crop (in 960x600 page px). Needs PW=<playwright path>, e.g.
@@ -35,10 +35,15 @@ const root = 'file://' + path.resolve(__dirname, '..');
       for (const m of Object.keys(g.members)) g.members[m] = g.newMember(m, lv);
       g.setParty(lv >= 14 ? ['crono', 'frog', 'ayla', 'magus'] : lv >= 9 ? ['crono', 'frog', 'ayla'] : ['crono', 'frog']);
       if (/^B4/.test(id)) g.guests = ['iselle'];
+      if (id === 'SKIRMISH') {
+        for (const m of CT.SKIRMISH.partyOverride) g.members[m] = g.newMember(m, CT.SKIRMISH.level);
+        g.setParty(CT.SKIRMISH.partyOverride);
+      }
       CT.game = g;
       const sc = new CT.Scene(CT.renderer, g);
-      sc.loadMap(CT.BATTLES[id].map);
-      CT.runBattle(id, sc, { game: g, noRetry: true, noRewards: true });
+      const def = id === 'SKIRMISH' ? CT.SKIRMISH : CT.BATTLES[id];
+      sc.loadMap(def.map);
+      CT.runBattle(id === 'SKIRMISH' ? CT.SKIRMISH : id, sc, { game: g, noRetry: true, noRewards: true });
     }, a);
     await p.waitForTimeout(+(b || 5000));
   } else if (mode === 'rig') {

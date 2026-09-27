@@ -141,34 +141,36 @@ small { font-size: 8px; }
 .menu { min-width: 176px; padding: 12px 10px 12px; }
 .menu:not(.battle-menu):not(.choice):not(.title-menu) { left: 50%; top: 50%; transform: translate(-50%, -50%); max-height: 520px; overflow-y: auto; }
 .menu.battle-menu { left: 318px; bottom: 8px; }
-.menu.battle-menu.techs { min-width: 240px; }
+.menu.battle-menu.techs { min-width: 240px; left: 8px; bottom: 184px; }
 .menu.choice { right: 40px; bottom: 176px; }
 .menu.shop { min-width: 480px; }
 .menu.slots { min-width: 560px; }
 .menu.debug-list { min-width: 560px; }
+.menu.defeat .menu-title { color: var(--r4); }
 .menu-title {
   font-size: 16px; line-height: 16px; color: var(--au3); padding: 2px 8px 8px 12px; margin: 0 2px 6px;
   border-bottom: 2px solid var(--b0); box-shadow: 0 2px 0 0 var(--b3);
 }
 .menu-hint {
   font-size: 8px; line-height: 12px; color: var(--b6); text-shadow: none; padding: 8px 8px 0 12px; margin: 6px 2px 0;
-  min-height: 22px; max-width: 400px; border-top: 2px solid var(--b0); box-shadow: inset 0 2px 0 0 var(--b3);
+  min-height: 22px; width: 0; min-width: calc(100% - 4px); border-top: 2px solid var(--b0); box-shadow: inset 0 2px 0 0 var(--b3);
 }
 .mi {
   display: flex; justify-content: space-between; align-items: baseline; gap: 16px; width: 100%; text-align: left;
   font: inherit; font-size: 16px; line-height: 16px; color: var(--white); background: none; border: none;
-  padding: 4px 10px 4px 36px; cursor: pointer; position: relative; text-shadow: 2px 2px 0 var(--b0); white-space: nowrap;
+  padding: 4px 10px 4px 38px; cursor: pointer; position: relative; text-shadow: 2px 2px 0 var(--b0); white-space: nowrap;
 }
 .mi small { color: var(--b5); font-size: 16px; white-space: nowrap; }
-.slots .mi small, .debug-list .mi small { font-size: 8px; text-shadow: none; }
+.slots .mi, .debug-list .mi { align-items: center; }
+.slots .mi small, .debug-list .mi small { font-size: 8px; line-height: 8px; text-shadow: none; }
 .mi:disabled { color: var(--sl3); cursor: default; }
 .mi:disabled small { color: var(--sl2); }
 .mi.dual span { color: var(--au3); }
 .mi.dual:disabled span { color: var(--au0); }
 .mi .gem { display: inline-block; width: 14px; height: 14px; margin-right: 4px; vertical-align: -2px; background: var(--ui-gem) 0 0 / 14px 14px; image-rendering: pixelated; }
 .mi.sel::before {
-  content: ''; position: absolute; left: 4px; top: 3px; width: 26px; height: 18px;
-  background: var(--ui-hand) 0 0 / 26px 18px no-repeat; image-rendering: pixelated;
+  content: ''; position: absolute; left: 2px; top: 2px; width: 32px; height: 20px;
+  background: var(--ui-hand) 0 0 / 32px 20px no-repeat; image-rendering: pixelated;
   animation: nudge 0.5s steps(1) infinite;
 }
 @keyframes nudge { 50% { transform: translateX(2px); } }
@@ -177,14 +179,14 @@ small { font-size: 8px; }
 .menu::-webkit-scrollbar-thumb { background: var(--sl4); border: 2px solid var(--ink0); }
 
 .popup {
-  left: 50%; top: 42%; transform: translate(-50%, -50%); min-width: 320px; max-width: 720px;
+  left: 0; right: 0; margin: 0 auto; width: fit-content; top: 42%; transform: translateY(-50%); min-width: 320px; max-width: 720px;
   text-align: center; font-size: 16px; line-height: 28px; z-index: 40; padding: 20px 24px 16px;
 }
 .popup small { display: inline-block; font-size: 8px; line-height: 14px; color: var(--b6); text-shadow: none; }
 .popup .dlg-more { position: static; margin: 4px auto 0; }
 .popup.results .lvup, .lvup { color: var(--au3); }
 .res-title { font-size: 32px; line-height: 40px; color: var(--au3); margin-bottom: 8px; text-shadow: 4px 4px 0 var(--b0); }
-.popup.status { text-align: left; max-width: 800px; }
+.popup.status { text-align: left; max-width: 800px; width: 760px; }
 .popup.status .res-title { font-size: 16px; line-height: 24px; text-shadow: 2px 2px 0 var(--b0); }
 .popup.status > .popup-text > .stats { margin-top: 6px; }
 .ps-row { display: flex; gap: 12px; align-items: center; margin: 8px 0; }
@@ -257,7 +259,7 @@ small { font-size: 8px; }
 .logo { text-align: center; position: relative; }
 .logo canvas { display: block; margin: 0 auto; }
 #title-menu .menu { position: relative; left: auto; top: auto; transform: none; min-width: 272px; }
-.legal { position: absolute; bottom: 12px; left: 0; right: 0; text-align: center; font-size: 8px; line-height: 8px; color: var(--sl3); }
+.legal { position: absolute; bottom: 20px; left: 0; right: 0; text-align: center; font-size: 8px; line-height: 8px; color: var(--sl3); }
 
 /* ---- Credits ---- */
 #credits { position: absolute; inset: 0; display: none; z-index: 44; pointer-events: none; }
@@ -272,3 +274,4 @@ small { font-size: 8px; }
 .still-cap { left: 24px; bottom: 24px; max-width: 480px; font-size: 16px; line-height: 24px; padding: 14px 16px; }
 .still-cap:empty { display: none; }
 @keyframes roll { to { transform: translateY(calc(-100% - 700px)); } }
+

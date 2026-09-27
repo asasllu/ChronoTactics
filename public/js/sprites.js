@@ -557,7 +557,11 @@
       const scale = 4;
       const cv = CT.PX.canvas(size * scale, size * scale, (g) => {
         let cx, cy, side;
-        if (f.J) {
+        const pt = spr.def && spr.def.portrait;
+        if (pt) {
+          // Per-rig anchor in frame coordinates (+1 outline pad).
+          cx = pt.x + 1; cy = pt.y + 1; side = pt.side || 20;
+        } else if (f.J) {
           cx = f.J.head.x + 1; cy = f.J.head.y + 3; side = 20;
         } else {
           const b = f.box;

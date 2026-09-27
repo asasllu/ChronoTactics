@@ -30,10 +30,6 @@
   const dir = (a) => ({ x: Math.sin(a), y: Math.cos(a) }); // angle from straight down, + forward
   // Frame list helper: every frame gets ms.
   const F = (ms, o) => Object.assign({ ms }, o);
-  // Fill in anything missing with a gentle default so every standard name exists.
-  function anims(o) {
-    return o;
-  }
 
   // =========================================================================================
   // HENCH — blue horned brute of Magus's army, with a hand axe
@@ -56,6 +52,22 @@
         frames: [
           F(520, { armF: [0.5, 0.9], armB: [-0.2, 0.3], wpn: 1.0, crouch: 1 }),
           F(520, { armF: [0.45, 0.95], armB: [-0.15, 0.35], wpn: 1.0, crouch: 1, bob: 1 }),
+        ],
+      },
+      walk: {
+        loop: true,
+        frames: [
+          F(150, { footF: [3, 0], footB: [-3, 0], armF: [0.3, 1.0], armB: [0.4, 0.4], wpn: 0.9, crouch: 1 }),
+          F(150, { footF: [0, 0], footB: [1, 2], armF: [0.45, 0.95], armB: [0, 0.4], wpn: 1.0 }),
+          F(150, { footF: [-3, 0], footB: [3, 0], armF: [0.6, 0.9], armB: [-0.35, 0.4], wpn: 1.1, crouch: 1 }),
+          F(150, { footF: [1, 2], footB: [0, 0], armF: [0.45, 0.95], armB: [0, 0.4], wpn: 1.0 }),
+        ],
+      },
+      victory: {
+        loop: true,
+        frames: [
+          F(300, { armF: [2.5, 0.4], armB: [-0.3, 0.4], wpn: 0.4, tilt: -1 }),
+          F(300, { armF: [2.6, 0.3], armB: [-0.3, 0.4], wpn: 0.3, tilt: -1, bob: -1 }),
         ],
       },
       attack: {
@@ -667,18 +679,18 @@
       // Tail.
       g.spike(cx - 10, gy - 4, cx - 16, gy - 1, 3.5, 't');
       // Domed banded shell, belly skirt underneath.
-      g.ell(cx, gy - 4, 11 + sq * 0.4, 3, 'u');
-      bands(cx, gy - 5 + sq, 11.5 + sq * 0.5, 9.5 - sq * 0.6, PI / 10 + L, gy - 4);
+      g.ell(cx, gy - 4, 11.5 + sq * 0.4, 3.2, 'u');
+      bands(cx, gy - 4 + sq, 12 + sq * 0.5, 13 - sq * 0.8, PI / 10 + L, gy - 4);
       for (let i = 1; i < 10; i += 2) {
         const t = PI + (i * PI) / 10 + L;
-        g.px(cx + Math.cos(t) * 11, gy - 5 + sq + Math.sin(t) * 9, 's');
+        g.px(cx + Math.cos(t) * 11.5, gy - 4 + sq + Math.sin(t) * 12.5, 's');
       }
       // Head on the facing side (hidden in back view except the ears).
-      const hx = cx + 12 + (p.x ? 0 : 0) + L * 4, hy = gy - 6 + sq + (p.nod || 0) + L * 3;
+      const hx = cx + 12 + L * 4, hy = gy - 7 + sq + (p.nod || 0) + L * 3;
       if (se) {
-        g.ell(hx, hy, 4, 3.5, 'h');
-        g.poly([[hx + 1, hy - 2], [hx + 6, hy + 1], [hx + 5, hy + 3], [hx, hy + 3]], 'h');
-        g.px(hx + 6, hy + 1, 'n');
+        g.ell(hx, hy, 4.5, 4, 'h');
+        g.poly([[hx + 1, hy - 2], [hx + 7, hy + 1], [hx + 6, hy + 3.5], [hx, hy + 3.5]], 'h');
+        g.px(hx + 7, hy + 1, 'n');
         g.spike(hx - 2, hy - 2, hx - 3, hy - 7, 2.5, 'H');
         g.spike(hx, hy - 2, hx + 1, hy - 6, 2.5, 'H');
         if (p.hurt) g.line(hx, hy - 1, hx + 2, hy, 'e');
@@ -1015,7 +1027,7 @@
       // Skeleton, masked to the glass.
       const sk = new CT.PX.Grid(g.w, g.h);
       const [sx0, sy0] = P(wu / 2, wv / 2, 5);
-      const sx = sx0 + (se ? 0 : 0), sy = sy0 + 1;
+      const sx = sx0, sy = sy0 + 1;
       const tilt = L * 14, nod = p.nod || 0;
       const hx = sx + tilt + (se ? 1 : 0), hy = sy - 19 + nod;
       // Legs, pelvis, spine, ribs.
@@ -1302,7 +1314,7 @@
       g.rect(R(cx - 1), R(hy + 3), R(cx + 1), R(cy - 8), 'j');
       g.ell(cx - sp, hy, 2.3, 4.2, 'Q');
       g.ell(cx + sp, hy, 2.3, 4.2, 'R');
-      if (se || true) g.line(cx, hy - 3, cx, hy + 3, p.hurt ? 'j' : 'g');
+      g.line(cx, hy - 3, cx, hy + 3, p.hurt ? 'j' : 'g');
       if (!p.hurt) g.px(cx, hy, 'G');
       // The knot of Lavos-red energy, screaming outward.
       const kr = 5 + gl * 0.6;
@@ -1332,6 +1344,4 @@
     },
   });
 
-  //@@MORE
-  void anims;
 })();
