@@ -771,7 +771,7 @@
           if (!t) return;
           const delay = CT.FAST ? 0 : i * (tf.stagger != null ? tf.stagger : 40);
           last = Math.max(last, delay);
-          this.r.playFx(tf.fx, t.x, t.y, b.visH(t), { delay, flip: west(u) });
+          this.r.playFx(tf.fx, t.x, t.y, b.visH(t), { delay, flip: west(u), noShake: i > 0 });
         });
         // Numbers pop on the effect's impact frame.
         const imp = fx && fx.def.impact != null ? fx.frames.slice(0, fx.def.impact).reduce((a, f) => a + f.ms, 0) : 120;
