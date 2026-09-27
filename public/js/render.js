@@ -356,7 +356,7 @@
       const liquid = mat.liquid;
       const ph = (frame / WATER_FRAMES) * Math.PI * 2;
 
-      const p = { t, nb, frame, ph, native: true };
+      const p = { t, nb, frame, ph, native: true, rot: this._rot };
       for (let y = 0; y < TH; y++) {
         const hw = y < HH ? 2 * (y + 1) : 2 * (TH - y);
         for (let x = HW - hw; x < HW + hw; x++) {
@@ -392,7 +392,7 @@
         }
       }
 
-      const sp = { t, depthPx: depthPx * 2, pdepth: depthPx, native: true };
+      const sp = { t, depthPx: depthPx * 2, pdepth: depthPx, native: true, frame, ph, rot: this._rot };
       for (let face = 0; face < 2; face++) {
         sp.face = face;
         sp.k = face === 0 ? 0.72 : 0.88;
@@ -796,7 +796,7 @@
       if (!mat.void) {
         const { cv } = this.tileImage(t, now);
         ctx.drawImage(cv, sx - TW / 2, sy - TH / 2);
-        if (mat.glow) lights.push({ x: sx, y: sy, color: mat.glow, radius: 23, flicker: true });
+        if (mat.glow && ((t.x + t.y) & 1) === 0) lights.push({ x: sx, y: sy, color: mat.glow, radius: 20, flicker: true }); // every other tile, so clusters don't flood
       }
 
       if (ui.grid && !mat.void) {

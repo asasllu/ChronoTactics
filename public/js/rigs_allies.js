@@ -56,8 +56,8 @@
     h: '#e4e8f0', H: '#9294b0', R: '#ffffff',
     s: '#f8d0a8', S: '#e0a878', a: '#e0a878', A: '#f8d0a8', f: '#e0a878', F: '#f8d0a8',
     e: '#1a1226', E: '#ffffff', m: '#bc7a50', n: '#e0a878',
-    P: '#e4e8f0', Q: '#bcc0d4', g: '#5c90dc', G: '#c4e4ff', k: '#1a1226',
-    c: '#6e7090', d: '#6e7090', D: '#52526e', t: '#6e7090', T: '#52526e', C: '#3a3a52', v: '#9294b0', i: '#2a2038',
+    P: '#ffffff', Q: '#bcc0d4', g: '#3c64b4', G: '#5c90dc', k: '#1a1226',
+    c: '#52526e', d: '#6e7090', D: '#3a3a52', t: '#52526e', T: '#2a2038', C: '#2a2038', v: '#bcc0d4', i: '#1a1226',
     l: '#2a2038', y: '#bcc0d4',
     p: '#3a3a52', q: '#2a2038', b: '#3a3a52', o: '#2a2038',
     z: '#5c90dc', Z: '#8cc0f0', x: '#c4e4ff', X: '#ffffff', j: '#5c90dc',
@@ -277,13 +277,13 @@
   // the visor slit and a dark plume, navy cape and tabard, a runed two-handed greatsword.
   // =====================================================================================
   const KNIGHT_PAL = {
-    s: '#9294b0', S: '#52526e', e: '#1a1226', G: '#e0c0fc', C: '#52526e', H: '#4a1c6c', h: '#6c3094', R: '#9450c0',
-    c: '#9294b0', d: '#9294b0', M: '#6e7090', D: '#6e7090', A: '#9294b0', a: '#6e7090', F: '#52526e', f: '#3a3a52',
-    P: '#bcc0d4', O: '#9294b0', K: '#bcc0d4',
-    p: '#9294b0', q: '#6e7090', b: '#6e7090', o: '#52526e',
+    s: '#bcc0d4', S: '#3a3a52', e: '#0a0612', G: '#e0c0fc', C: '#2a2038', H: '#4a1c6c', h: '#9450c0', R: '#e0c0fc',
+    c: '#bcc0d4', d: '#bcc0d4', M: '#6e7090', D: '#6e7090', A: '#bcc0d4', a: '#6e7090', F: '#52526e', f: '#3a3a52',
+    P: '#e4e8f0', O: '#9294b0', K: '#e4e8f0',
+    p: '#bcc0d4', q: '#6e7090', b: '#6e7090', o: '#3a3a52',
     y: '#f8bc3c', Y: '#e88c28', l: '#4a2a16',
-    u: '#2c4488', U: '#1c2c5c', t: '#2c4488',
-    x: '#e4e8f0', X: '#9294b0', r: '#bc84e4', g: '#4a2a16',
+    u: '#2c4488', U: '#10183a', t: '#3c64b4',
+    x: '#e4e8f0', X: '#9294b0', r: '#9450c0', g: '#4a2a16',
   };
   function greatsword(g, J) {
     const A = (k, s) => at(J, k, s);
@@ -308,7 +308,7 @@
   }
   function knightCape(g, J, view) {
     const sway = (J.pose.x || 0) > 1 || (J.pose.footF && J.pose.footF[0] > 2) ? 2 : (J.pose.bob ? 1 : 0);
-    const low = Math.min(RY - 2, J.hip.y + 11);
+    const low = Math.min(J.root.y - 2, J.hip.y + 11);
     if (view === 'se') {
       g.poly([[J.shB.x + 2, J.shB.y - 2], [J.shB.x - 3, J.shB.y], [J.hip.x - 8 - sway, low], [J.hip.x - 1, low + 1]], 'U');
       g.line(J.hip.x - 8 - sway, low, J.hip.x - 1, low + 1, 'y');
@@ -410,6 +410,7 @@
   const KGUARD = { armF: [0.9, 0.9], wpn: Math.PI, two: 3 };
   define('knight', {
     body: { leg: 13, torso: 10, headR: 5, shoulder: 4, upper: 5.5, fore: 5, hipW: 2.5, stance: 4 },
+    size: 64,
     pal: KNIGHT_PAL,
     detail: 'eGyYrgRHXS',
     magic: '#bc84e4',
@@ -745,12 +746,12 @@
   }
   define('spekkio', {
     pal: {
-      p: '#e0709c', q: '#a83c74', L: '#f8b0c8', P: '#6c2048', z: '#f8b0c8', u: '#a83c74', U: '#e0709c', I: '#f8b0c8',
-      a: '#a83c74', A: '#e0709c', o: '#a83c74', b: '#e0709c',
+      p: '#f090b4', q: '#e0709c', L: '#f8b0c8', P: '#6c2048', z: '#f8b0c8', u: '#a83c74', U: '#f090b4', I: '#f8b0c8',
+      a: '#a83c74', A: '#f090b4', o: '#a83c74', b: '#e0709c',
       h: '#dcb468', n: '#fff4b0', t: '#6c3094', T: '#bc84e4',
       e: '#1a1226', E: '#ffffff', m: '#6c2048', B: '#f06c4c',
     },
-    detail: 'eEmBTIPzL',
+    detail: 'eEmBTIPzLpqAaUuob',
     hi: false,
     magic: '#fce068',
     anims: {

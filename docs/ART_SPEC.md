@@ -97,6 +97,9 @@ CT.RIG.define('key', {
     around `J.head`.
   - `koRotate: false`: draw the `ko` animation as authored instead of rotating the sprite
     90°. Use it for blobs, boxes and domes.
+- Shading is ramp-aware: a material whose colour is exactly on a palette ramp shades
+  one step darker or lighter along its own ramp. Regions thinner than 3 px only get the
+  dark edge. Off-ramp colours fall back to mixing toward grey, so use ramp colours.
 - In `shadeGrid` the letter `k` is always drawn in the outline colour, whatever the
   palette says.
 - A non-humanoid `draw(g, J, view, pose)` should still move with the pose. Use
@@ -120,8 +123,8 @@ CT.RIG.define('key', {
 
 - Terrain materials (`CT.TERRAIN[code]`) keep the same API (`top(p)`, `side(sp)`,
   `blades`, `liquid`, `animated`…). They are now rasterised into a 32×16 top plus 8 px per
-  level of side. `p` also carries `px py` (the pixel inside the 32×16 top) and `native:
-  true`. `sp` carries `pu pv` (native side-face pixel coords), `pwu` (a native
+  level of side. `p` also carries `px py` (the pixel inside the 32×16 top), `rot` (the camera rotation) and `native:
+  true`. `sp` carries `pu pv` (native side-face pixel coords), `frame ph` (the animation frame), `pwu` (a native
   world-varying u) and `pdepth` (native face height). `u v wu depthPx` remain at the old
   double scale for legacy materials. Design for chunky 16-bit legibility: bold 2–3 tone
   patterns, 2×2 to 4×4 features, a clear top edge, and brick courses 4 px tall.

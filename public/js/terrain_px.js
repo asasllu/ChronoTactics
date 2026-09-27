@@ -22,7 +22,7 @@
   const RP = {};
   for (const k in CT.PAL.RAMPS) RP[k] = CT.PAL.RAMPS[k].map(hx);
   const IN = RP.ink, SL = RP.slate, ST = RP.stone, BL = RP.blue, GR = RP.green, TE = RP.teal;
-  const WD = RP.wood, SK = RP.skin, RD = RP.red, GD = RP.gold, PU = RP.purple, PK = RP.pink;
+  const WD = RP.wood, SK = RP.skin, RD = RP.red, GD = RP.gold, PK = RP.pink;
   const WH = RP.white[0];
 
   // ---- Per-tile frame --------------------------------------------------------------
@@ -630,19 +630,24 @@
     if (sp.pv > sp.pdepth - 5 && hash(col, sp.pv, 466) > 0.6) c = RD[1];
     return c;
   };
+  // Gravel stones: 3x3 lattice on a period of 5, about half the cells filled.
+  const aPat = (i, j) => {
+    const ci = Math.floor(i / 5), cj = Math.floor(j / 5);
+    const h = hash(ci, cj, 581);
+    if (h < 0.45) return -1;
+    const o = Math.floor(h * 10) & 1;
+    const a = mod(i, 5) - o, b = mod(j, 5) - o;
+    return a >= 0 && a < 3 && b >= 0 && b < 3 && !(a === 2 && b === 2) ? ci * 1000 + cj : -1;
+  };
   T.A.top = (p) => {
     px(p);
     const n = vnoise(p.wx * 1.3, p.wy * 1.3, 582);
     let c = n > 0.5 ? ST[2] : ST[1];
-    // Gravel: small lit stones on the lattice.
-    const ci = Math.floor(p.tx / 3), cj = Math.floor(p.ty / 3);
-    const h = hash(ci, cj, 581);
-    if (h > 0.6 && mod(p.tx, 3) < 2 && mod(p.ty, 3) < 2) {
-      const [, e] = bevel(p, (i, j) => (mod(i, 3) < 2 && mod(j, 3) < 2 && hash(Math.floor(i / 3), Math.floor(j / 3), 581) > 0.6 ? Math.floor(i / 3) * 999 + Math.floor(j / 3) : -1));
-      c = e > 0 ? ST[3] : h > 0.85 ? SL[1] : ST[2];
-      if (e < 0) c = ST[0];
-    }
-    if (vnoise(p.wx * 0.8, p.wy * 0.8, 583) > 0.7 && c === ST[1]) c = WD[2];
+    const [id, e] = bevel(p, aPat);
+    if (id >= 0) {
+      const dark = hash(id, 1, 584) > 0.7;
+      c = e > 0 ? (dark ? SL[2] : ST[4]) : e < 0 ? ST[1] : dark ? SL[1] : ST[3];
+    } else if (vnoise(p.wx * 0.8, p.wy * 0.8, 583) > 0.7) c = WD[2];
     return out(p, c);
   };
   T.A.side = (sp) => {

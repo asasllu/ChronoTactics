@@ -337,7 +337,7 @@
       g.rect(Math.round(J.neck.x) - 1, Math.round(J.neck.y) - 1, Math.round(J.neck.x) + 1, Math.round(J.neck.y) + 1, 'S');
       g.ell(H.x, H.y, r - 0.3, r, 's');
       if (view === 'se') {
-        if (o.face) o.face(g, J, view);
+        if (o.face) o.face(g, J, view, J.pose);
         else {
           const x = Math.round(H.x), y = Math.round(H.y);
           g.px(x - r + 1, y + 1, 'S'); // ear

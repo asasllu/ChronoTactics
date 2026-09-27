@@ -536,15 +536,47 @@
   // ---- Title & credits --------------------------------------------------------------------
   // Pixel-art logo: CT.PXD bitmap letters with a bevelled gold face, a stepped extrusion
   // and an ink outline, over a clock ring whose hands creep round. 1 canvas px = 1 game px.
-  const LW = 352, LH = 124;
-  function wordArt(str, scale, adv, face, bevel, depth) {
-    const w = str.length * adv, h = 7 * scale;
-    const src = document.createElement('canvas');
-    src.width = w;
-    src.height = h;
-    const sg = src.getContext('2d', { willReadFrequently: true });
-    [...str].forEach((ch, i) => CT.PXD.text(sg, ch, i * adv, 0, '#ffffff', { scale, outline: false }));
-    const m = sg.getImageData(0, 0, w, h).data;
+  const LW = 384, LH = 128;
+  // Chunky 2px-stroke capitals for the main logo (drawn at 3x).
+  const LOGO_FONT = {
+    C: ['..######', '.#######', '##......', '##......', '##......', '##......', '##......', '##......', '.#######', '..######'],
+    H: ['##....##', '##....##', '##....##', '##....##', '########', '########', '##....##', '##....##', '##....##', '##....##'],
+    R: ['######..', '#######.', '##....##', '##....##', '#######.', '######..', '##..##..', '##...##.', '##....##', '##....##'],
+    O: ['..####..', '.######.', '##....##', '##....##', '##....##', '##....##', '##....##', '##....##', '.######.', '..####..'],
+    N: ['##....##', '###...##', '####..##', '##.#..##', '##.##.##', '##..#.##', '##..####', '##...###', '##....##', '##....##'],
+    T: ['########', '########', '...##...', '...##...', '...##...', '...##...', '...##...', '...##...', '...##...', '...##...'],
+    I: ['######', '######', '..##..', '..##..', '..##..', '..##..', '..##..', '..##..', '######', '######'],
+    G: ['..#####.', '.#######', '##......', '##......', '##..####', '##..####', '##....##', '##....##', '.#######', '..#####.'],
+    E: ['########', '########', '##......', '##......', '######..', '######..', '##......', '##......', '########', '########'],
+    ' ': ['...', '...', '...', '...', '...', '...', '...', '...', '...', '...'],
+  };
+  function logoMask(str, scale) {
+    const glyphs = [...str].map((ch) => LOGO_FONT[ch] || LOGO_FONT[' ']);
+    const w = (glyphs.reduce((n, gl) => n + gl[0].length + 1, 0) - 1) * scale, h = 10 * scale;
+    const cv = document.createElement('canvas');
+    cv.width = w;
+    cv.height = h;
+    const g = cv.getContext('2d', { willReadFrequently: true });
+    g.fillStyle = '#ffffff';
+    let x0 = 0;
+    for (const gl of glyphs) {
+      gl.forEach((row, y) => [...row].forEach((c, x) => c === '#' && g.fillRect((x0 + x) * scale, y * scale, scale, scale)));
+      x0 += gl[0].length + 1;
+    }
+    return cv;
+  }
+  function textMask(str, scale, adv) {
+    const cv = document.createElement('canvas');
+    cv.width = str.length * adv;
+    cv.height = 7 * scale;
+    const g = cv.getContext('2d', { willReadFrequently: true });
+    [...str].forEach((ch, i) => CT.PXD.text(g, ch, i * adv, 0, '#ffffff', { scale, outline: false }));
+    return cv;
+  }
+  // Bevelled face (colour bands top -> bottom), stepped extrusion below, 1px ink outline.
+  function wordArt(src, face, bevel, depth) {
+    const w = src.width, h = src.height;
+    const m = src.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, w, h).data;
     const on = (x, y) => x >= 0 && y >= 0 && x < w && y < h && m[(y * w + x) * 4 + 3] > 0;
     const pad = 1, W = w + pad * 2, H = h + pad * 2 + depth.length;
     const cv = document.createElement('canvas');
@@ -581,23 +613,26 @@
     const g = cv.getContext('2d');
     if (!logoArt) {
       logoArt = {
-        main: wordArt('CHRONO TRIGGER', 4, 24, [R.gold[4], R.gold[3], R.gold[3], R.gold[2], R.gold[2], R.gold[1]], [R.gold[4], R.gold[0]], [R.gold[0], R.gold[0], R.red[1], R.red[1]]),
-        sub: wordArt('THE HOLLOW FUTURE', 2, 16, [R.blue[6], R.blue[5]], [R.white[0], R.blue[4]], [R.blue[1], R.blue[1]]),
-        note: wordArt('A FAN-MADE TACTICS SEQUEL', 1, 7, [R.slate[4]], [R.slate[4], R.slate[3]], []),
+        main: wordArt(logoMask('CHRONO TRIGGER', 3), [R.gold[3], R.gold[3], R.gold[3], R.gold[2], R.gold[2], R.gold[1], R.gold[1]], [R.gold[4], R.gold[0]], [R.gold[0], R.red[2], R.red[1]]),
+        sub: wordArt(textMask('THE HOLLOW FUTURE', 2, 16), [R.blue[6], R.blue[5]], [R.white[0], R.blue[4]], [R.blue[1], R.blue[1]]),
+        note: wordArt(textMask('A FAN-MADE TACTICS SEQUEL', 1, 7), [R.slate[4]], [R.slate[4], R.slate[3]], []),
       };
     }
     g.clearRect(0, 0, LW, LH);
     // Clock ring.
     const cx = LW / 2, cy = 52, P = CT.PXD;
-    g.fillStyle = R.wood[2];
+    g.fillStyle = R.wood[1];
+    P.ellipseRing(g, cx, cy, 51, 51);
+    P.ellipseRing(g, cx, cy, 48, 48);
+    g.fillStyle = R.wood[3];
     P.ellipseRing(g, cx, cy, 50, 50);
     P.ellipseRing(g, cx, cy, 49, 49);
-    g.fillStyle = R.wood[1];
+    g.fillStyle = R.wood[2];
     P.ellipseRing(g, cx, cy, 45, 45);
     for (let i = 0; i < 12; i++) {
       const a = (i / 12) * Math.PI * 2;
       const big = i % 3 === 0;
-      g.fillStyle = big ? R.gold[0] : R.wood[3];
+      g.fillStyle = big ? R.gold[1] : R.wood[4];
       const s = big ? 3 : 2;
       g.fillRect(Math.round(cx + Math.sin(a) * 41 - s / 2), Math.round(cy - Math.cos(a) * 41 - s / 2), s, s);
     }
@@ -606,15 +641,15 @@
       g.fillStyle = col;
       P.line(g, cx, cy, cx + Math.sin(a) * len, cy - Math.cos(a) * len, w);
     };
-    hand(((t / 60) % 1) * Math.PI * 2 + 2.8, 38, 2, R.wood[3]);
-    hand(4.36 + ((t / 720) % 1) * Math.PI * 2, 26, 2, R.wood[4]);
+    hand(((t / 60) % 1) * Math.PI * 2 + 2.8, 38, 2, R.wood[4]);
+    hand(4.36 + ((t / 720) % 1) * Math.PI * 2, 26, 2, R.gold[1]);
     g.fillStyle = R.gold[1];
     g.fillRect(cx - 2, cy - 2, 4, 4);
     // Words.
     const put = (art, y) => g.drawImage(art, Math.round((LW - art.width) / 2), y);
-    put(logoArt.main, 32);
-    put(logoArt.sub, 78);
-    put(logoArt.note, 106);
+    put(logoArt.main, 26);
+    put(logoArt.sub, 80);
+    put(logoArt.note, 108);
   }
   let logoTimer = null;
 

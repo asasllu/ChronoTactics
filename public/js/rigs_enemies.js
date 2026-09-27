@@ -10,16 +10,16 @@
 //   glow  core / eye brightness step (0..2)
 (function () {
   const CT = (window.CT = window.CT || {});
-  const { define, human, RX, RY } = CT.RIG;
+  const { define, human } = CT.RIG;
   const PI = Math.PI;
 
   // ---- helpers ---------------------------------------------------------------------------
   const R = Math.round;
   // Monster pose basics: root offset, hip drop, lean, squash.
-  function base(p) {
+  function base(p, J) {
     return {
-      x: RX + (p.x || 0),
-      y: RY + (p.y || 0),
+      x: J.root.x,
+      y: J.root.y,
       dip: (p.bob || 0) + (p.crouch || 0),
       lean: p.lean || 0,
       sq: p.sq || 0,
@@ -27,6 +27,24 @@
       ko: !!p.ko,
     };
   }
+  // A Grid proxy that magnifies 1x geometry by k around (ox, oy): big rigs keep their
+  // hand-tuned proportions and simply draw larger. Radii and widths scale; 1px lines stay 1px.
+  function scaled(g, ox, oy, k) {
+    const T = (x, y) => [ox + (x - ox) * k, oy + (y - oy) * k];
+    return {
+      T, w: g.w, h: g.h, a: g.a,
+      px: (x, y, c) => g.px(...T(x, y), c),
+      rect: (x0, y0, x1, y1, c) => { const a = T(x0, y0), b = T(x1, y1); g.rect(R(a[0]), R(a[1]), R(b[0]), R(b[1]), c); },
+      ell: (x, y, rx, ry, c) => g.ell(...T(x, y), rx * k, ry * k, c),
+      line: (x0, y0, x1, y1, c) => g.line(...T(x0, y0), ...T(x1, y1), c),
+      capsule: (x0, y0, x1, y1, r, c) => g.capsule(...T(x0, y0), ...T(x1, y1), r * k, c),
+      poly: (pts, c) => g.poly(pts.map((q) => T(q[0], q[1])), c),
+      spike: (x0, y0, x1, y1, w, c) => g.spike(...T(x0, y0), ...T(x1, y1), w * k, c),
+      tri: (ax, ay, bx, by, cx, cy, c) => g.tri(...T(ax, ay), ...T(bx, by), ...T(cx, cy), c),
+    };
+  }
+  // Custom-drawn monsters record their cast light origin (mouth, core, crown) in J.rim.
+  const rimAt = (J) => J.rim || [J.head.x, J.head.y];
   const dir = (a) => ({ x: Math.sin(a), y: Math.cos(a) }); // angle from straight down, + forward
   // Frame list helper: every frame gets ms.
   const F = (ms, o) => Object.assign({ ms }, o);
@@ -278,8 +296,9 @@
   // NU — big round blue blob with a tuft, beady eyes and stubby limbs
   // =========================================================================================
   define('nu', {
-    // body only places J.head (HUD portrait) and the hands (cast rim light).
-    body: { leg: 12, torso: 4, neck: 2, headR: 5 },
+    portrait: { x: 30, y: 31, side: 24 },
+    rimAt,
+    koRotate: false,
     pal: {
       s: '#5c90dc', b: '#8cc0f0', f: '#2c4488', F: '#3c64b4', a: '#3c64b4', A: '#5c90dc',
       t: '#2c4488', T: '#3c64b4', e: '#1a1226', E: '#ffffff', m: '#1a1226', M: '#a02030', S: '#3c64b4', P: '#e0709c',
@@ -315,7 +334,7 @@
       },
       shoot: { frames: [F(150, { sq: 2, lean: -0.1, armF: [1.2, 0], armB: [-1, 0] }), F(150, { sq: -1, x: 1, lean: 0.15, armF: [1.8, 0], armB: [-1.2, 0], jaw: 1 })] },
       hurt: { frames: [F(300, { sq: -1, x: -3, lean: -0.3, armF: [2.2, 0], armB: [-2.2, 0], hurt: true, jaw: 1 })] },
-      ko: { frames: [F(1000, { sq: 4, armF: [0.2, 0], armB: [-0.2, 0], ko: true })] },
+      ko: { frames: [F(1000, { sq: 5, armF: [1.5, 0], armB: [-1.5, 0], hurt: true, ko: true })] },
       kneel: { frames: [F(1000, { sq: 3, lean: 0.15, armF: [0.3, 0], armB: [-0.3, 0] })] },
       victory: {
         loop: true,
@@ -323,7 +342,7 @@
       },
     },
     draw(g, J, view, p) {
-      const b = base(p);
+      const b = base(p, J);
       const sq = b.sq;
       // Pear body: squash widens and lowers it, the bottom stays on the ground.
       const rx = 12 + sq * 0.7, ry = 10 - sq * 0.8;
@@ -341,6 +360,7 @@
       g.ell(hx, hy, 9 + sq * 0.4, hry, 's');
       // Tuft of dark fur on top.
       const top = hy - hry + 1, tf = p.hurt ? 2 : 0;
+      J.rim = [hx, top - 3];
       g.spike(hx - 3, top + 2, hx - 6 - tf, top - 5, 3.5, 't');
       g.spike(hx, top + 1, hx + 1 - tf, top - 7, 4, 'T');
       g.spike(hx + 3, top + 2, hx + 6 - tf, top - 5, 3.5, 't');
@@ -617,7 +637,9 @@
   // ROUNDILLO — banded armadillo; walks and attacks curled into a rolling ball
   // =========================================================================================
   define('roundillo', {
-    body: { leg: 6, torso: 2, neck: 0, headR: 3 },
+    portrait: { x: 31, y: 40, side: 24 },
+    rimAt,
+    koRotate: false,
     pal: {
       a: '#bc8844', c: '#94602e', s: '#6e4222', u: '#dcb468', h: '#e0a878', H: '#bc7a50',
       f: '#6e4222', F: '#94602e', e: '#1a1226', E: '#ffffff', n: '#e0709c', t: '#94602e', w: '#fff0dc',
@@ -644,12 +666,12 @@
       },
       shoot: { frames: [F(150, { sq: 1, lean: -0.2 }), F(150, { x: 1, lean: 0.2, jaw: 1 })] },
       hurt: { frames: [F(300, { x: -3, lean: -0.3, hurt: true, jaw: 1 })] },
-      ko: { frames: [F(1000, { sq: 2, ko: true })] },
+      ko: { frames: [F(1000, { sq: 3, nod: 3, lean: 0.3, hurt: true, footF: [2, 0], footB: [-2, 0], ko: true })] },
       kneel: { frames: [F(1000, { sq: 2, nod: 2 })] },
       victory: { loop: true, frames: [F(200, { ball: 1, roll: 0, y: -4 }), F(200, { ball: 1, roll: 1.2, y: 0, sq: 1 })] },
     },
     draw(g, J, view, p) {
-      const b = base(p);
+      const b = base(p, J);
       const se = view === 'se';
       const bands = (cx, cy, rx, ry, phase, clipY) => {
         // Radial wedges from a hub: rolling rotates them.
@@ -665,6 +687,7 @@
       if (p.ball) {
         const sq = b.sq;
         const r = 9.5, cx = b.x - 0.5, cy = b.y - 1 - r + sq;
+        J.rim = [cx, cy - r];
         bands(cx, cy, r + sq * 0.6, r - sq * 0.5, p.roll || 0, 99);
         // Hub where the head and tail tuck in.
         g.ell(cx + (se ? 1 : -1), cy + 1, 2.5, 2.5, 'u');
@@ -672,6 +695,7 @@
         return;
       }
       const cx = b.x - 2, gy = b.y, sq = b.sq, L = b.lean;
+      J.rim = [cx, gy - 16];
       const ff = p.footF || [0, 0], fb = p.footB || [0, 0];
       // Far feet.
       g.rect(R(cx - 7 + fb[0]), gy - 3, R(cx - 5 + fb[0]), gy, 'f');
@@ -720,7 +744,10 @@
     { footF: [0, 5], footB: [1, 0], bob: -1 },
   ];
   define('tyrano', {
-    body: { leg: 12, torso: 14, neck: 2, headR: 5, upper: 9.5, fore: 9.5 },
+    size: 80,
+    portrait: { x: 60, y: 24, side: 28 },
+    rimAt,
+    koRotate: false,
     pal: {
       a: '#c05c1c', h: '#c05c1c', c: '#c05c1c', f: '#8c5034', t: '#bc7a50', T: '#8c5034', u: '#dcb468', U: '#bc8844',
       s: '#5c3020', e: '#1a1226', E: '#fce068', w: '#fff0dc', m: '#3c0a14', r: '#d43c3c', j: '#bc7a50', x: '#fff0dc', d: '#e88c28',
@@ -741,23 +768,24 @@
       // Fire breath: rear back with a glowing throat, then roar forward.
       cast: {
         frames: [
-          F(170, { lean: -0.35, crouch: 1, jaw: 0.3, glow: 1, armF: [2.2, 0], armB: [2.2, 0], tail: 1 }),
-          F(170, { lean: -0.4, bob: -1, jaw: 0.4, glow: 2, armF: [2.2, 0], armB: [2.2, 0], tail: 1 }),
-          F(300, { lean: 0.3, crouch: 1, x: 2, jaw: 1, glow: 2, armF: [2.0, 0], armB: [2.0, 0], footF: [3, 0], footB: [-3, 0], tail: -1 }),
+          F(170, { lean: -0.35, crouch: 1, jaw: 0.3, glow: 1, tail: 1 }),
+          F(170, { lean: -0.4, bob: -1, jaw: 0.4, glow: 2, tail: 1 }),
+          F(300, { lean: 0.3, crouch: 1, x: 2, jaw: 1, glow: 2, footF: [3, 0], footB: [-3, 0], tail: -1 }),
         ],
         charge: [0, 1], release: 2, rim: true,
       },
       shoot: { frames: [F(160, { lean: -0.3, jaw: 0.4, glow: 1 }), F(160, { lean: 0.25, x: 1, jaw: 1, glow: 2 })] },
       hurt: { frames: [F(320, { lean: -0.45, x: -2, jaw: 0.7, hurt: true, footF: [1, 0], footB: [-3, 0], tail: 1 })] },
-      ko: { frames: [F(1000, { lean: 0.3, crouch: 4, jaw: 0.5, ko: true })] },
+      ko: { frames: [F(1000, { lean: 0.75, crouch: 8, jaw: 0.35, hurt: true, tail: 1, footF: [4, 0], footB: [-4, 0], ko: true })] },
       kneel: { frames: [F(1000, { lean: 0.35, crouch: 4, footF: [3, 0], footB: [-4, 0] })] },
       victory: { loop: true, frames: [F(300, { lean: -0.45, jaw: 1, tail: 1 }), F(300, { lean: -0.5, jaw: 0.8, bob: -1, tail: -1 })] },
     },
-    draw(g, J, view, p) {
-      const b = base(p);
+    draw(g0, J, view, p) {
+      const b = base(p, J);
+      const g = scaled(g0, b.x, b.y, 1.4);
       const se = view === 'se';
       const L = b.lean, dip = b.dip, tw = p.tail || 0;
-      const X = b.x, Y = b.y; // root (28, 50)
+      const X = b.x, Y = b.y;
       const ff = p.footF || [0, 0], fb = p.footB || [0, 0];
       // Hip and body centre.
       const hx = X - 6, hy = Y - 16 + dip;
@@ -802,6 +830,7 @@
       const ja = -jaw * 0.7; // jaw drops (rotates clockwise from the head axis)
       const J2 = (dx, dy) => { const [rx, ry] = rot(dx, dy, L * 0.9 - ja); return [hing[0] + rx, hing[1] + ry]; };
       const H = (dx, dy) => { const [rx, ry] = rot(dx, dy, L * 0.9); return [hing[0] + rx, hing[1] + ry]; };
+      J.rim = g.T(...H(15, 0));
       // Mouth interior (visible when open).
       if (jaw > 0.1) g.poly([H(0, 0), H(14, 0), J2(14, 1), J2(0, 1)], 'm');
       g.poly([J2(-1, -1), J2(13, 0), J2(13, 2.5), J2(3, 4), J2(-2, 2)], 'j');
@@ -843,7 +872,9 @@
   function sprout(k) {
     const W = 12 * k, H = 17 * k;
     return {
-      body: k > 1 ? { leg: 10, torso: 7, neck: 0, headR: 5 } : { leg: 8, torso: 3, neck: 0, headR: 4 },
+      portrait: k > 1 ? { x: 32, y: 34, side: 30 } : { x: 32, y: 40, side: 22 },
+      rimAt,
+      koRotate: false,
       pal: {
         a: '#5a4a44', b: '#7a665a', c: '#3e3230', s: '#3e3230', x: '#fff0dc', X: '#c0aa92', Y: '#fce068',
         r: '#d43c3c', R: '#f06c4c', m: '#1a1226', e: '#fce068', l: '#2a2038',
@@ -866,20 +897,20 @@
         },
         cast: {
           frames: [
-            F(170, { sq: 2, open: 0, glow: 1, armF: [2.9, 0], armB: [2.9, 0] }),
-            F(170, { sq: 1, open: 0.2, glow: 2, armF: [2.9, 0], armB: [2.9, 0] }),
-            F(300, { sq: -2, y: -2, open: 1, glow: 2, jaw: 1, armF: [2.9, 0], armB: [2.9, 0] }),
+            F(170, { sq: 2, open: 0, glow: 1 }),
+            F(170, { sq: 1, open: 0.2, glow: 2 }),
+            F(300, { sq: -2, y: -2, open: 1, glow: 2, jaw: 1 }),
           ],
           charge: [0, 1], release: 2, rim: true,
         },
         shoot: { frames: [F(150, { sq: 2, open: 0.2, glow: 1 }), F(150, { sq: -1, open: 1, jaw: 1, glow: 2 })] },
         hurt: { frames: [F(300, { sq: -1, lean: -0.25, x: -2, open: 0.9, hurt: true, jaw: 1 })] },
-        ko: { frames: [F(1000, { sq: 3, open: 0, ko: true })] },
+        ko: { frames: [F(1000, { sq: 4, open: 0, lean: 0.1, hurt: true, ko: true })] },
         kneel: { frames: [F(1000, { sq: 3, open: 0 })] },
         victory: { loop: true, frames: [F(260, { sq: -1, open: 1, glow: 2 }), F(260, { sq: 1, open: 0.5, glow: 1 })] },
       },
       draw(g, J, view, p) {
-        const b = base(p);
+        const b = base(p, J);
         const se = view === 'se';
         const sq = b.sq * k * 0.8, L = b.lean;
         const rx = W + sq * 0.6, ry = H - sq;
@@ -904,8 +935,8 @@
           g.line(sh(x0, y0), y0, sh(x1, y1), y1, 's');
         }
         // Spikes in rings, larger toward the crown; `open` extends them.
-        const len0 = 4 * k + open * 3 * k;
-        const rings = [[1.0, 7, 1, 2.8], [0.55, 2, 0.9, 2.6]];
+        const len0 = (p.ko ? 2 : 4) * k + open * 3 * k;
+        const rings = k > 1.2 ? [[1.0, 7, 1, 2.8], [0.55, 2, 0.9, 2.6]] : [[1.0, 5, 1, 3.2]];
         const tip = p.glow > 1 ? 'Y' : 'x';
         for (const [r, n, lm, w] of rings)
           for (let i = 0; i < n; i++) {
@@ -919,7 +950,8 @@
             if (p.glow > 1) g.px(sh(tx, ty), ty, tip);
           }
         // Crown spike.
-        const ct = by - ry + 1, cl = (5 + open * 3) * k;
+        const ct = by - ry + 1, cl = (p.ko ? 2 : 5 + open * 3) * k;
+        J.rim = [sh(cx, ct - cl), ct - cl];
         g.spike(sh(cx, ct), ct, sh(cx, ct - cl), ct - cl, 3.5 * k, 'x');
         if (p.glow > 1) g.px(sh(cx, ct - cl), ct - cl, 'Y');
         // Flared base rim.
@@ -992,7 +1024,7 @@
       victory: { loop: true, frames: [F(300, { armF: [2.9, 0], armB: [-0.2, 0], y: -2 }), F(300, { armF: [2.6, 0], armB: [-0.2, 0], bob: 1 })] },
     },
     draw(g, J, view, p) {
-      const b = base(p);
+      const b = base(p, J);
       const se = view === 'se';
       const L = b.lean;
       const U = se ? [1, -0.5] : [-1, -0.5], V = se ? [-1, -0.5] : [1, -0.5];
@@ -1266,13 +1298,13 @@
       victory: { loop: true, frames: [F(300, { open: 1, glow: 2, fl: [2.3, 2.3], y: -2 }), F(300, { open: 0.9, glow: 1, fl: [2.1, 2.1], y: -1 })] },
     },
     draw(g, J, view, p) {
-      const b = base(p);
+      const b = base(p, J);
       const se = view === 'se';
       const o = p.open == null ? 0.8 : p.open, gl = p.glow || 0, L = b.lean;
       const cx = b.x + L * 8, cy = b.y - 23 + b.dip;
       const fl = p.fl || [1.2, 1.2];
       // Tattered coat hanging below the bloom, hem torn into points.
-      const hemY = RY - 3;
+      const hemY = b.y - (p.y || 0) - 3;
       g.poly([[cx - 6, cy + 6], [cx + 6, cy + 6], [b.x + 11, hemY], [b.x - 11, hemY]], 'T');
       g.poly([[cx, cy + 6], [cx + 6, cy + 6], [b.x + 11, hemY], [b.x + 1, hemY]], 't');
       for (let i = -10; i <= 10; i += 3) g.spike(b.x + i, hemY - 1, b.x + i + (i % 2 ? 1 : -1), hemY + 2 + ((i + 10) % 3 === 0 ? 1 : 0), 2.5, i > 0 ? 't' : 'T');

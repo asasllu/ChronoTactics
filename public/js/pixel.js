@@ -106,6 +106,23 @@
           b[2] = Math.max(b[2], x);
           b[3] = Math.max(b[3], y);
         }
+    // Ramp-aware shading: a material whose colour is on a palette ramp shades by
+    // stepping along its own ramp (hue-shifted), instead of mixing toward grey.
+    const rampPos = {};
+    if (CT.PAL) for (const k in pal) {
+      const hx = pal[k].toLowerCase();
+      for (const name in CT.PAL.RAMPS) {
+        const r = CT.PAL.RAMPS[name].map((h) => h.toLowerCase());
+        const i = r.indexOf(hx);
+        if (i >= 0 && r.length > 1) { rampPos[k] = { r, i }; break; }
+      }
+    }
+    const step = (k, d) => {
+      const rp = rampPos[k];
+      const j = rp.i + d;
+      if (j < 0) return d <= -2 ? OUTLINE : hex(rp.r[0]);
+      return hex(rp.r[Math.min(rp.r.length - 1, j)]);
+    };
     for (let y = -P; y < g.h + P; y++)
       for (let x = -P; x < g.w + P; x++) {
         const c = at(x, y);
@@ -116,6 +133,24 @@
         const base = c === 'k' ? OUTLINE : cols[c] || OUTLINE;
         if (c === 'k' || isDetail(c)) {
           put(x, y, base);
+          continue;
+        }
+        if (rampPos[c]) {
+          // Seams between materials -2, bottom/right edge -1, top/left edge +1.
+          // Regions thinner than 3px get only the dark edge so they keep their colour.
+          const e1 = !same(x + 1, y, c) || !same(x, y + 1, c);
+          const t1 = !same(x - 1, y, c) || !same(x, y - 1, c);
+          const seam = hi && [[1, 0], [0, 1]].some(([dx, dy]) => {
+            const d = at(x + dx, y + dy);
+            return d !== '.' && d !== c && !isDetail(d);
+          });
+          const thin = (!same(x - 1, y, c) && !same(x + 1, y, c)) || (!same(x, y - 1, c) && !same(x, y + 1, c));
+          let d = 0;
+          if (seam && !thin) d = -2;
+          else if (e1) d = -1;
+          else if (t1 && !thin) d = 1;
+          else if (hi && (!same(x + 2, y, c) || !same(x, y + 2, c)) && ((x + y) & 1)) d = -1; // dithered second band
+          put(x, y, d ? step(c, d) : base);
           continue;
         }
         const r1 = !same(x + 1, y, c) || !same(x, y + 1, c);
