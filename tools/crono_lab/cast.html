@@ -1,0 +1,52 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Cast gallery</title>
+<style>
+  body { margin: 0; background: #8080ff; font: 13px monospace; color: #1c1024; }
+  h2 { margin: 0; padding: 14px 20px 0; font-size: 16px; }
+  .grid { display: flex; flex-wrap: wrap; gap: 22px 28px; padding: 14px 20px 20px; align-items: flex-end; }
+  .cell { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  canvas { image-rendering: pixelated; display: block; }
+</style>
+<script src="kit.js"></script>
+<script src="crono_r2.js"></script>
+<script src="cast_party.js"></script>
+<script src="cast_allies.js"></script>
+<script src="cast_enemies.js"></script>
+<script src="cast_bosses.js"></script>
+<script src="cast_npcs.js"></script>
+<script src="cast_villagers.js"></script>
+<body>
+<script>
+// cast.html?only=frog,ayla&scale=4&game=1 — every hand-pixelled sprite in window.CAST.
+// Each entry: { name, group, rows: [...], pal: { letter: '#hex' }, w, h }.
+const q = new URLSearchParams(location.search);
+const S = +(q.get('scale') || 4);
+const only = q.get('only') ? q.get('only').split(',') : null;
+const K = window.KIT;
+const CAST = Object.assign({}, window.CAST || {});
+// Crono (round 4, alternative B) is the quality bar and always comes first.
+const cr = window.CRONO_R2.build();
+const entries = [['crono', { name: 'Crono (bar)', group: 'party', buf: cr.spriteB, pal: cr.pal }]];
+for (const [k, v] of Object.entries(CAST)) {
+  if (only && !only.includes(k)) continue;
+  try {
+    entries.push([k, Object.assign({}, v, { buf: K.fromRows(v.rows, v.w, v.h) })]);
+  } catch (e) { console.error(k, e); }
+}
+const groups = {};
+for (const [k, v] of entries) (groups[v.group || 'other'] = groups[v.group || 'other'] || []).push([k, v]);
+for (const [gname, list] of Object.entries(groups)) {
+  const h = document.createElement('h2'); h.textContent = gname; document.body.appendChild(h);
+  const grid = document.createElement('div'); grid.className = 'grid'; document.body.appendChild(grid);
+  for (const [k, v] of list) {
+    const c = document.createElement('div'); c.className = 'cell';
+    c.appendChild(K.toCanvas(v.buf, v.pal, S));
+    if (q.get('game')) c.appendChild(K.toCanvas(v.buf, v.pal, 2));
+    const t = document.createElement('div'); t.textContent = `${v.name || k} ${v.buf.w}x${v.buf.h}`; c.appendChild(t);
+    grid.appendChild(c);
+  }
+}
+window.READY = true;
+</script>
+</body>
