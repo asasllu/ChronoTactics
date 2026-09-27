@@ -516,10 +516,10 @@
       walk: {
         loop: true,
         frames: [
-          { ms: 150, footF: [3, 0], footB: [-3, 0], armF: [0.25, 1.0], armB: [0.3, 0.4], wpn: 0.2 },
-          { ms: 150, footF: [0, 0], footB: [1, 2], armF: [0.35, 0.95], armB: [0, 0.4], wpn: 0.12, bob: -1 },
-          { ms: 150, footF: [-3, 0], footB: [3, 0], armF: [0.45, 0.9], armB: [-0.3, 0.4], wpn: 0.05 },
-          { ms: 150, footF: [1, 2], footB: [0, 0], armF: [0.35, 0.95], armB: [0, 0.4], wpn: 0.12, bob: -1 },
+          { ms: 150, footF: [4, 0], footB: [-4, 0], armF: [0.2, 1.0], armB: [0.3, 0.4], wpn: 0.25, lean: 0.05 },
+          { ms: 150, footF: [0, 0], footB: [1, 3], armF: [0.35, 0.95], armB: [0, 0.4], wpn: 0.12, bob: -1, lean: 0.05 },
+          { ms: 150, footF: [-4, 0], footB: [4, 0], armF: [0.5, 0.9], armB: [-0.3, 0.4], wpn: 0.0, lean: 0.05 },
+          { ms: 150, footF: [1, 3], footB: [0, 0], armF: [0.35, 0.95], armB: [0, 0.4], wpn: 0.12, bob: -1, lean: 0.05 },
         ],
       },
       // Two-handed scythe sweep: raise it behind, reap down in front, follow through.
@@ -569,7 +569,8 @@
       torso(g, J, view) {
         const c = J.chest, h = J.hip, H = J.head;
         // Sash, tunic seam and gold clasps.
-        g.capsule(h.x - 4, h.y - 1, h.x + 3.5, h.y - 1 + J.lean * 3, 0.8, 'C');
+        g.capsule(h.x - 4, h.y - 1, h.x + 3.5, h.y - 1 + J.lean * 3, 0.8, 'P');
+        if (view === 'se') g.px(h.x + 1, h.y - 1, 'y');
         if (view === 'se') {
           g.line(c.x + 1, c.y + 1, h.x + 1, h.y - 2, 'C');
           // High collar: tall back flare (purple outside, red inside) and a short front flare.

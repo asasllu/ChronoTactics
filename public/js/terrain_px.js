@@ -193,8 +193,7 @@
       const li = mod(p.tx, 3), lj = mod(p.ty, 3);
       if (li < 2 && lj < 2) {
         const stone = h > 0.95;
-        const [id, e] = bevel(p, (i, j) => (mod(i, 3) < 2 && mod(j, 3) < 2 && Math.floor(i / 3) === ci && Math.floor(j / 3) === cj ? 1 : 0));
-        void id;
+        const [, e] = bevel(p, (i, j) => (mod(i, 3) < 2 && mod(j, 3) < 2 && Math.floor(i / 3) === ci && Math.floor(j / 3) === cj ? 1 : 0));
         if (stone) return e > 0 ? ST[4] : e < 0 ? ST[2] : ST[3];
         return e > 0 ? WD[4] : WD[2];
       }
@@ -423,7 +422,7 @@
     if (sp.pv === 0) return fc(sp, RD, 3);
     if (sp.pv === 1) return fc(sp, RD, 2);
     if (sp.pv === 2) return fc(sp, GD, 2);
-    return jSide({ ...sp, pv: sp.pv - 3 + 1, pdepth: sp.pdepth - 2, face: sp.face, pu: sp.pu, t: sp.t });
+    return jSide({ t: sp.t, face: sp.face, pu: sp.pu, pwu: sp.pwu, pv: sp.pv - 2, pdepth: sp.pdepth - 2 });
   };
 
   // ======================================================================================
@@ -536,7 +535,6 @@
     if (id < 0.45 && cy === 2) {
       const x0 = Math.floor(id * 8);
       if (cx >= x0 && cx < x0 + 4) c = SL[4];
-      if (cx >= x0 + 1 && cx < x0 + 3 && d > 0.3) c = cx === x0 + 1 ? SL[4] : SL[4];
     } else if (id < 0.45 && cy === 1) {
       const x0 = Math.floor(id * 8);
       if (cx >= x0 + 1 && cx < x0 + 3) c = WH;
