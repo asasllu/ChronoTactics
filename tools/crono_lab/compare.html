@@ -1,0 +1,43 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Crono compare</title>
+<style>
+  body { margin: 0; background: #8080ff; font: 13px monospace; color: #1c1024; }
+  .row { display: flex; gap: 40px; padding: 20px; align-items: flex-end; }
+  .col { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  canvas { image-rendering: pixelated; display: block; }
+</style>
+<script src="kit.js"></script>
+<script src="crono_r2.js"></script>
+<body>
+<div class="row" id="row"></div>
+<script>
+// ?ref=<file url of a reference png>&crop=x,y,w,h (native px of a 2x-upscaled image)&scale=8
+const q = new URLSearchParams(location.search);
+const S = +(q.get('scale') || 8);
+const row = document.getElementById('row');
+const add = (cv, cap) => {
+  const c = document.createElement('div'); c.className = 'col';
+  c.appendChild(cv);
+  const t = document.createElement('div'); t.textContent = cap; c.appendChild(t);
+  row.appendChild(c);
+};
+(async () => {
+  if (q.get('ref')) {
+    const im = new Image(); im.src = q.get('ref'); await im.decode();
+    const [x, y, w, h] = (q.get('crop') || '0,0,24,46').split(',').map(Number);
+    const up = +(q.get('up') || 2);
+    const cv = document.createElement('canvas'); cv.width = w * S; cv.height = h * S;
+    const g = cv.getContext('2d'); g.imageSmoothingEnabled = false;
+    g.drawImage(im, x * up, y * up, w * up, h * up, 0, 0, w * S, h * S);
+    add(cv, 'reference');
+  }
+  const v = window.CRONO_R2.build();
+  add(window.KIT.toCanvas(v.sprite, v.pal, S), 'A — faithful');
+  add(window.KIT.toCanvas(v.spriteB, v.pal, S), 'B — own touches');
+  add(window.KIT.toCanvas(v.sprite, v.pal, 3), 'A in game (3x)');
+  add(window.KIT.toCanvas(v.spriteB, v.pal, 3), 'B in game (3x)');
+  window.READY = true;
+})();
+</script>
+</body>
