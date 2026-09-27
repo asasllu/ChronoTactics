@@ -1,5 +1,333 @@
 // Hand-pixelled cast sprites (enemies). See CAST_SPEC.md.
+// Front view, idle. Every pixel placed by hand; outlines are drawn, light from the top-left.
 (function () {
   const CAST = (window.CAST = window.CAST || {});
-  void CAST;
+
+  // Hench: Magus's blue horned brute, with a spiked pauldron, a gold-buckled belt, a purple loincloth and a crescent axe.
+  CAST.hench = {
+    name: "Hench", group: 'enemies', w: 39, h: 47,
+    pal: {
+      // skin: outline, dark, mid, light, highlight
+      O: '#0c1440', D: '#2a4498', M: '#4874cc', L: '#78a6ec', H: '#b8dcff',
+      // horns and claws: outline, dark, mid, light
+      J: '#3a2418', j: '#8a6c50', i: '#c8b08c', h: '#f4e8d0',
+      // eyes, mouth, fangs
+      Y: '#fce068', k: '#140a18', m: '#3a0a1c', t: '#fff4e0',
+      // pauldron: dark, mid, light, shine
+      N: '#464a6c', n: '#8a8eaa', z: '#c8ccdc', Z: '#f4f6ff',
+      // belt, buckle
+      b: '#3e2210', B: '#7a4a24', G: '#f8c040',
+      // loincloth: outline, dark, mid, light
+      X: '#1c0a30', V: '#431c66', v: '#6c3094', u: '#a060cc',
+      // axe: haft light/dark, blade shine/mid/dark
+      W: '#8a5a2c', w: '#4e2e14', S: '#e0e4f0', T: '#9aa0bc', Q: '#555a7c',
+    },
+    rows: [
+      '.....J..................J',
+      '....JhJ................JiJ...O..OO',
+      '...JhiJ................JijJ.OzOOSZO',
+      '...JhiJ...OOOOOOOOO....JijJ.OWOQSZO',
+      '...JhijJOOLLLDMMMMDOO.JijjJ.OWOQTSZO',
+      '....JhijJLHHLLDMMMMDOJijjJ..OwOQTTSZO',
+      '.....JJijJLHLLDMMMMDJjjJJ...OWOQTTSSZO',
+      '.....OJJijJLLDMMMMDJjjJO....OWOQTTTSZO',
+      '.....OLJJJJMMMMMMMDJJJDO...OOWOQQTTSZO',
+      '.....OLOOODDMDMDDDDOODDO..OTOWOQTTTSZO',
+      '.....OLMDkYYOMMMOYYkODDO...OOwOQTTTSZO',
+      '......OMDOkkOMLMOkkODDO.....OWOQTTSSZO',
+      '.O..O.OLMDMMMDMDMMDMDDO.....OWOQTTSZO',
+      'OzO.OzOOMLMtOOOOOtDDDDO.....OWOQTSZO',
+      'OZzOOzzOMLOtmmmmmtODDDO.....OWOQSZO',
+      'OZzzzznOOLMOOOOOOODOOO......OwOSZO',
+      'OZZzzznO.OLMMMMMMDDOOOOOO...OWOOO',
+      'OZzzznnOLLODDDDDDDDOMMMDDOO.OWO',
+      'OzzznnNNOLLOODDDDOOMMMMDDDDOOWO',
+      'OnnnnNNNOLHHHLLOMMMMMODDDDDOOWO',
+      '.ONNNNNOLHHLLLLODMMMMODMDDDOOwO',
+      '..OOOOOLLHLLLLLODMMMDOLMDDDOOWO',
+      '..OLMMDOLLLLLLODDMMDDOLMDDDOOWO',
+      '..OLMMDOOLLLLOLLODDDOOLMDDO.OWO',
+      '..OLMMDOLOOOOLHHLOOODOLMDDO.OWO',
+      '..OLMMDOLLOLHHHHLLMODOLMDDO.OwO',
+      '..OLMDDOLLOLHHHLLLMODOLMMDO.OWO',
+      '..OLMDDOLLOLHLLLOLMODOLMDDO.OWO',
+      '..OLMDDOOLOLLLLLLMMOOOLMDDO.OWO',
+      '..OLMDDOOLOOLLLLMMOO..OOOLLLOLO',
+      '..OLMDDOObBBBBGGBBbbO.OOLHLHLHO',
+      '..OLMDO.ObbbbbGGbbbbO..OLLLLLMO',
+      '..OhLhO.OVvuvvvvvvvVO..OMMDMDDO',
+      '..OhhhO.OVvuuvvvvvVVO...OOOOOOO',
+      '...OOO..OMOVuvvvvVOMO.......OWO',
+      '.........OLMDOVvvvVODMDO....OwO',
+      '.........OLMDOOVvVOOMDDO....OWO',
+      '.........OLLMDOOXOOLMMDO....OWO',
+      '.........OLHMDDO.OLLMDDO....OWO',
+      '.........OLLMDDO.OLMMDDO....OWO',
+      '.........OOLMDDO.OOLMDDO....OwO',
+      '.........OLMMDDO.OLMMDDO....OWO',
+      '.........OLMDDDO.OLMDDDO....OWO',
+      '........OLMMDDDO.OLMMDDDO...OWO',
+      '.......OLLMMMDDO.OLLMMDDDO..OOO',
+      '......OhLhMhMDDO.OLhMhMhDDO..O',
+      '......OOOOOOOOOO.OOOOOOOOOO',
+    ],
+  };
+
+  // Imp: a small teal goblin with a big bald head, long pointed ears, a toothy grin and a red loincloth.
+  CAST.imp = {
+    name: "Imp", group: 'enemies', w: 33, h: 31,
+    pal: {
+      // skin: outline, dark, mid, light, highlight; inner ear
+      O: '#0c2628', D: '#1f6664', M: '#359686', L: '#5cc4a4', H: '#a4ecc6', p: '#d86a8c',
+      // eyes, pupils, mouth, teeth, claws
+      Y: '#fce068', k: '#140a18', m: '#3c0a14', t: '#fff0dc', c: '#e8e0c8', P: '#c84860',
+      // knife blade
+      s: '#e4e8f0', S: '#8890aa', g: '#6e4222',
+      // loincloth: outline, dark, mid, light
+      X: '#3a0810', R: '#7a1424', r: '#c02838', q: '#ec6450',
+    },
+    rows: [
+      '.........OO.....OO',
+      '.........OHOOOOOLDO',
+      '........OLLHHLLMMMDO',
+      'O......OLHHLLLLMMMMDO......O',
+      'OLO...OLHLLLLLMMMMMMDO...ODO',
+      '.OLMO.OLLLDLLMMDMMMMDO.ODDO',
+      '.OLpMOLLOOODLMDOOOMMMDOMpDO',
+      '..OLppLOYYkOMMOkYYOMMDMppDO',
+      '..OLLpMLOYkkOOkkYODMMDppDO',
+      '...OLLMMLOOOMLMOOODMMDDDO',
+      '....OOLmMLMMMMMMMMDmMDDOO',
+      '......OLmmmmmmmmmmmmDDO',
+      '......OMmtmttttmttmtDDO',
+      '.......OMmtmmPPmmtmMDO',
+      '........OOmmmmmmmmDOO',
+      '.........OODDDDDDDOO',
+      '.......OOLLMMMMMMMDDOO',
+      '......OLLOLHHLLMMMODMDO',
+      '......OLOOLHLLLLMMMODDO',
+      '.....OLMOOLLLDLLMMMODDO',
+      '.....OLMO.OLLLMMMMMODMDO',
+      '.....OMDO.OXqrrrrrRXODDO.O',
+      '.....OLLO.OXqrrrrRRXOLcgOSOOOOO',
+      '.....OccO..OXrrrRRXOccgOSsssssSO',
+      '......OO...ODXrrRXOMOOOOSSSSSSO',
+      '..........OLMOXXXOLMDO.OOOOOOO',
+      '..........OLMDO.OLMMDO',
+      '.........OLMMDO.OLMMDO',
+      '........OLLMDDO..OLMDDO',
+      '.......OcLMMDDO..OLMMDDO',
+      '.......OcOcOcOO..OOcOcOcO',
+    ],
+  };
+
+  // Nu: a big round blue blob with a tuft, beady eyes, a wide grin and stubby limbs.
+  CAST.nu = {
+    name: "Nu", group: 'enemies', w: 36, h: 36,
+    pal: {
+      // outline, dark, mid, light, highlight
+      O: '#140f44', N: '#262a86', D: '#3244b0', M: '#4e6ad2', L: '#729cf0', H: '#b4dcff',
+      // eyes, mouth, tongue
+      k: '#0c0a1c', W: '#ffffff', m: '#1e1040', P: '#d8607c',
+    },
+    rows: [
+      '................O',
+      '...........O...OLO..O',
+      '............OO.OMDOOLO',
+      '............OOLOMDODMOOO',
+      '..........ONLLMODDDMMMMMOO',
+      '........ONLLHHLLMDDMMMMMMMOO',
+      '.......NLLHHHHLLLMMDMMMMMMMDO',
+      '......NLLHHHLLLDLMMMDMMMMMMMDO',
+      '.....NLLHHLLLLDLMMMMMDMMMMMMDNO',
+      '.....NLLHLLLLDLMMMMMMMMMMMMMDNO',
+      '....NLLLLLLLLLMMMMMMMMMMMMMMMDNO',
+      '....OLLLLLLMMMMkMMMMMMkMMMMMMDNO',
+      '...OLLLLLLMMMMWkkMMMMWkkMMMMMDDNO',
+      '...OLLLLLMMMMMkkkMMMMkkkMMMMMDDNO',
+      '...OLLDLMMMMMMMMMMMMMMMMMMMMMDDNO',
+      '...OLLLDMMMMMMMMMMMMMMMMMMMMMDDNO',
+      '..OLLLLDMMMmMMMMMMMMMMMMMmMMMMDDNO',
+      '..OLLLLMDMMMmmmmmmmmmmmmmMMMMMDDNO',
+      '..OLLLMMMMMMMmPPPPPPPPkmMMMMMMDDNO',
+      'OOOLLLMMMMMMMMmmmmmmmmmMMMMMMDDDNOOO',
+      'OLOLLLMMMMMMMMMMMMMMMMMMMMMMMDDDNODO',
+      'OLLOLDLMMMMMMMMMMMMMMMMMMMMMMDDDNODO',
+      'OMMOLLDLMMMMMMMMMMMMMMMMMMMMMDDNNNO',
+      '.OOOLLLDMMMMMMMMMMMMMMMMMMMDMDDNNOO',
+      '..OLLLLLDMMMMMMMMMMMMMMMMMMMDDDNNO',
+      '..OLLDLLLMMMMMMMMMMMMMMMMMMMDDDNNNO',
+      '..OLLLDLMMMMMMMMMMMMMMMMMMMDDDNDNNO',
+      '..OLLLLDMMMMMMMMMMMMMMMMMMMDDDDNNNO',
+      '...OLDLMDMMMMMMMMMMMMMMMMMMDDDNNNO',
+      '...ODLDMMDMMMMMMMMMMMMMMMMDDDDNNNO',
+      '....ODDMDMDMDMMMDMMMMDMMDDDDNDNNO',
+      '....ONDDNDDDDNDDDDDNDDDDNDDNNNNNOO',
+      '.....OONNNOONNNNONNNNNNNOONNNNOO',
+      '......OLMMDDO.........OLMMDNO',
+      '.....OLMLMMDDO.......OLMMMDNNO',
+      '.....OOOOOOOOO.......OOOOOOOOO',
+    ],
+  };
+
+  // Kilwala: a hunched white ape with a pink face, round ears and long knuckle-dragging arms.
+  CAST.kilwala = {
+    name: "Kilwala", group: 'enemies', w: 33, h: 35,
+    pal: {
+      // fur: outline, dark, mid, light, highlight
+      O: '#34304e', D: '#8e90b0', M: '#c2c6dc', L: '#e6eaf6', H: '#ffffff',
+      // face, hands and feet: light, mid, shade
+      F: '#fcc4cc', f: '#ec8ca4', P: '#b0506e',
+      // eyes, mouth
+      W: '#ffffff', k: '#1a1226', m: '#5a1024',
+    },
+    rows: [
+      '..............O..O',
+      '...........O.OHOOLO.O',
+      '...........OLOHLOLMOMO',
+      '..........OLHOLLMOLMODO',
+      '..OOOO...OLHLLLLMMMMMMDO..OOOO',
+      '.OLLLMO.OLHHLLLLLLMMMMMDOODMMDO',
+      'OLLFFMMOLHLLPPPPLPPPPMMMDOMFfDDO',
+      'OLFFfMMOLLPFFFFPFFFFfPMMDOMffPDO',
+      'OLFffMDOLPFFFFFFFFFFFfPMDOMffPDO',
+      'OLMfPMDOLPFOOOFFFFOOOfPMDOPfPDDO',
+      '.OMMMDDOMPFWkOFFFFWkOffPDODDDDO',
+      '..ODDDOOMPFkkFFFFFkkfffPDOOOOO',
+      '....OOOLMPFFFFFFFFFFfffPDO',
+      '......OLMOPFFFFPkPFFffPODO',
+      '......OLMDOPfFFFFFFffPPODDO',
+      '......OLMDOPmPPPPPPPPmPODDO',
+      '.....OLLMMDOPmHHHHHHmPODDDDO',
+      '....OLHLMMMDOPPmmmmmmPPODMDDDO',
+      '...OLHHLMMDDOOPPPPPPPPOODMMDDDO',
+      '..OLHLLMMMLLHHLLLMMMMMDDDDMMDDDO',
+      '..OLHLLMDOLHHLLLLMMMMMDODMMDDDDO',
+      '.OLLMLMDOLHHLLLLLMMMMMDDODMDMDDO',
+      '.OLMLMDDOLLMHHLLLMMDMMDDODDMDDDO',
+      '.OLLMDMDOLLLMLLLLMMMDMDDODMMDMDO',
+      'OLLMLMDDOLLLLLLMLMMMMDMDODMMDMDDO',
+      '.OLMMLDDOLLLLLLLMMMMMDDDODMDDMDO',
+      '.OLMLMDDOOLLMMLLMMMMMDDOODMMDDDO',
+      '.OLMMLMDO.OLMMMDMMMMDDO.ODMDMDDO',
+      'OLLMMLMDO.OLLMMDOLMMDDO.ODMMDMDDO',
+      'OLMLMMDDO.OLMMDDOOLMDDO.ODMDMDDDO',
+      'OLMMLMDDO.OLLMDDOOLMMDO.OODMMDDDO',
+      'OFfFfFfPO.OFFfDO.OLMDDO.OfFfFfPO',
+      'OfFfFfPPO.OFfFPO.OFFfDO.OfFfFfPPO',
+      '.OOOOOOO.OFfFPPO.OFfFPPO.OOOOOOO',
+      '.........OOOOOOO.OOOOOOO',
+    ],
+  };
+
+  // Roundillo: a banded armadillo; the shell arches over a long-snouted head and two clawed forefeet.
+  CAST.roundillo = {
+    name: "Roundillo", group: 'enemies', w: 38, h: 30,
+    pal: {
+      // shell: outline, dark, mid, light, highlight
+      O: '#2c1606', D: '#6e3e1c', M: '#a86c34', L: '#d49e4c', H: '#f6d888',
+      // head and feet: outline, dark, mid, light
+      o: '#3e1c10', q: '#9c5634', s: '#d08c60', S: '#f2c49a',
+      // eyes, nose, claws
+      W: '#ffffff', k: '#160c10', n: '#e0709c', c: '#fff0dc',
+    },
+    rows: [
+      '...............OOOOOOOO',
+      '.............OOHHLLLLMMOO',
+      '...........OOHLLDLLMDMMMDOO',
+      '..........OHLLLDLLMDMMMDMMDO',
+      '.........OLLLDLLMMDMMMDMMMDDO',
+      '........OLLDLLMMDMMMDMMMDMMDDO',
+      '.......OLLDLLOOOOOOOOOOODMMDDDO',
+      '......OLLDLOOHHLLLLMMMMDOOMDDDDO',
+      '......OLDLOHHLLDLLMMDMMMMDOMDDDO',
+      '.....OLDLOHLLDLLMMDMMMDMMMDOMDDDO',
+      '.....OLLOLLLDLLMMDMMMDMMMDDODMDDO',
+      '....OLLDOLLDooOOOOOOOOODooDDODDDDO',
+      '....OLDOLLDoSnoHLLLMMMMonsoDODDDDO',
+      '....OLLOLDLoSnoLLLMMMMMonqoDDODDDO',
+      '...OLDOLLDOHoSsoLLMMMMosqoODDODDDDO',
+      '...OLLOLDLOLoSsqoooooooqsoODDDODDDO',
+      '...OLOLLDOLLLoSSSSSssssqoMMODDOODDO',
+      '..OLLOLDOLLLLoSSSSsssssqoMMODDODDDDO',
+      '..OLDOLLOLLLLoSWkSsssWkqoMMODDODDDDO',
+      '..OLLOLDOLLLOoSkkSssskkqoOMMODDODDDO',
+      '..OLDOLDOLLMOooSSSsssqqoDOMMODDODDDO',
+      '..OLLOLDOLMMOooSsSsssqqooDMMODDODDDO',
+      '..OLDOLDOMMMOoooSSsssqoooDMMODDODDDO',
+      '..OOOOOOOOOOOOOoSsssqqoOOOOOOOOOOOOO',
+      '....oSSsqo.....oSssssqo....osssqo',
+      '...oSSssqo......oSssqo.....ossssqo',
+      '...oSsssqqo.....oSsqqo....osssqqqo',
+      '...ocSccScc.....onnnno....occsccqo',
+      '...oooooooo......oooo.....oooooooo',
+      '',
+    ],
+  };
+
+  // Seedbearer: a faceless porcelain automaton on a lattice of blue light, cradling a red Lavos seed.
+  CAST.seedbearer = {
+    name: "Seedbearer", group: 'enemies', w: 26, h: 48,
+    pal: {
+      // porcelain: outline, shade, mid, light, highlight, seam
+      O: '#1c2450', D: '#8a8eb0', M: '#c4c8dc', L: '#e6eaf4', H: '#ffffff', C: '#a8acc6',
+      // lattice light: deep, glow, bright
+      b: '#2a4a9c', g: '#6cb0f0', G: '#d4f0ff',
+      // Lavos seed: outline, dark, mid, core, glint
+      x: '#1e0408', r: '#5a0c18', R: '#a82030', e: '#f06c4c', Y: '#fce068',
+      // grey docent coat: outline, dark, mid, light
+      K: '#191a26', A: '#474a62', a: '#6c7088', c: '#9ca0b8',
+    },
+    rows: [
+      '..........OOOOO',
+      '.........OHHLLMO',
+      '........OHHLLLMDO',
+      '........OHLLLLMDO',
+      '........OHLLLLMgO',
+      '........OCLLLLgDO',
+      '........ObGGGgbDO',
+      '........OCLLLMMgO',
+      '.........OCLLMDgO',
+      '.........OCLMMDO',
+      '..........OgGgO',
+      '.....KcaK.ObgbO.KaAK',
+      '..OOOKcaaKOOOOOKaAAKOOO',
+      '.OLHHLOcaaKLHLMDKaAAOMDDO',
+      '.OLHLLOcaaaKLMDKaAAAODDDO',
+      '.OLLLMOcaaaaKMKaAAAAODDDO',
+      '..OMMOKcaaaaaKaAAAAK.ODDO',
+      '..KcaKKcaaaxxxxxAAAK.KaAK',
+      '..KcaKKcaaxrRRRrxAAK.KaAK',
+      '..KcaKKcaxrReeRRrxAK.KaAK',
+      '..KcaKKcaxReYYeRRxAK.KaAK',
+      '..KcaKKcaxReYeeRrxAK.KaAK',
+      '..ObgOKcaxRReeRRrxAK.ObgO',
+      '..OLLOKcaxrRRRRrrxAK.OMDO',
+      '..OLLOOLHOxrRRrrOMDO.OMDO',
+      '...OLLOLLOaxxxxxOMDOMDO',
+      '....OLLOaKaaKaaaOOOMDO',
+      '......OKKKKKKKKKKKKO',
+      '......KcaaKObgbOKaAK',
+      '......KcaaKOgGgOKaAK',
+      '.....KcaaK.OLMO.KaAAK',
+      '.....KcaKK.OLMO.KKaAK',
+      '.....KcKaKOLLMDOKaKAK',
+      '....KccKaKOLMDOOKaAKAK',
+      '....KcaKaKOLMDOOKAaKAK',
+      '....KcaKAKOLMDODKaAKAK',
+      '....KcaKAKOLDOLDKAaKAK',
+      '....KKcKKKOLDOLDKKAKKK',
+      '.....KK...ObGbO.OgbgOK',
+      '..........OgGgO.ObgbO',
+      '..........OLLMO.OLMDO',
+      '..........OHLMO.OLMDO',
+      '..........OLLMO.OLMDO',
+      '..........OLMDO.OLMDO',
+      '..........OLMDO.OLMDO',
+      '.........OLHLMDOOLLMDDO',
+      '.........OHLLMDDOLLMMDDO',
+      '.........OOOOOOOOOOOOOOO',
+    ],
+  };
+
 })();
