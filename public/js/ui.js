@@ -260,6 +260,7 @@
     const setSel = (i) => {
       sel = i;
       btns.forEach((b, j) => b.classList.toggle('sel', j === sel));
+      if (btns[sel] && m.scrollHeight > m.clientHeight) btns[sel].scrollIntoView({ block: 'nearest' });
       hint.textContent = (items[sel] && (items[sel].hint || items[sel].why)) || '';
       if (opts.onHover) opts.onHover(items[sel]);
     };

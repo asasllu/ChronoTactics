@@ -745,7 +745,7 @@
   ];
   define('tyrano', {
     size: 84,
-    portrait: { x: 61, y: 29, side: 28 },
+    portrait: { x: 59, y: 26, side: 26 },
     rimAt,
     koRotate: false,
     pal: {
@@ -990,7 +990,7 @@
   // Drawn as a true isometric box: SE shows the front (right) and left side, NE the back
   // (left) and right side. The skeleton is painted only onto glass pixels, so it stays inside.
   define('vitrine', {
-    portrait: { x: 29, y: 21, side: 24 },
+    portrait: { x: 30, y: 25, side: 24 },
     rimAt,
     koRotate: false,
     pal: {
