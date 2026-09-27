@@ -79,7 +79,8 @@
       ['move', 'marle', '@marle', { run: true }],
       ['face', 'marle', 'crono'],
       ['face', 'crono', 'marle'],
-      say('marle', 'happy', `There you are! Everyone's asking where the hero went. Lucca says you owe her a dance. She's lying, she can't dance.`),
+      say('marle', 'happy', `There you are! The whole fair is toasting the boy who beat Lavos, and he's hiding by the bell.`),
+      say('marle', 'happy', `Lucca says you owe her a dance. She's lying. She can't dance.`),
       ['face', 'lucca', 'marle'],
       say('lucca', 'angry', `I can dance! I choose not to.`),
       say('marle', 'happy', `See?`),
@@ -112,7 +113,7 @@
       say('marle', 'happy', `Frog! I thought you went back to 600!`),
       say('frog', 'neutral', `The Gate to mine own era… would not open. I stood before it an hour like a fool. Then I came to find thee.`),
       ['face', 'lucca', 'frog'],
-      say('lucca', 'surprised', `Wouldn't open? That's not — Gates don't just close. Not since Lavos —`),
+      say('lucca', 'surprised', `Wouldn't open? Gates don't just close on their own. Not since Lavos —`),
       // The rift.
       ['sfx', 'sfx_hollow_gate'],
       ['music', 'mus_rift'],
@@ -120,6 +121,7 @@
       ['shake', 400],
       ['vfx', 'time_rift', '@rift'],
       ['camera', '@rift', 600],
+      say('lucca', 'surprised', `…That is *not* one of my fireworks.`),
       ['emote', 'fair1', '!'],
       ['emote', 'fair2', '!'],
       ['anim', 'fair1', 'run_off'],
@@ -128,7 +130,8 @@
       ['anim', 'fair4', 'run_off'],
       ['despawn', 'fair1'], ['despawn', 'fair2'], ['despawn', 'fair3'], ['despawn', 'fair4'],
       ['sfx', 'sfx_scanline'],
-      radio('robo', 'neutral', `Crono. Lucca. This is Robo, transmitting from 2300 A.D. — or what remains of it. Something is… reading the Gate network. The readings are not from any year I know. Please —`),
+      radio('robo', 'neutral', `Crono. Lucca. This is Robo, in 2300 A.D. Something is… reading the Gate network. Every Gate, every year, at once.`),
+      radio('robo', 'surprised', `The signal comes from no year I know. Please be caref—`),
       ['sfx', 'sfx_scanline'],
       ['wait', 500],
       // Echoes crawl out of the rift.
@@ -141,7 +144,7 @@
       ['camera', 'frog', 500],
       say('frog', 'determined', `Monsters — yet not. They wear the shape of things I have slain. Crono! Draw!`),
       ['anim', 'crono', 'draw_sword'],
-      say('marle', 'surprised', `I'll get the guards clear of the square. Lucca, the Epoch!`),
+      say('marle', 'surprised', `I'll get everyone out of the square. Lucca — the Epoch! If that's a Gate, we'll need it.`),
       say('lucca', 'determined', `On it. Don't die, you two, I'd have to plan the funeral.`),
       ['anim', 'marle', 'run_off'],
       ['anim', 'lucca', 'run_off'],
@@ -170,7 +173,7 @@
       ['spawn', { id: 'lucca', at: '@gate', face: 'S' }],
       ['move', 'lucca', '@lucca'],
       ['face', 'lucca', 'crono'],
-      say('lucca', 'determined', `I ran a scan through the rift before it closes. The other side isn't a year. It's a *nothing*. A timeline that was deleted and didn't take the hint.`),
+      say('lucca', 'determined', `I scanned the rift from the Epoch. The other side isn't a year. It's a *nothing*. A timeline that was deleted and didn't take the hint.`),
       say('frog', 'neutral', `Speak plainly, Lucca.`),
       say('lucca', 'neutral', `When we killed Lavos, the ruined future — Robo's future — stopped ever having happened. Except something in it survived the deletion. And it just opened a door into our fair.`),
       say('marle', 'sad', `So it's not over.`),
@@ -187,10 +190,11 @@
       ['emote', 'lucca', '!'],
       ['sfx', 'sfx_seed_pulse'],
       say('frog', 'angry', `I know that light. It is *its* light.`),
-      say('lucca', 'surprised', `A seed. A Lavos seed. Oh, no. No no no. If these are being planted in other eras —`),
+      say('lucca', 'surprised', `A piece of Lavos. A *seed*. Oh, no. No no no. If something's sowing these through history —`),
       ['face', 'marle', 'crono'],
-      say('marle', 'determined', `Then somebody has to pull them up. Crono. Go with Frog. Find Ayla, find — ugh — find Magus. You'll need everyone who can hit hard and doesn't need a lab.`),
-      say('lucca', 'happy', `Rude. Accurate. I'll ride shotgun on the radio — the Epoch can drop you at the End of Time, Gaspar will know which era's bleeding first.`),
+      say('marle', 'determined', `Then somebody has to pull them up. Crono, go with Frog. Find Ayla. Find — ugh — find Magus.`),
+      say('marle', 'determined', `If more of these crawl out here, Guardia needs its princess home. You need people who hit hard and don't need a lab.`),
+      say('lucca', 'happy', `Rude. Accurate. I'll talk you through it by radio. The Epoch can drop you at the End of Time — Gaspar will know which era is bleeding first.`),
       ['choice', ['Nod', 'Nod harder'], [
         [['anim', 'crono', 'nod']],
         [['anim', 'crono', 'nod'], ['anim', 'crono', 'nod'], ['anim', 'crono', 'jump']],
@@ -223,13 +227,15 @@
       ['move', 'crono', '@lamppost'],
       ['face', 'crono', 'gaspar'],
       ['face', 'frog', 'gaspar'],
-      say('gaspar', 'neutral', `Ah. The boy who wouldn't stay dead. And the knight who wouldn't stay a frog. You've noticed the new door, then.`),
+      say('gaspar', 'neutral', `Ah. The boy who wouldn't stay dead. And the frog who wouldn't stop being a knight. You've noticed the new door, then.`),
       say('frog', 'neutral', `It hath the look of sickness.`),
-      say('gaspar', 'sad', `It leads to a future that should not be. I cannot open it, and I would not if I could. Whatever lives there has been reaching *backward* — into 600, into the age of the reptites, into the fall of Zeal. Three seeds, three eras. One in each. Pull them up before they take root, and the door may weaken.`),
+      say('gaspar', 'sad', `It leads to a future that should not be. I cannot open it, and I would not if I could.`),
+      say('gaspar', 'sad', `Whatever lives there is reaching *backward*. Into 600. Into the age of the reptites. Into the fall of Zeal. One seed in each.`),
+      say('gaspar', 'neutral', `Pull them up before they take root, and that door may weaken.`),
       say('frog', 'determined', `Six hundred first. 'Tis mine home.`),
       say('gaspar', 'neutral', `It is also the first to bleed. Go. And boy —`),
       ['face', 'gaspar', 'crono'],
-      say('gaspar', 'neutral', `the one who guards that door wears a young girl's face. Do not mistake the face for the thing.`),
+      say('gaspar', 'neutral', `the one who plants them wears a young girl's face. Don't mistake her for the thing that sent her.`),
       ['setflag', 'ch1_open', true],
       ['setflag', 'progress', 1],
       ['sfx', 'sfx_gate_open'],
@@ -326,6 +332,10 @@
       { id: 'spekkio', at: '@spekkio', face: 'S' },
     ],
     script: [
+      // The party travels together: everyone who has joined stands at the lamppost.
+      ['spawn', { id: 'frog', at: '@arrive', face: 'N' }],
+      ['if', { flag: 'progress', gte: 3 }, [['spawn', { id: 'ayla', at: '@arrive', face: 'N' }]]],
+      ['if', { flag: 'progress', gte: 4 }, [['spawn', { id: 'magus', at: '@arrive', face: 'N' }]]],
       ['if', { flag: 'progress', eq: 4 }, [
         ['spawn', { id: 'iselle', at: '@door_grey', face: 'S' }],
       ]],
@@ -336,9 +346,12 @@
         ['camera', '@door_grey', 700],
         ['wait', 400],
         ['camera', 'gaspar', 600],
-        say('gaspar', 'neutral', `One up. The grey door… flickered. She said "the age of beasts." Ayla will not need convincing — she will need *restraining*.`),
+        say('gaspar', 'neutral', `One seed pulled. And the grey door… flickered. Good.`),
+        say('frog', 'neutral', `The Warden spake of "the age of beasts." She goeth for Ayla next.`),
+        say('gaspar', 'neutral', `Then Ayla will not need convincing. She will need *restraining*.`),
         ['sfx', 'sfx_gate_open'],
         ['vfx', 'sparkle', '@door_65m'],
+        ['camera', '@door_65m', 700],
         ['setflag', 'gaspar_after', 0],
       ]],
       ['if', { flag: 'gaspar_after', eq: 2 }, [
@@ -346,11 +359,15 @@
         ['shake', 300],
         ['camera', 'gaspar', 600],
         say('gaspar', 'neutral', `Two. The door groans now.`),
+        ['face', 'gaspar', 'ayla'],
         say('gaspar', 'neutral', `Chief.`),
+        ['anim', 'ayla', 'jump'],
         ['face', 'gaspar', 'crono'],
-        say('gaspar', 'neutral', `The mage will not come for you. He will come for the name. Let him.`),
+        say('gaspar', 'neutral', `Twelve thousand B.C. is next, where Zeal fell into the sea. The mage will not come for you, boy.`),
+        say('gaspar', 'neutral', `He will come for the name. Let him.`),
         ['sfx', 'sfx_gate_open'],
         ['vfx', 'sparkle', '@door_12k'],
+        ['camera', '@door_12k', 700],
         ['setflag', 'gaspar_after', 0],
       ]],
       ['if', { flag: 'gaspar_after', eq: 3 }, [
@@ -388,7 +405,7 @@
       ['if', { flag: 'progress', gte: 4 }, [['spawn', { id: 'magus', at: '@magus', face: 'N' }]]],
       ['fade', 'in', 400],
       ['anim', 'spekkio', 'jump'],
-      say('spekkio', 'happy', `Heya! Wanna spar? I'll size myself to you. Fair's fair!`),
+      say('spekkio', 'happy', `Step right up! I'll size myself to you. Fair's fair!`),
       ['choice', ['Spar with Spekkio', 'Maybe later'], [
         [
           ['battle', 'OPT1'],
@@ -432,8 +449,8 @@
       ['move', 'crono', '@party'],
       ['face', 'king', 'frog'],
       say('king', 'angry', `Glenn! Where in the nine hells — the Denadoro Mountains are *walking*. Porcelain men march the pass at night and the mountain folk say the peak glows red.`),
-      say('leene', 'sad', `The Masamune's shrine, Glenn. They're digging at it.`),
-      say('frog', 'determined', `Then they dig for a grave. Majesty — a Seed. Of the beast we slew. It hath been planted where Cyrus fell.`),
+      say('leene', 'sad', `The Masamune's old shrine, Glenn. They're digging at it.`),
+      say('frog', 'determined', `Then they dig their own graves. 'Tis a seed, Majesty — of the very beast we slew. And they plant it where Cyrus fell.`),
       say('king', 'neutral', `Cyrus…`),
       ['wait', 500],
       say('king', 'neutral', `Take whoever you need.`),
@@ -463,7 +480,10 @@
             say('leene', 'happy', `I should like to hear it sing again. Bring the song home, Glenn.`),
           ] },
           { id: 'guard1', talk: [
-            N(`Guard: "Sir Glenn! Er — Sir Frog! Er… Sir." He salutes twice to be safe.`),
+            ['anim', 'guard1', 'salute'],
+            N(`Guard: "Sir Glenn! Er — Sir Frog! Er… Sir."`),
+            ['anim', 'guard1', 'salute'],
+            N(`He salutes a second time, to be safe.`),
           ] },
           { id: 'guard2', talk: [
             N(`Guard: "They say the porcelain men don't bleed. Don't sleep, either. Just walk, all night, up the pass."`),
@@ -507,7 +527,8 @@
       ['sfx', 'sfx_porcelain_step'],
       say('iselle', 'neutral', `The knight and the boy who bent the century. I was told you'd come here first. The Curator keeps very good records.`),
       say('frog', 'angry', `Who art thou to dig at hallowed ground?`),
-      say('iselle', 'neutral', `Iselle. Warden of the Hollow. And this ground isn't hallowed, Sir Glenn. It's *catalogued.* Entry 4,417: Denadoro Mountains, site of the death of Cyrus of Guardia. It will be preserved exactly as it was.`),
+      say('iselle', 'neutral', `Iselle. Warden of the Hollow. And this ground isn't hallowed, Sir Glenn. It's *catalogued.*`),
+      say('iselle', 'neutral', `Entry 4,417: Denadoro Mountains, where Cyrus of Guardia died. It will be preserved exactly as it was.`),
       say('frog', 'surprised', `…Thou knowest his name.`),
       say('iselle', 'sad', `I know everyone's name. That's the problem with archives.`),
       ['face', 'iselle', 'N'],
@@ -544,7 +565,7 @@
         [['anim', 'crono', 'shake_head'], say('frog', 'happy', `Ha. Thou'rt kind. Thou'rt also wrong.`)],
       ], 'c_shrine'],
       say('frog', 'determined', `One seed pulled. Let us pull the rest — and then, perhaps, I shall let the mountain be a mountain.`),
-      ['reward', { xp: 150, key: 'denadoro_seed' }],
+      ['reward', { xp: 50, key: 'denadoro_seed' }],
       ...toHub(2, 1, 'ch2_open', 'ch1_open'),
     ],
   };
@@ -647,12 +668,13 @@
       ['if', { flag: 'kino_choice', eq: 0 }, [['emote', 'kino', '!']]],
       say('iselle', 'neutral', `Entry 9. Ayla of Ioka. Slew the Black Tyrano. Never learned to read. Never needed to.`),
       ['wait', 600],
-      say('iselle', 'neutral', `You can't break it, chief. It's already rooting. In four turns it will hatch, and this crater becomes a nursery.`),
+      say('iselle', 'neutral', `You can't break it, chief. It's already rooting. My bearers feed it, it hatches, and this crater becomes a nursery.`),
       ['face', 'ayla', 'iselle'],
       say('ayla', 'angry', `You! Half-shiny girl! You plant bad egg in Ayla's ground!`),
       say('iselle', 'sad', `It was never your ground. It's *its* ground. It always was, underneath.`),
       say('ayla', 'determined', `Ayla show you whose ground.`),
       ['if', { flag: 'kino_choice', eq: 0 }, [
+        say('kino', 'surprised', `Kino go… guard back of crater! Very important back!`),
         ['anim', 'kino', 'run_off'],
         ['despawn', 'kino'],
       ]],
@@ -703,8 +725,9 @@
           ['wait', 3000],
         ],
       ], 'c_crater'],
-      say('ayla', 'determined', `Half-shiny say "her name." Ayla think Blue-hair not going to like that.`),
-      ['reward', { xp: 300, key: 'tyrano_seed' }],
+      say('ayla', 'determined', `Half-shiny say "Schala." Ayla think Blue-hair not going to like that.`),
+      say('frog', 'sad', `His sister. Lost when Zeal fell into the sea.`),
+      ['reward', { xp: 50, key: 'tyrano_seed' }],
       ...toHub(3, 2, 'ch3_open', 'ch2_open'),
     ],
   };
@@ -745,22 +768,23 @@
       say('magus', 'neutral', `You're late. The frog's stench arrived a full minute before the frog.`),
       say('frog', 'angry', `And thine has been here since dawn, I'm told, and hath not improved.`),
       ['face', 'magus', 'crono'],
-      say('magus', 'neutral', `Crono. A porcelain girl came through the ice last night. She said the thing in the grey future had built an exhibit. She said the exhibit's name was *Schala.*`),
+      say('magus', 'neutral', `Crono. A porcelain girl found me last night. She said the thing in the grey future had built an exhibit.`),
+      say('magus', 'neutral', `She said the exhibit's name was *Schala.*`),
       ['wait', 700],
       say('magus', 'neutral', `Then she asked me to come quietly.`),
       say('ayla', 'surprised', `Blue-hair go quiet?`),
       say('magus', 'angry', `I broke her halberd's shaft and she left.`),
       ['wait', 700],
-      say('magus', 'angry', `I should have gone with her. Whatever it has — a copy, a memory, a corpse — it has more of my sister than I have had in twenty years.`),
-      ['choice', ['Draw sword — "then we take it from them"', 'Sheathe sword — "come with us"'], [
+      say('magus', 'angry', `Perhaps I should have gone with her. Whatever it has — a copy, a memory, a corpse — it's more of my sister than I've had since I was a child.`),
+      ['choice', ['Draw sword ("Then we take it back.")', 'Offer a hand ("Come with us.")'], [
         [
           ['anim', 'crono', 'draw_sword'],
           say('magus', 'determined', `…Good. I'd have despised you for sympathy.`),
         ],
         [
-          say('magus', 'neutral', `Put that away or use it. You've never once done anything in between.`),
+          say('magus', 'neutral', `Keep your hand. I'm not joining anything.`),
           ['anim', 'crono', 'shrug'],
-          say('magus', 'neutral', `…Fine.`),
+          say('magus', 'neutral', `…But I'm coming.`),
         ],
       ], 'c_magus_join'],
       say('magus', 'neutral', `The seed is in the Zeal wreckage. Deepest hall. She's waiting there. I'll be *civil*.`),
@@ -882,7 +906,7 @@
       say('magus', 'neutral', `Don't say "together."`),
       ['wait', 800],
       say('magus', 'neutral', `…Fine. Together.`),
-      ['reward', { xp: 500, key: 'zeal_seed' }],
+      ['reward', { xp: 50, key: 'zeal_seed' }],
       ['guest', 'iselle', true],
       ['popup', 'Iselle joins as a guest ally for the battles in the Hollow.'],
       ...toHub(4, 3, 'ch4_open', 'ch3_open'),
@@ -1276,7 +1300,7 @@
         lines: [L('frog', 'surprised', `It… fadeth. Like a memory forgotten.`)] },
       victoryMusic('B0_T6'),
     ],
-    rewards: { xp: 110, gold: 50, items: { tonic: 2 } },
+    rewards: { xp: 190, gold: 50, items: { tonic: 2 } },
   };
 
   B.B1 = {
@@ -1331,7 +1355,7 @@
       { id: 'B1_DEFEAT', when: 'DEFEAT',
         lines: [L('frog', 'sad', `Cyrus… I have failed thee twice.`)] },
     ],
-    rewards: { xp: 500, gold: 300, items: { tonic: 3, mid_tonic: 1 } },
+    rewards: { xp: 220, gold: 300, items: { tonic: 3, mid_tonic: 1 } },
   };
 
   B.B2 = {
@@ -1396,7 +1420,7 @@
       { id: 'B2_DEFEAT', when: 'DEFEAT',
         lines: [L('ayla', 'sad', `Ground… all red now.`)] },
     ],
-    rewards: { xp: 1600, gold: 600, items: { mid_tonic: 2, ether: 1 } },
+    rewards: { xp: 150, gold: 600, items: { mid_tonic: 2, ether: 1 } },
   };
 
   B.B3 = {
@@ -1477,7 +1501,7 @@
       { id: 'B3_DEFEAT', when: 'DEFEAT',
         lines: [L('magus', 'angry', `Pathetic.`)] },
     ],
-    rewards: { xp: 3500, gold: 900, items: { mid_tonic: 2, ether: 2, revive: 1 } },
+    rewards: { xp: 120, gold: 900, items: { mid_tonic: 2, ether: 2, revive: 1 } },
   };
 
   B.B4A = {
@@ -1516,7 +1540,7 @@
         ] },
       victoryMusic('B4A_T4'),
     ],
-    rewards: { xp: 500, gold: 1200, items: { ether: 2, revive: 1 } },
+    rewards: { xp: 70, gold: 1200, items: { ether: 2, revive: 1 } },
   };
 
   B.B4B = {
@@ -1577,7 +1601,7 @@
         ] },
       victoryMusic('B4B_T7'),
     ],
-    rewards: { xp: 1000, gold: 1400, items: { mid_tonic: 3, shelter: 1 } },
+    rewards: { xp: 70, gold: 1400, items: { mid_tonic: 3, shelter: 1 } },
   };
 
   B.B5 = {
@@ -1693,7 +1717,7 @@
         lines: [L('spekkio', 'happy', `Not bad! Not bad! …I was going easy.`)],
         effect: [{ type: 'PLAY_MUSIC', track: 'mus_victory' }] },
     ],
-    rewards: { xp: 150, gold: 100 },
+    rewards: { xp: 40, gold: 100 },
   };
 
   // =====================================================================
