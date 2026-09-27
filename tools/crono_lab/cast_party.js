@@ -4,7 +4,7 @@
 
   // ---- Frog ------------------------------------------------------------------------
   CAST.frog = {
-    name: 'Frog', group: 'party', w: 26, h: 38,
+    name: 'Frog', group: 'party', w: 25, h: 37,
     pal: {
       // frog skin: outline, dark, mid, light, highlight; mouth; jaw light/shade
       O: '#10301a', D: '#2f6a2a', G: '#4f9a34', g: '#7cc23c', h: '#b8e870', m: '#0c2412',
@@ -170,10 +170,10 @@
       'qPVVVLqdGGGDDdDddqLVVvvvOnO',
       'qPVvVLLqGGDDdDddqlLVVvvvOnO',
       'qPVvVLLqGDDDdDddqlLVVvvvOnO',
-      'qPVvVLLqGDDDdDddqlLVvqDDqGGDdq',
-      'qPVvVLLqGDDDdDddqlLVvqGDqGGDDdq',
-      'qPVvVLLqkkYykkkkqlLVvVqqqDdDdddq',
-      'qPVvVLqdGDDDdDDddqLVvVvvOqdddq',
+      'qPVvVLLqGDDDdDddqlLVqDdqGGDq',
+      'qPVvVLLqGDDDdDddqlLVqGDGGDDdq',
+      'qPVvVLLqkkYykkkkqlLVvqqDdDddq',
+      'qPVvVLqdGDDDdDDddqLVvVvqqddq',
       'qPVVvLqdGDDDDDDddqLVvVvvOnO',
       'qPVVvLqdGDDDqDDddqLVvVvvOnO',
       'qPVVvLqdGDDqqqDddqLVvVvvOnO',
