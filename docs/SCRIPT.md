@@ -65,9 +65,9 @@ Common sprite spec for all playable characters: **32×48 px, 4 directions (down/
   1. Cyclone (Lv1, 4 MP): all adjacent tiles (8 tiles ring), physical.
   2. Slash (Lv3, 3 MP): single target, range 1, ATK×1.3, lightning-tinted.
   3. Lightning (Lv5, 5 MP): single target, range 3, magic, lightning element.
-  4. Spincut (Lv9, 7 MP): single target, range 1, ATK×1.8.
-  5. Lightning 2 (Lv13, 10 MP): 3×3 area, range 4, lightning.
-  6. Luminaire (Lv18, 20 MP): 5×5 area centered on self, lightning, ATK+MAG.
+  4. Spincut (Lv7, 7 MP): single target, range 1, ATK×1.8.
+  5. Lightning 2 (Lv9, 10 MP): 3×3 area, range 4, lightning.
+  6. Luminaire (Lv11, 20 MP): 5×5 area centered on self, lightning, ATK+MAG.
 - **Battle quotes** (short text popups, no portrait): on tech: "…!" ; on victory: (raises sword, sparkle).
 
 #### FROG (Glenn)
@@ -77,11 +77,11 @@ Common sprite spec for all playable characters: **32×48 px, 4 directions (down/
 - **Weapon:** Masamune (start of game).
 - **Techs:**
   1. Slurp (Lv1, 2 MP): heal one ally, range 3, MAG×1.2.
-  2. Slurp Cut (Lv2, 3 MP): single target, range 2 (tongue reach), ATK×1.3.
+  2. Slurp Cut (Lv3, 3 MP): single target, range 2 (tongue reach), ATK×1.3.
   3. Water (Lv5, 4 MP): single target, range 3, water element.
-  4. Heal (Lv8, 6 MP): heal all allies within 2 tiles of Frog.
-  5. Leap Slash (Lv11, 8 MP): jump to a tile up to 3 away (ignores terrain), strike adjacent target ATK×1.7.
-  6. Frog Squash (Lv16, 12 MP): 3×3 area, damage scales with Frog's missing HP.
+  4. Heal (Lv7, 6 MP): heal all allies within 2 tiles of Frog.
+  5. Leap Slash (Lv9, 8 MP): jump to a tile up to 3 away (ignores terrain), strike adjacent target ATK×1.7.
+  6. Frog Squash (Lv11, 12 MP): 3×3 area, damage scales with Frog's missing HP.
 - **Dual techs with Crono:** X-Strike (Crono + Frog, 6 MP each): both adjacent to target, ATK×2.5 combined. Sword Stream (Crono Lv5 + Frog Lv5): line attack 4 tiles, water+lightning.
 
 #### AYLA
@@ -91,10 +91,10 @@ Common sprite spec for all playable characters: **32×48 px, 4 directions (down/
 - **Techs:**
   1. Kiss (Lv1, 2 MP): heal one adjacent ally, small.
   2. Rollo Kick (Lv3, 3 MP): single target, range 1, knockback 1 tile (can push off ledges; pushing off a 2+ height drop deals bonus damage).
-  3. Cat Attack (Lv6, 4 MP): move up to 2 extra tiles then strike ATK×1.4.
-  4. Tail Spin (Lv9, 6 MP): 8-tile ring, physical, chance to Stun.
-  5. Charm (Lv12, 5 MP): single target range 1, steals the enemy's held item (each enemy has a `steal` field).
-  6. Triple Kick (Lv17, 10 MP): three hits ATK×0.8 each on one target.
+  3. Cat Attack (Lv5, 4 MP): move up to 2 extra tiles then strike ATK×1.4.
+  4. Tail Spin (Lv7, 6 MP): 8-tile ring, physical, chance to Stun.
+  5. Charm (Lv9, 5 MP): single target range 1, steals the enemy's held item (each enemy has a `steal` field).
+  6. Triple Kick (Lv11, 10 MP): three hits ATK×0.8 each on one target.
 - **Dual techs:** Drop Kick (Crono + Ayla), Slurp Kiss (Frog + Ayla: heal all allies within 2 tiles, big). **New for this game:** Beast Toss (Ayla + Magus, Lv10 each): Ayla throws Magus's Dark Bomb — 3×3 area, range 5, shadow element.
 
 #### MAGUS
@@ -106,10 +106,10 @@ Common sprite spec for all playable characters: **32×48 px, 4 directions (down/
   1. Lightning 2 (Lv1, 8 MP): 3×3 area, range 4.
   2. Ice 2 (Lv1, 8 MP): 3×3 area, range 4, chance to Slow.
   3. Fire 2 (Lv1, 8 MP): 3×3 area, range 4, chance to Burn.
-  4. Dark Bomb (Lv4, 10 MP): 3×3 area, range 5, shadow.
-  5. Dark Mist (Lv8, 12 MP): all enemies within 3 tiles, shadow, halves their MAG for 2 turns.
-  6. Black Hole (Lv14, 16 MP): 3×3 area, instantly KOs non-boss enemies with <30% HP; damage otherwise.
-  7. Dark Matter (Lv20, 24 MP): cross-shaped area (5 tiles each arm), range 6, shadow, heavy.
+  4. Dark Bomb (Lv5, 10 MP): 3×3 area, range 5, shadow.
+  5. Dark Mist (Lv9, 12 MP): all enemies within 3 tiles, shadow, halves their MAG for 2 turns.
+  6. Black Hole (Lv11, 16 MP): 3×3 area, instantly KOs non-boss enemies with <30% HP; damage otherwise.
+  7. Dark Matter (Lv12, 24 MP): cross-shaped area (5 tiles each arm), range 6, shadow, heavy.
 - **Dual techs (new — Magus had none originally, the story earns them):** Shadow Cyclone (Crono + Magus, unlocked Chapter 3): Crono's Cyclone infused with shadow, ring + 1 extra tile. Ice Water (Frog + Magus, unlocked Chapter 3): freezes a 3-tile line, enemies caught are Slowed.
 - **Triple tech (new, unlocked in Chapter 4):** **Eclipse Blade** (Crono + Frog + Magus, 15 MP each): Magus opens a dark rift, Frog and Crono strike through it — hits every enemy on the map for ATK+MAG×1.2. Used exactly once in the script (final battle phase 2); it can also be player-triggered after unlock.
 
@@ -214,7 +214,8 @@ Every battle has a `TRIGGERS` table. Implement a small event engine that checks 
 If all party members are KO'd (or a `PROTECT_TILE` objective fails), show `DEFEAT` trigger dialogue, then offer **Retry battle** (from the pre-battle state) or **Load save**.
 
 ### 3.9 Progression
-- XP per kill; party levels together (all four gain XP even if not in the battle — keeps pacing simple). Level cap 30. Expected levels: Prologue 1–3, Ch1 4–8, Ch2 9–13, Ch3 14–19, Ch4 20–24.
+- A flat 100 EXP per level (as in Final Fantasy Tactics): a little per kill (5, or 20 for bosses) plus a victory reward and each Lavos seed. The party levels together (everyone gains EXP even if not in the battle). Level cap 15. About one or two levels and one new tech per hero per story battle. Party level going into each battle: B0 1, B1 3, B2 6, B3 8, B4A 10, B4B 11, B5 12. Stats grow with a power level of 2L−1, so enemy scaling (`CT.BATTLE_LEVEL`) stays on its original scale.
+- After every victory the whole party is restored to full HP and MP, including anyone knocked out.
 - Items: Tonic (heal 50), Mid Tonic (150), Ether (MP 30), Revive, Shelter (full heal at save point). Equipment: 1 weapon, 1 armor, 1 helmet, 1 accessory each; a simple shop exists at Guardia Castle (Ch1), Ioka (Ch2), Last Village (Ch3), End of Time (all chapters, run by a Nu).
 
 ---
