@@ -159,6 +159,7 @@
       this.floaters = [];
       this.parts = [];
       this.rings = [];
+      this.sheetFx = []; // hand-pixelled effect sheets in flight (playFx)
       this.orbits = [];
       this.bolts = [];
       this.shots = [];
@@ -646,16 +647,20 @@
         const z = Math.max(this.depth(Math.floor(u.rx), Math.floor(u.ry)), this.depth(Math.ceil(u.rx), Math.ceil(u.ry)));
         drawables.push({ z, sub: 1 + (u.prop ? 0 : 0.5), u });
       }
+      this.sheetFx = this.sheetFx.filter((e) => now - e.t0 < e.until);
+      for (const e of this.sheetFx) if (e.fx.def.layer === 'back') drawables.push({ z: this.depth(Math.round(e.u ? e.u.rx : e.x), Math.round(e.u ? e.u.ry : e.y)), sub: 0.9, e });
       drawables.sort((a, b) => a.z - b.z || a.sub - b.sub);
 
       const lights = [];
       for (const d of drawables) {
         if (d.t) this.drawTile(d.t, ui, now, lights);
+        else if (d.e) this.drawSheetFx(d.e, now);
         else this.drawUnit(d.u, world, ui, now, lights);
       }
       for (const r of this.rifts) this.drawRift(r, now);
 
       this.drawGrading(lights, now);
+      for (const e of this.sheetFx) if (e.fx.def.layer !== 'back') this.drawSheetFx(e, now);
       this.drawEffects(now);
       this.drawWeather(now);
       this.drawUnitHud(world, ui, now);
@@ -888,6 +893,10 @@
       if (spr.rig) {
         const a = this.unitAnim(u, spr, now);
         const f = spr.frame(a.name, dir, a.t, a);
+        if (f && f !== u._lastFrame) {
+          u._lastFrame = f;
+          if (f.sfx && CT.audio) CT.audio.sfx(f.sfx);
+        }
         if (f) return f;
       }
       return spr.frames[dir] || spr.frames['south-east'] || Object.values(spr.frames)[0];
@@ -1112,6 +1121,45 @@
       for (let i = 0; i < 22; i++) {
         this.orbits.push({ u, t0: now + (i / 22) * ms * 0.7, life: 300 + Math.random() * 220, a0: Math.random() * Math.PI * 2, r0: 9 + Math.random() * 8, w: (0.012 + Math.random() * 0.008) * (i % 2 ? 1 : -1), ramp });
       }
+    }
+
+    // Hand-pixelled effect sheet (CT.fxSheet). At a tile (x, y, h), or following a unit
+    // (opts.unit). opts: { flip, delay, from: [x, y, h] (projectile start: the sheet
+    // travels from there to the tile over opts.travel ms) }. Resolves when it ends.
+    playFx(key, x, y, h, opts = {}) {
+      const fx = CT.getFx && CT.getFx(key);
+      if (!fx) return 0;
+      const e = { fx, x, y, h, u: opts.unit || null, flip: !!opts.flip, t0: performance.now() + (opts.delay || 0), from: opts.from, travel: opts.travel || 0 };
+      e.until = e.travel || opts.ms || fx.total;
+      this.sheetFx.push(e);
+      const d = fx.def;
+      if (d.shake) setTimeout(() => this.shake(d.shake), (opts.delay || 0) + (d.shakeAt != null ? fx.frames.slice(0, d.shakeAt).reduce((a, f) => a + f.ms, 0) : 0));
+      if (d.flash) setTimeout(() => this.flashScreen(CT.PAL.hex(d.flash).join(','), 120), (opts.delay || 0) + (d.flashAt != null ? fx.frames.slice(0, d.flashAt).reduce((a, f) => a + f.ms, 0) : 0));
+      return (opts.delay || 0) + e.until;
+    }
+    drawSheetFx(e, now) {
+      const t = now - e.t0;
+      if (t < 0) return;
+      const fr = CT.fxFrame(e.fx, e.fx.def.loop || e.travel || e.until > e.fx.total ? t % e.fx.total : t);
+      if (!fr) return;
+      let sx, sy;
+      if (e.u) {
+        [sx, sy] = this.unitScreenPos(e.u);
+      } else if (e.from && e.travel) {
+        const k = Math.min(1, t / e.travel);
+        const a = this.project(e.from[0], e.from[1], e.from[2]);
+        const b = this.project(e.x, e.y, e.h);
+        sx = a[0] + (b[0] - a[0]) * k;
+        sy = a[1] + (b[1] - a[1]) * k - Math.sin(k * Math.PI) * (e.fx.def.arc || 0);
+      } else [sx, sy] = this.project(e.x, e.y, e.h);
+      let img = fr.img;
+      const [ax, ay] = e.fx.anchor;
+      let ox = ax;
+      if (e.flip) {
+        img = fr.mirror || (fr.mirror = CT.PX.mirror(fr.img));
+        ox = img.width - 1 - ax;
+      }
+      this.ctx.drawImage(img, Math.round(sx - ox + (e.flip ? -fr.dx : fr.dx)), Math.round(sy - ay + fr.dy));
     }
 
     projectile(from, to, kind, dur) {

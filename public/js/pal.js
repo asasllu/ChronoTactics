@@ -28,11 +28,11 @@
   for (const k in RAMPS) for (const h of RAMPS[k]) PAL.push(h);
   const hex = (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
   const RGB = PAL.map(hex);
-  const N = PAL.length;
+  let N = PAL.length;
 
   const le = new Uint8Array(new Uint32Array([1]).buffer)[0] === 1;
   const pack = ([r, g, b]) => (le ? (0xff000000 | (b << 16) | (g << 8) | r) : ((r << 24) | (g << 16) | (b << 8) | 0xff)) >>> 0;
-  const PAL32 = new Uint32Array(RGB.map(pack));
+  let PAL32, RGB24;
 
   // Perceptual-ish nearest colour (weighted RGB, weights follow luma).
   function nearest(r, g, b) {
@@ -45,12 +45,31 @@
     }
     return best;
   }
-  // RGB555 lookup (built once) + exact-match table so palette pixels never dither.
-  const LUT = new Uint8Array(32768);
-  for (let k = 0; k < 32768; k++) LUT[k] = nearest(((k >> 10) << 3) + 4, (((k >> 5) & 31) << 3) + 4, ((k & 31) << 3) + 4);
-  const EXACT = new Int16Array(32768).fill(-1);
-  RGB.forEach(([r, g, b], i) => (EXACT[((r >> 3) << 10) | ((g >> 3) << 5) | (b >> 3)] = i));
-  const RGB24 = new Int32Array(RGB.map(([r, g, b]) => (r << 16) | (g << 8) | b));
+  // RGB555 lookup + exact-match table so palette pixels never dither. Rebuilt when
+  // hand-pixelled sheets add their own colours (CT.PAL.extend).
+  const LUT = new Uint16Array(32768);
+  const EXACT = new Int16Array(32768);
+  function rebuild() {
+    N = PAL.length;
+    PAL32 = new Uint32Array(RGB.map(pack));
+    RGB24 = new Int32Array(RGB.map(([r, g, b]) => (r << 16) | (g << 8) | b));
+    for (let k = 0; k < 32768; k++) LUT[k] = nearest(((k >> 10) << 3) + 4, (((k >> 5) & 31) << 3) + 4, ((k & 31) << 3) + 4);
+    EXACT.fill(-1);
+    RGB.forEach(([r, g, b], i) => (EXACT[((r >> 3) << 10) | ((g >> 3) << 5) | (b >> 3)] = i));
+  }
+  rebuild();
+  // Add authored colours to the master palette so they reach the screen exactly.
+  function extend(hexes) {
+    const have = new Set(PAL.map((h) => h.toLowerCase()));
+    let added = 0;
+    for (const h of hexes) {
+      const k = h.toLowerCase();
+      if (!/^#[0-9a-f]{6}$/.test(k) || have.has(k)) continue;
+      have.add(k); PAL.push(k); RGB.push(hex(k)); added++;
+    }
+    if (added) rebuild();
+    return added;
+  }
 
   // 4x4 Bayer thresholds centred on zero.
   const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map((v) => (v + 0.5) / 16 - 0.5);
@@ -197,6 +216,6 @@
     return w;
   }
 
-  CT.PAL = { PAL, RGB, RAMPS, PAL32, nearest, quantize, snapCanvas, snapHex, hex, N };
+  CT.PAL = { PAL, RGB, RAMPS, nearest, quantize, snapCanvas, snapHex, hex, extend, get N() { return N; } };
   CT.PXD = { ellipse, ellipseRing, disc, line, diamond, text };
 })();

@@ -190,6 +190,7 @@
       const s = JSON.parse(localStorage.getItem('ct_hollow_settings') || 'null');
       if (s && CT.audio) CT.audio.setVolume(s);
     } catch (e) {}
+    await CT.loadSheets();
     await CT.loadAssets();
     $('loading').remove();
     if (window.TEST_SCENES) CT.SCENES = Object.assign(CT.SCENES || {}, window.TEST_SCENES);

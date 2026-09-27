@@ -455,7 +455,7 @@
     CT.SPRITE_BUILDERS[key] = fn;
     delete cache[key];
   };
-  CT.hasSprite = (key) => !!(cache[key] || (CT.RIGS && CT.RIGS[key]) || CT.SPRITE_BUILDERS[key] || (CT.ASSETS && CT.ASSETS[key]) || (key.startsWith('echo_') && CT.hasSprite(key.slice(5))));
+  CT.hasSprite = (key) => !!(cache[key] || (CT.SHEETS && CT.SHEETS[key]) || (CT.RIGS && CT.RIGS[key]) || CT.SPRITE_BUILDERS[key] || (CT.ASSETS && CT.ASSETS[key]) || (key.startsWith('echo_') && CT.hasSprite(key.slice(5))));
 
   function loadImage(src) {
     return new Promise((res, rej) => {
@@ -497,6 +497,7 @@
   const halfFrame = (cv) => frameOf(CT.PX.halve(cv));
   CT.getSprite = function (key) {
     if (cache[key] && !cache[key].legacyRaw) return cache[key];
+    if (CT.SHEETS && CT.SHEETS[key]) return (cache[key] = CT.makeSheetSprite(key));
     if (CT.RIGS && CT.RIGS[key]) return (cache[key] = CT.RIG.makeSprite(CT.RIGS[key]));
     if (cache[key] && cache[key].legacyRaw) {
       // PixelLab export with no rig yet.

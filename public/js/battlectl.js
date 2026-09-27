@@ -649,23 +649,65 @@
       const from = { x: u.x, y: u.y };
       if (center.x !== u.x || center.y !== u.y) u.face = CT.dirTo(u.x, u.y, center.x, center.y);
       const partners = tech.dual ? b.partnersFor(u, tech) : [];
+      // Hand-pixelled staging for this tech (or this unit's basic attack), if authored.
+      const skey = (m) => (m.sprite || m.key || '').replace(/^echo_/, '');
+      const sprOf = (m) => CT.getSprite(m.sprite || m.key);
+      const tf = (CT.TECH_FX || {})[tech.isAttack ? 'attack_' + skey(u) : tech.id] || null;
+      const west = (m) => this.r.screenDir(m.face).endsWith('west');
+      const magicLike = tech.kind === 'mag' || tech.kind === 'heal' || tech.kind === 'status' || tech.kind === 'special';
+      const casterAnim = (m) => {
+        const spr = sprOf(m);
+        const own = spr.anims && spr.anims['tech_' + tech.id] ? 'tech_' + tech.id : null;
+        if (m === u && tf && tf.anim) return tf.anim;
+        return own || (magicLike ? 'cast' : 'attack');
+      };
+      // ms from the start of an animation to its hit (or release) frame.
+      const hitMs = (m, name) => {
+        const spr = sprOf(m);
+        const a = spr.anims && spr.anims[name];
+        if (!a || !spr.at) return 0;
+        const i = a.hit != null ? a.hit : a.release != null ? a.release : 0;
+        return spr.at(name, i);
+      };
+      let staged = false;
       if (!tech.isAttack) {
         UI.banner(`${u.name}${partners.length ? ' & ' + partners.map((p) => p.name).join(' & ') : ''}: ${tech.name}`, 1400, tech.dual ? 'dual' : '');
         const elem = tech.vfx || tech.elem || (u.key === 'magus' ? 'shadow' : 'lightning');
-        for (const m of [u, ...partners]) {
-          this.r.anim(m, 'cast', { charge: true });
+        const chargers = [u, ...partners].filter((m) => !(m === u && tf && tf.charge === false));
+        for (const m of chargers) {
+          const name = casterAnim(m);
+          const spr = sprOf(m);
+          this.r.anim(m, spr.anims[name] && spr.anims[name].charge ? name : 'cast', { charge: true });
           this.r.charge(m, elem, CT.FAST ? 5 : 520);
         }
-        await tween(CT.FAST ? 5 : 560, (k) => {
-          for (const m of [u, ...partners]) m.flash = Math.floor(k * 8) % 4 === 0 ? 0.4 : 0;
-        });
+        if (chargers.length) {
+          await tween(CT.FAST ? 5 : 560, (k) => {
+            for (const m of chargers) m.flash = Math.floor(k * 8) % 4 === 0 ? 0.4 : 0;
+          });
+        }
         for (const m of [u, ...partners]) {
           m.flash = 0;
-          // Jump to the release frame of the cast.
-          const spr = CT.getSprite(m.sprite || m.key);
-          const cast = spr.rig && spr.anims.cast;
-          const skip = cast ? cast['south-east'].slice(0, cast.release).reduce((s, f) => s + f.ms, 0) : 0;
-          m.anim = { name: 'cast', t0: performance.now() - skip };
+          const name = casterAnim(m);
+          const spr = sprOf(m);
+          const a = spr.anims && spr.anims[name];
+          if (chargers.includes(m) && a && a.charge) {
+            // Jump to the release frame of the charged animation.
+            const skip = spr.at ? spr.at(name, a.release || 0) : a['south-east'].slice(0, a.release).reduce((s, f) => s + f.ms, 0);
+            m.anim = { name, t0: performance.now() - skip };
+          } else if (spr.sheet) {
+            this.r.anim(m, name);
+          } else {
+            const cast = spr.rig && spr.anims.cast;
+            const skip = cast ? cast['south-east'].slice(0, cast.release).reduce((s, f) => s + f.ms, 0) : 0;
+            m.anim = { name: 'cast', t0: performance.now() - skip };
+          }
+        }
+        if (tf && sprOf(u).sheet) {
+          // Wait for the blow to land (non-charged techs) before the effect.
+          const name = casterAnim(u);
+          const a = sprOf(u).anims[name];
+          if (!(a && a.charge && tf.charge !== false)) await wait(CT.FAST ? 5 : hitMs(u, name));
+          staged = true;
         }
       }
       if (tech.big) {
@@ -673,7 +715,14 @@
         await wait(tech.big === 'eclipse' ? 900 : 400);
       }
       const physMelee = (tech.isAttack || tech.kind === 'phys') && tech.range[1] <= 1 && !tech.special;
-      if (tech.isAttack && tech.proj) {
+      if (!staged && tf && sprOf(u).sheet && tech.isAttack) {
+        // Authored weapon attack (melee or ranged): the animation carries the lunge.
+        sfx(tech.proj ? 'sfx_sword_swing' : 'sfx_sword_swing');
+        const name = tf.anim || (tech.proj ? 'shoot' : 'attack');
+        this.r.anim(u, name);
+        await wait(CT.FAST ? 5 : hitMs(u, name));
+        staged = true;
+      } else if (tech.isAttack && tech.proj) {
         const fromP = this.r.project(u.x, u.y, u.rh + 1.3);
         const tt = b.tile(center.x, center.y);
         const toP = this.r.project(center.x, center.y, b.visH(tt) + 1.2);
@@ -682,7 +731,7 @@
         this.r.anim(u, 'shoot');
         this.r.projectile(fromP, toP, u.key === 'magus' ? 'dark' : 'shot', dur);
         await wait(dur);
-      } else if (physMelee && (center.x !== u.x || center.y !== u.y)) {
+      } else if (physMelee && (center.x !== u.x || center.y !== u.y) && !staged) {
         const [dx, dy] = CT.DIRS[CT.dirTo(u.x, u.y, center.x, center.y)];
         sfx('sfx_sword_swing');
         // Wind-up frame, then lunge with the strike.
@@ -692,6 +741,15 @@
           u.ox = dx * 0.35 * k;
           u.oy = dy * 0.35 * k;
         });
+      }
+      if (staged && tf) {
+        if (tf.casterFx) this.r.playFx(tf.casterFx, u.x, u.y, u.rh, { unit: u, flip: west(u) });
+        if (tf.proj) {
+          const tt = b.tile(center.x, center.y);
+          const dur = CT.FAST ? 5 : 140 + 60 * (Math.abs(u.x - center.x) + Math.abs(u.y - center.y));
+          this.r.playFx(tf.proj, center.x, center.y, b.visH(tt) + 1, { from: [u.x, u.y, u.rh + 1.4], travel: dur, flip: west(u) });
+          await wait(dur);
+        }
       }
       const out = b.execute(u, tech, center);
       // Moves caused by the tech (leap, dash, knockback, rearrange).
@@ -704,7 +762,21 @@
         this.ui.highlights = null;
       }
       const area = tech.shape === 'map' ? b.living().filter((v) => b.hostile(u, v)).map((v) => b.tile(v.x, v.y)) : tech.special === 'rearrange' || tech.special === 'reconstruct' ? [] : b.areaTiles(u, { x: u.x, y: u.y }, tech, center);
-      if (tech.kind !== 'special' || tech.special === 'steal') {
+      if (staged && tf && tf.fx) {
+        // Authored effect on the target tile, or on every tile of the area.
+        const tiles = tech.isAttack || tech.shape === 'single' ? [b.tile(center.x, center.y)] : area;
+        const fx = CT.getFx(tf.fx);
+        let last = 0;
+        tiles.forEach((t, i) => {
+          if (!t) return;
+          const delay = CT.FAST ? 0 : i * (tf.stagger != null ? tf.stagger : 40);
+          last = Math.max(last, delay);
+          this.r.playFx(tf.fx, t.x, t.y, b.visH(t), { delay, flip: west(u) });
+        });
+        // Numbers pop on the effect's impact frame.
+        const imp = fx && fx.def.impact != null ? fx.frames.slice(0, fx.def.impact).reduce((a, f) => a + f.ms, 0) : 120;
+        if (!CT.FAST) await wait(imp + Math.min(last, 200));
+      } else if (tech.kind !== 'special' || tech.special === 'steal') {
         const elem = tech.isAttack ? 'hit' : tech.vfx || tech.elem || 'hit';
         const tiles = tech.isAttack || tech.shape === 'single' ? [b.tile(center.x, center.y)] : area;
         tiles.forEach((t, i) => t && setTimeout(() => this.r.burst(t.x, t.y, b.visH(t), elem, { noShake: i > 0, n: tiles.length > 6 ? 10 : undefined }), CT.FAST ? 0 : i * 25));

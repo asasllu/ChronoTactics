@@ -1,0 +1,117 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Animation lab</title>
+<style>
+  body { margin: 0; background: #8080ff; font: 12px monospace; color: #1c1024; }
+  h2 { margin: 0; padding: 12px 16px 0; font-size: 15px; }
+  h3 { margin: 0; padding: 8px 16px 0; font-size: 12px; font-weight: normal; }
+  .strip { display: flex; flex-wrap: wrap; gap: 6px; padding: 6px 16px 4px; align-items: flex-end; }
+  .cell { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  canvas { image-rendering: pixelated; display: block; }
+  .live { background: #6a6ae0; }
+</style>
+<script src="../../public/js/pixel.js"></script>
+<script src="../../public/js/pal.js"></script>
+<script src="../../public/js/rig.js"></script>
+<script src="../../public/js/sheet.js"></script>
+<body>
+<script>
+// anim.html?keys=crono[&anims=idle,walk][&views=se,ne][&scale=4][&fx=fx_crono][&play=1]
+// Filmstrips of every frame, aligned on the anchor (dx/dy applied), ground line in white.
+// fx=<file> loads public/js/sheets/<file>.js and shows each effect sheet as a strip.
+// play=1 adds a live looping preview of each animation (for looking at it in a browser).
+const q = new URLSearchParams(location.search);
+const S = +(q.get('scale') || 4);
+const keys = (q.get('keys') || '').split(',').filter(Boolean);
+const fxFiles = (q.get('fx') || '').split(',').filter(Boolean);
+const onlyAnims = q.get('anims') ? q.get('anims').split(',') : null;
+const views = (q.get('views') || 'se,ne').split(',');
+const load = (src) => new Promise((res) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => { console.error('missing ' + src); res(); }; document.head.appendChild(s); });
+const live = [];
+
+function cellFor(frames, i, W, H, ax, ay) {
+  // Draw frame i into a W x H cell, anchor at (ax, ay).
+  const f = frames[i];
+  const cv = document.createElement('canvas');
+  cv.width = W * S; cv.height = H * S;
+  const g = cv.getContext('2d'); g.imageSmoothingEnabled = false;
+  g.fillStyle = 'rgba(255,255,255,0.5)'; g.fillRect(0, ay * S, W * S, 1);
+  g.drawImage(f.img, (ax - f.cx) * S, (ay - f.footY + 1) * S, f.img.width * S, f.img.height * S);
+  return cv;
+}
+
+(async () => {
+  for (const k of keys) await load(`../../public/js/sheets/${k}.js`);
+  for (const f of fxFiles) await load(`../../public/js/sheets/${f}.js`);
+  for (const key of keys) {
+    let spr;
+    try { spr = CT.makeSheetSprite(key); } catch (e) { console.error(key, e.message); continue; }
+    const def = spr.def;
+    const h = document.createElement('h2'); h.textContent = `${key} ${def.w}x${def.h}`; document.body.appendChild(h);
+    const W = def.w + 16, H = def.h + 12, ax = (def.w >> 1) + 8, ay = def.h + 2;
+    const own = new Set([...Object.keys(def.se || {}), ...Object.keys(def.ne || {})]);
+    for (const view of views) {
+      if (!def[view]) continue;
+      const dir = view === 'se' ? 'south-east' : 'north-east';
+      for (const name of Object.keys(spr.anims)) {
+        if (!own.has(name) || (onlyAnims && !onlyAnims.includes(name))) continue;
+        if (!def[view][name]) continue;
+        const a = spr.anims[name];
+        const frames = a[dir];
+        const t = document.createElement('h3');
+        t.textContent = `${view} ${name}${a.loop ? ' (loop)' : ''}${a.charge ? ' charge ' + a.charge : ''}${a.release != null ? ' release ' + a.release : ''}${a.hit != null ? ' hit ' + a.hit : ''}`;
+        document.body.appendChild(t);
+        const strip = document.createElement('div'); strip.className = 'strip'; document.body.appendChild(strip);
+        frames.forEach((f, i) => {
+          const c = document.createElement('div'); c.className = 'cell';
+          c.appendChild(cellFor(frames, i, W, H, ax, ay));
+          const l = document.createElement('div'); l.textContent = `${i}: ${f.ms}ms`; c.appendChild(l);
+          strip.appendChild(c);
+        });
+        if (q.get('play')) {
+          const c = document.createElement('div'); c.className = 'cell';
+          const cv = document.createElement('canvas'); cv.className = 'live'; cv.width = W * S; cv.height = H * S;
+          c.appendChild(cv); const l = document.createElement('div'); l.textContent = 'live'; c.appendChild(l);
+          strip.appendChild(c);
+          live.push({ cv, frames, a, W, H, ax, ay });
+        }
+      }
+    }
+  }
+  for (const key of Object.keys(CT.FXS)) {
+    const fx = CT.getFx(key);
+    const h = document.createElement('h2'); h.textContent = `${key} ${fx.def.w}x${fx.def.h} ${fx.total}ms`; document.body.appendChild(h);
+    const strip = document.createElement('div'); strip.className = 'strip'; document.body.appendChild(strip);
+    const [ax, ay] = fx.anchor;
+    fx.frames.forEach((f, i) => {
+      const c = document.createElement('div'); c.className = 'cell';
+      const cv = document.createElement('canvas'); cv.width = fx.def.w * S; cv.height = fx.def.h * S;
+      const g = cv.getContext('2d'); g.imageSmoothingEnabled = false;
+      g.fillStyle = '#20183a'; g.fillRect(0, 0, cv.width, cv.height);
+      g.fillStyle = 'rgba(255,255,255,0.35)'; g.fillRect(0, ay * S, cv.width, 1); g.fillRect(ax * S, 0, 1, cv.height);
+      g.drawImage(f.img, f.dx * S, f.dy * S, f.img.width * S, f.img.height * S);
+      c.appendChild(cv);
+      const l = document.createElement('div'); l.textContent = `${i}: ${f.ms}ms`; c.appendChild(l);
+      strip.appendChild(c);
+    });
+  }
+  if (live.length) {
+    const t0 = performance.now();
+    const tick = () => {
+      const t = performance.now() - t0;
+      for (const L of live) {
+        const g = L.cv.getContext('2d'); g.imageSmoothingEnabled = false;
+        g.clearRect(0, 0, L.cv.width, L.cv.height);
+        let tt = t % (L.a.total + (L.a.loop ? 0 : 500)), f = L.frames[L.frames.length - 1];
+        for (const fr of L.frames) { if (tt < fr.ms) { f = fr; break; } tt -= fr.ms; }
+        g.fillStyle = 'rgba(255,255,255,0.5)'; g.fillRect(0, L.ay * S, L.cv.width, 1);
+        g.drawImage(f.img, (L.ax - f.cx) * S, (L.ay - f.footY + 1) * S, f.img.width * S, f.img.height * S);
+      }
+      requestAnimationFrame(tick);
+    };
+    tick();
+  }
+  window.READY = true;
+})();
+</script>
+</body>
