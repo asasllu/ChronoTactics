@@ -799,7 +799,7 @@ MUSIC: `mus_credits`. Scrolling credits over a slideshow of stills (`ui_credit_s
 
 - **Single ending**, with three small variations:
   - If the player never let a seed hatch in Battles 1–3: in the credits, Iselle's tablet in Magus's still is **lit**. Otherwise it's dark.
-  - If Iselle was never KO'd in 4A/4B: an extra line in 5.2 — LUCCA: "Also — the last thing the radio picked up before it died was a girl's voice saying 'entry filed.' Friend of yours?" FROG: "Aye. She was."
+  - Always, in 5.2 — LUCCA: "Also — the last thing the radio picked up before it died was a girl's voice saying 'entry filed.' Friend of yours?" FROG: "Aye. She was."
   - If the player used Eclipse Blade more than once: Magus's parting "Nothing." becomes "…Together. There. I said it twice. Never again."
 
 ---

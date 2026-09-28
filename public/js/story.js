@@ -1233,10 +1233,8 @@
       say('lucca', 'happy', `The radio cut out for six hours. Six. I aged a decade. Robo got here ten minutes ago and has said nothing but "readings nominal."`),
       say('robo', 'happy', `Because they are. Nothing is reading the Gates anymore. Every year is just… a year again.`),
       say('robo', 'happy', `That is not nothing, Lucca. That is *everything.*`),
-      ['if', '!iselle_ko', [
-        say('lucca', 'neutral', `Also — the last thing the radio picked up before it died was a girl's voice saying 'entry filed.' Friend of yours?`),
-        say('frog', 'sad', `Aye. She was.`),
-      ]],
+      say('lucca', 'neutral', `Also — the last thing the radio picked up before it died was a girl's voice saying 'entry filed.' Friend of yours?`),
+      say('frog', 'sad', `Aye. She was.`),
       say('frog', 'happy', `Then 'tis done.`),
       ['face', 'frog', 'N'],
       say('frog', 'happy', `I shall go home now, I think. And when I next climb the mountain, it shall only be a mountain.`),
