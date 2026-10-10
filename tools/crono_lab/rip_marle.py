@@ -1,0 +1,44 @@
+"""Build public/js/sheets/marle.js from the Chrono Trigger Marle sprite sheet (captured by
+Tonberry2k, The Spriters Resource), supplied by the user.
+
+    python3 tools/crono_lab/rip_marle.py
+
+Marle is a story NPC here: idle/walk in both views, a talk loop, and her story extras
+(jump, spin, cheer) plus hurt, kneel and victory. Frame ids index rip/marle_frames.json.
+"""
+import os, sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from rip_lib import Sheet
+
+W, H, AX, AY = 64, 64, 32, 58
+s = Sheet('marle', w=W, h=H, ax=AX, ay=AY, credit='captured by Tonberry2k')
+F, S = False, True  # front/back frames as drawn; side frames that face left get flipped
+
+# ---- front (se) --------------------------------------------------------------------------
+# Idle: standing, with a blink (3) now and then.
+s.add('se', 'idle', [(1, 900), (3, 120), (1, 700), (2, 400)], loop=True)
+s.add('se', 'walk', [(i, 110) for i in (4, 5, 6, 7, 8, 9)], loop=True)
+# Talk: chatting with her hands - fists on hips mid-sentence, then a giggle behind her hand.
+s.add('se', 'talk', [(1, 220), (159, 300), (1, 180), (126, 260)], loop=True)
+# Jump: crouch, airborne (legs tucked), land.
+s.add('se', 'jump', [(214, 120), (208, 150, F, 0, -12), (209, 140, F, 0, -10), (214, 120), (1, 140)])
+# Spin: a dance twirl with her arms out - front, right, back, left, twice round.
+spin = [(198, 100), (202, 100), (200, 100), (202, 100, S)]
+s.add('se', 'spin', spin + spin + [(198, 160), (1, 120)])
+# Cheer: two quick hops with her arms flung up, then a laugh with her fists on her hips.
+s.add('se', 'cheer', [(140, 120), (141, 100, F, 0, -6), (142, 120, F, 0, -10), (143, 110, F, 0, -6),
+                      (140, 110), (141, 100, F, 0, -6), (144, 140, F, 0, -10), (143, 100, F, 0, -6),
+                      (140, 140), (159, 480)], loop=True)
+s.add('se', 'hurt', [(103, 220), (104, 160), (1, 120)])
+s.add('se', 'kneel', [(157, 1000)], loop=True)
+# Victory: the jump-for-joy from her battle wins.
+s.add('se', 'victory', [(140, 200), (141, 120, F, 0, -6), (142, 140, F, 0, -10), (143, 160, F, 0, -10),
+                        (141, 120, F, 0, -6), (140, 200)], loop=True)
+
+# ---- back (ne) ---------------------------------------------------------------------------
+s.add('ne', 'idle', [(19, 900), (19, 900)], loop=True)
+s.add('ne', 'walk', [(i, 110) for i in (20, 21, 22, 23, 24, 25)], loop=True)
+s.add('ne', 'jump', [(215, 120), (210, 150, F, 0, -12), (211, 140, F, 0, -10), (215, 120), (19, 140)])
+s.add('ne', 'spin', [(200, 100), (202, 100, S), (198, 100), (202, 100)] * 2 + [(200, 160), (19, 120)])
+
+s.build()
