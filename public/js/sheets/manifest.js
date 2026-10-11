@@ -14,6 +14,8 @@ CT.SHEET_FILES = [
   'villager_last', 'villager_last_b', 'villager_last_c',
   // props
   'epoch', 'lavos_seed', 'lavos_seed_inert', 'time_gate', 'hollow_gate',
+  // dialogue portraits from the original game
+  'portraits_ct',
   // effects
   'fx_crono', 'fx_frog', 'fx_ayla', 'fx_magus', 'fx_allies', 'fx_enemies', 'fx_duals',
 ];

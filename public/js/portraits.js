@@ -1427,10 +1427,34 @@
     return render(g, { c: '#6a6a78' }, '');
   }
 
+  function ripPortrait(rows) {
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = 64;
+    const g = cv.getContext('2d');
+    const img = g.createImageData(48, 48);
+    rows.forEach((r, y) => {
+      for (let x = 0; x < 48; x++) {
+        const i = (y * 48 + x) * 4, h = r.slice(x * 6, x * 6 + 6);
+        img.data[i] = parseInt(h.slice(0, 2), 16);
+        img.data[i + 1] = parseInt(h.slice(2, 4), 16);
+        img.data[i + 2] = parseInt(h.slice(4, 6), 16);
+        img.data[i + 3] = 255;
+      }
+    });
+    g.putImageData(img, 8, 8);
+    return cv;
+  }
+
   const cache = {};
   CT.getPortrait = function (id, emotion) {
     const k = id + '|' + emotion;
     if (!cache[k]) {
+      const rip = CT.RIP_PORTRAITS && CT.RIP_PORTRAITS[id];
+      if (rip) {
+        // The original Chrono Trigger portrait (48x48), centred in the 64x64 frame.
+        cache[k] = ripPortrait(rip);
+        return cache[k];
+      }
       try {
         cache[k] = build(String(id), String(emotion || 'neutral'));
       } catch (err) {
