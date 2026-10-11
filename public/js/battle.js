@@ -971,6 +971,7 @@
         if (!act) continue;
         let score = act.score - node.d * 0.004;
         // Heroes know the Core's rule: a tech from an intact placard pedestal breaks it.
+        if (u.team === 0 && this.dangerAt(node)) score -= 2;
         if (u.team === 0 && this.placards && act.tech && !act.tech.isAttack && this.placards.zones.some((z) => !this.placards.broken.has(z) && this.inZone(z, node.x, node.y))) score += 0.8;
         if (ai === 'ranged' || ai === 'healer' || (u.hero && u.range && u.range[1] > 1)) score += this.safety(u, node) * 0.05;
         if (!best || score > best.score) best = { score, dest: node, tech: act.tech, target: act.target };
@@ -990,10 +991,15 @@
       const df = this.distanceField(u, goal.map((f) => ({ x: f.x, y: f.y })));
       let adv = null;
       for (const n of reach.values()) {
-        const d = df.get(key(n.x, n.y)) ?? 99;
+        const d = (df.get(key(n.x, n.y)) ?? 99) + (u.team === 0 && this.dangerAt(n) ? 50 : 0);
         if (!adv || d < adv.dd || (d === adv.dd && n.d < adv.node.d)) adv = { node: n, dd: d };
       }
       return { dest: adv ? adv.node : null, tech: null };
+    }
+    // Tiles the party has been warned about (the Core's pending Erase Era quadrant).
+    dangerAt(n) {
+      const e = this.erasure;
+      return !!(e && e.pending && e.zone && this.inZone(e.zone, n.x, n.y));
     }
 
     safety(u, node) {

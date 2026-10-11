@@ -1254,9 +1254,12 @@
           if (u && base) {
             this.r.flashScreen('255,80,80', 600);
             this.r.shake(12, 900);
+            // The new form honours the battle's difficulty tune, like any spawned enemy.
+            const tn = this.def.tune || {};
+            const hp = Math.round((ef.hp || base.hp) * (tn.hp || 1));
             Object.assign(u, {
-              key: ef.into, type: ef.into, sprite: base.sprite, name: base.name, maxHp: ef.hp || base.hp, hp: ef.hp || base.hp,
-              atk: base.atk, def: base.def, mag: base.mag, mdef: base.mdef, spd: base.spd, move: base.move, jump: base.jump,
+              key: ef.into, type: ef.into, sprite: base.sprite, name: base.name, maxHp: hp, hp,
+              atk: Math.round(base.atk * (tn.atk || 1)), def: Math.round(base.def * (tn.def || 1)), mag: Math.round(base.mag * (tn.mag || tn.atk || 1)), mdef: Math.round(base.mdef * (tn.def || 1)), spd: base.spd, move: base.move, jump: base.jump,
               techs: [...base.techs], ai: ef.ai || base.ai, affinity: { ...base.affinity }, immortal: !!ef.immortal, alive: true, status: {}, big: base.big, xp: base.xp, gold: base.gold,
             });
             this.r.burst(u.x, u.y, u.rh, 'lavos', { r: 90 });
