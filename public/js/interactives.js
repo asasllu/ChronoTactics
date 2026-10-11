@@ -41,8 +41,8 @@
     ],
     // Chapter 1 — Denadoro: a fallen knight's sword, the Masamune's spring, a loose boulder.
     B1: [
-      { id: 'b1_sword', at: '@cairn', kind: 'sword', mode: 'step', who: ['crono'],
-        name: "Fallen Knight's Sword", desc: 'Planted in a cairn at the trail head. CRONO ONLY: touch it to learn the tech Confuse.',
+      { id: 'b1_sword', at: [9, 12], kind: 'sword', mode: 'step', who: ['crono'],
+        name: "Fallen Knight's Sword", desc: 'Planted in the ford below the trail, where a knight fell. CRONO ONLY: touch it to learn the tech Confuse.',
         effect: { learn: 'confuse' },
         lines: [
           ['frog', 'sad', `A knight's blade, left where he fell. Cyrus's men climbed this trail and never came down.`],
