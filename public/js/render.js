@@ -777,6 +777,7 @@
       for (const r of this.rifts) this.drawRift(r, now);
 
       this.drawGrading(lights, now);
+      if (ui.spotAt && CT.Interact) CT.Interact.drawIcons(this, ctx, ui.spotAt, now); // spot icons stay bright at night
       this.drawDim(now);
       for (const b of this.big) this.drawBig(b, now);
       for (const e of this.sheetFx) if (e.fx.def.layer !== 'back') this.drawSheetFx(e, now);
@@ -955,7 +956,6 @@
       if (spot) CT.Interact.drawMarker(this, ctx, spot, sx, sy, now, lights, 'base');
       const d = this.map.decorAt.get(key);
       if (d && !d.hidden) this.drawDecor(d, sx, sy, now, lights);
-      if (spot) CT.Interact.drawMarker(this, ctx, spot, sx, sy, now, lights, 'icon');
     }
 
     drawDecor(d, sx, sy, now, lights) {
@@ -1529,7 +1529,8 @@
     //   ground), bits: { ember|shard|debris|drop|spark|mote|sparkle|crackle: n },
     //   bolt: n sky bolts (boltAt), dim: [colour, amount, ms], big: full-screen moment
     //   (bigAt, bigMs), all: true to run dim/big on every tile instead of once per area,
-    //   also: [more stages] (later beats: a shatter, a second burst), trail (on a proj sheet:
+    //   spawn: [{ fx, at, all }] (another sheet on the same spot from frame `at`; first tile only
+    //   unless all), also: [more stages] (later beats: a shatter, a second burst), trail (on a proj sheet:
     //   the bit kind it sheds in flight).
     stageFx(key, st, fx, x, y, h, opts) {
       const first = !opts.noShake;
@@ -1548,6 +1549,8 @@
         setTimeout(() => { const [sx, sy] = pos(); for (let i = 0; i < n; i++) this.skyBolt(sx + (i ? (Math.random() - 0.5) * 16 : 0), sy - (st.boltY || 0), { delay: i * 70, ramp: R, ms: st.boltMs || 300 }); }, at(st.boltAt != null ? st.boltAt : imp) - (st.lead || 0));
       }
       for (const s2 of st.also || []) this.stageFx(key, Object.assign({ elem: st.elem, y: st.y }, s2), fx, x, y, h, opts);
+      // Follow-up hand-drawn sheets on the same spot (a geyser after the splash, a shatter after the freeze).
+      for (const sp of st.spawn || []) if (first || sp.all) setTimeout(() => this.playFx(sp.fx, x, y, h, { flip: opts.flip, noShake: !first, unit: opts.unit }), at(sp.at || 0));
       setTimeout(() => {
         const [sx, gy] = pos();
         const cy = gy - (st.y != null ? st.y : 12);

@@ -154,7 +154,7 @@
     spring: { color: '120,240,170', icon: 'drop', sfx: 'sfx_heal_chime', fx: 'fx_ia_spring' },
     font: { color: '140,170,255', icon: 'rune', sfx: 'sfx_heal_chime', fx: 'fx_ia_spring' },
     keg: { color: '255,150,60', icon: 'flame', sfx: 'sfx_dark_bomb', fx: 'fx_ia_blast' },
-    boulder: { color: '230,190,130', icon: 'arrow', sfx: 'sfx_door', fx: 'fx_ia_dust' },
+    boulder: { color: '230,190,130', icon: 'rock', sfx: 'sfx_door', fx: 'fx_ia_dust' },
     lever: { color: '160,210,255', icon: 'lever', sfx: 'sfx_door', fx: 'fx_ia_dust' },
     chest: { color: '255,230,140', icon: 'chest', sfx: 'sfx_item_get', fx: 'fx_ia_spring' },
     egg: { color: '255,255,255', icon: 'egg', sfx: 'sfx_gate_open', fx: 'fx_ia_learn' },
@@ -172,7 +172,7 @@
     drop: ['...c...', '..ccc..', '.ccWcc.', '.cWccB.', '.ccccB.', '..cBB..'],
     rune: ['..ppp..', '.p.W.p.', 'p.WWW.p', 'pWW.WWp', 'p.WWW.p', '.p.W.p.', '..ppp..'],
     flame: ['...y...', '..yfy..', '..fyf..', '.fFyFf.', '.fFfFf.', '..FFF..'],
-    arrow: ['..W....', '.WW....', 'WWWWWWW', '.WW....', '..W....'],
+    rock: ['..EEE..', '.EeeEE.', 'EeeEEEk', 'EeEEEEk', 'EEEEEkk', '.EkkEk.', '..kkk..'],
     lever: ['.....y.', '....y..', '...S...', '..S....', '.SSSSS.', '.SkkkS.'],
     chest: ['.ooooo.', 'oyyyyyo', 'obbybbo', 'oyyWyyo', 'obbbbbo', 'ooooooo'],
     egg: ['..eee..', '.eWWee.', 'eWWeeEe', 'eWeeeEe', 'eeeeeEe', '.eEEEe.', '..EEE..'],
@@ -664,6 +664,17 @@
         ctx.fillRect(x0 + w, y0 + 1, 3, 1);
       }
     },
+  };
+
+  // Floating icons for every spot, drawn after the colour grading.
+  Interact.drawIcons = function (R, ctx, spotAt, now) {
+    for (const s of spotAt.values()) {
+      if (s.trail || s.gone) continue;
+      const t = R.map && R.map.tiles[s.y] && R.map.tiles[s.y][s.x];
+      if (!t) continue;
+      const [sx, sy] = R.project(s.x, s.y, R.tileHeight(t));
+      Interact.drawMarker(R, ctx, s, Math.round(sx), Math.round(sy), now, null, 'icon');
+    }
   };
 
   // Shows the interactive-tile primer the first time a battle has spots.

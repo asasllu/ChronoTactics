@@ -3262,13 +3262,13 @@
   // ---- Spectacle staging (render.js stageFx): impact bits, rings, field dim, full-screen moments ----
   Object.assign((CT.FX_STAGE = CT.FX_STAGE || {}), {
     fx_x_strike: { elem: 'slash', big: 'xslash', bigMs: 900, bigAt: 0, wave: 40, bits: { spark: 16 } },
-    fx_sword_stream: { elem: 'water', bolt: 1, big: 'storm', bigMs: 900, wave: 30, bits: { drop: 8, spark: 4 } },
+    fx_sword_stream: { elem: 'water', bolt: 1, big: 'storm', bigMs: 900, wave: 30, bits: { drop: 8, spark: 4 }, spawn: [{ fx: 'fx_geyser', at: 2, all: true }] },
     fx_drop_kick: { elem: 'lightning', bolt: 2, boltAt: 2, dim: ['#10183a', 0.5, 800], wave: 40, bits: { spark: 12, debris: 6, crackle: 3 } },
     fx_slurp_kiss: { elem: 'heal', big: 'bloom', bigMs: 1200, y: 20, bits: { sparkle: 8 } },
     fx_beast_toss_proj: { elem: 'shadow', trail: 'ember' },
     fx_beast_toss: { elem: 'shadow', big: 'shock', bigMs: 800, wave: 48, bits: { mote: 10, debris: 6 } },
     fx_shadow_cyclone: { elem: 'shadow', big: 'gale', bigMs: 1000, wave: 60, bits: { mote: 14 } },
-    fx_ice_water: { elem: 'ice', big: 'frost', bigMs: 1200, bits: { shard: 6, drop: 6 }, also: [{ at: 8, ring: 18, bits: { shard: 10 } }] },
+    fx_ice_water: { elem: 'ice', big: 'frost', bigMs: 1200, bits: { shard: 6, drop: 6 }, spawn: [{ fx: 'fx_ice_shatter', at: 8, all: true }], also: [{ at: 8, ring: 18, bits: { shard: 6 } }] },
     fx_eclipse_blade: { elem: 'shadow', wave: 40, ring: 20, bits: { spark: 8, mote: 6 } },
   });
   // ---- end spectacle staging ----
