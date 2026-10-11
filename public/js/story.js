@@ -1415,11 +1415,11 @@
     units: [
       { id: 'imp1', type: 'echo_imp', at: [4, 2], face: 'S', hp: 40 },
       { id: 'imp2', type: 'echo_imp', at: [6, 2], face: 'S', hp: 40 },
-      { id: 'hench', type: 'echo_hench', at: [5, 3], face: 'S', hp: 90 },
+      { id: 'hench', type: 'echo_hench', at: [5, 3], face: 'S', hp: 62 },
       { id: 'imp3', type: 'echo_imp', at: [10, 3], face: 'S', hp: 40 },
       { id: 'imp4', type: 'echo_imp', at: [2, 3], face: 'S', hp: 40 },
       { id: 'imp5', type: 'echo_imp', at: [11, 7], face: 'W', hp: 40 },
-      { id: 'hench2', type: 'echo_hench', at: [9, 2], face: 'S', hp: 90 },
+      { id: 'hench2', type: 'echo_hench', at: [9, 2], face: 'S', hp: 62 },
     ],
     objective: { type: 'DEFEAT_ALL', text: 'Defeat the Echoes!' },
     triggers: [
@@ -1710,7 +1710,7 @@
       { id: 'sen2', type: 'vitrine_sentinel', at: '@sentinel2', ai: 'sentinel', hp: 300 },
       { id: 'sen3', type: 'vitrine_sentinel', at: '@sentinel3', ai: 'sentinel', hp: 300 },
       { id: 'sen4', type: 'vitrine_sentinel', at: '@sentinel4', ai: 'sentinel', hp: 300 },
-      { id: 'tyrano', type: 'echo_tyrano', at: '@tyrano', face: 'S', hp: 1000 },
+      { id: 'tyrano', type: 'echo_tyrano', at: '@tyrano', face: 'S', hp: 750 },
       { id: 'imp1', type: 'echo_imp', near: '@imp1' },
       { id: 'imp2', type: 'echo_imp', near: '@imp2' },
       { id: 'imp3', type: 'echo_imp', near: '@imp3' },

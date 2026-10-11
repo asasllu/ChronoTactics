@@ -70,13 +70,14 @@
   CT.BATTLE_LEVEL = { B0: 1, B1: 5, B2: 9, B3: 14, B4A: 20, B4B: 22, B5: 23 };
   // Per-battle difficulty knobs, tuned with batch simulations (tools/balance).
   CT.BATTLE_TUNE = {
-    B0: { atk: 1.5, hp: 1.7 },
+    // Enemies die in 2-4 hits and bosses in ~10; the danger comes from how hard they hit.
+    B0: { atk: 1.5, hp: 1.0 },
     B1: { atk: 0.72, def: 0.55, hp: 0.9 },
-    B4A: { hp: 1.35, atk: 0.64 },
-    B2: { atk: 0.72 },
-    B3: { atk: 1.22 },
-    B5: { atk: 0.7, hp: 0.68 },
-    B4B: { atk: 2.5, hp: 1.0 },
+    B2: { atk: 0.8, hp: 0.6 },
+    B3: { atk: 1.0, hp: 0.6 },
+    B4A: { hp: 0.8, atk: 0.75 },
+    B4B: { atk: 1.8, hp: 0.55 },
+    B5: { atk: 0.75, hp: 0.55 },
   };
   CT.LEVEL_CAP = 15;
 
@@ -180,11 +181,11 @@
     echo_nu: E({ name: 'Echo Ozzie', sprite: 'echo_ozzie', hp: 200, atk: 14, def: 16, mag: 20, mdef: 14, spd: 7, move: 3, techs: ['re_file'], ai: 'healer', xp: 80, gold: 60, flicker: true, steal: 'ether' }),
     echo_kilwala: E({ name: 'Echo Green Imp', sprite: 'echo_green_imp', hp: 60, atk: 14, def: 6, mag: 6, mdef: 5, spd: 12, move: 5, jump: 3, techs: ['rock_toss'], affinity: { fire: 1.5 }, xp: 30, gold: 18, flicker: true, steal: 'tonic' }),
     echo_roundillo: E({ name: 'Echo Lizardactyl', sprite: 'echo_lizardactyl', hp: 130, atk: 24, def: 14, mag: 8, mdef: 8, spd: 10, move: 5, jump: 9, techs: ['roll'], affinity: { ice: 1.5 }, xp: 60, gold: 40, flicker: true, steal: 'mid_tonic' }),
-    echo_tyrano: E({ name: 'Echo Avian Rex', sprite: 'echo_avian_rex', hp: 900, atk: 46, def: 22, mag: 38, mdef: 16, spd: 8, move: 3, jump: 2, techs: ['fire_breath'], affinity: { ice: 1.5, fire: 0.5 }, xp: 600, gold: 400, big: true, boss: true, flicker: true }),
+    echo_tyrano: E({ name: 'Echo Avian Rex', sprite: 'echo_avian_rex', hp: 900, atk: 46, def: 14, mag: 38, mdef: 16, spd: 8, move: 3, jump: 2, techs: ['fire_breath'], affinity: { ice: 1.5, fire: 0.5 }, xp: 600, gold: 400, big: true, boss: true, flicker: true }),
     seedbearer: E({ name: 'Seedbearer', sprite: 'stone_imp', hp: 120, atk: 15, def: 8, mag: 10, mdef: 10, spd: 8, move: 3, techs: ['porcelain_strike'], affinity: { lightning: 1.5, shadow: 0.5 }, xp: 45, gold: 30, steal: 'ether' }),
     lavos_sprout: E({ name: 'Lavos Sprout', sprite: 'lavos_sprout', hp: 300, atk: 16, def: 12, mag: 22, mdef: 12, spd: 7, move: 0, jump: 0, techs: ['destruction_rain'], ai: 'sprout', affinity: { shadow: 0.5, ice: 1.5 }, xp: 150, gold: 80 }),
     lavos_sprout_large: E({ name: 'Lavos Sprout', sprite: 'lavos_sprout_large', hp: 600, atk: 26, def: 16, mag: 30, mdef: 16, spd: 8, move: 0, jump: 0, techs: ['destruction_rain_l'], ai: 'sprout', affinity: { shadow: 0.5, ice: 1.5 }, xp: 320, gold: 160, big: true }),
-    vitrine_sentinel: E({ name: 'Gallery Goon', sprite: 'goon', hp: 250, atk: 30, def: 30, mag: 10, mdef: 12, spd: 5, move: 2, jump: 1, techs: ['glass_bash'], ai: 'sentinel', shatter: 200, xp: 120, gold: 70, steal: 'mid_tonic' }),
+    vitrine_sentinel: E({ name: 'Gallery Goon', sprite: 'goon', hp: 250, atk: 30, def: 16, mag: 10, mdef: 12, spd: 5, move: 2, jump: 1, techs: ['glass_bash'], ai: 'sentinel', shatter: 200, xp: 120, gold: 70, steal: 'mid_tonic' }),
     iselle: E({ name: 'Cyrus', sprite: 'cyrus', hp: 400, atk: 20, def: 14, mag: 18, mdef: 12, spd: 10, move: 4, jump: 3, range: [1, 2], techs: ['ledger_strike', 'catalogue', 'preserve'], xp: 200, gold: 150, boss: true, steal: 'ether' }),
     iselle_ally: E({ fixed: true, name: 'Cyrus', sprite: 'cyrus', hp: 420, atk: 36, def: 22, mag: 26, mdef: 20, spd: 11, move: 4, jump: 3, range: [1, 2], techs: ['ledger_strike', 'preserve', 'sever'], ai: 'protect', guest: true }),
     curator: E({ fixed: true, name: 'The Curator', sprite: 'prophet', hp: 2000, atk: 34, def: 20, mag: 40, mdef: 22, spd: 9, move: 0, jump: 0, range: [1, 1], techs: ['rearrange', 'catalogue_all', 'deaccession', 'reconstruct'], ai: 'curator', affinity: { shadow: 0.5 }, boss: true, big: true, xp: 0 }),

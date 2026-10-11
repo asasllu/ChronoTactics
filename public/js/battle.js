@@ -548,6 +548,8 @@
       let hit = 100;
       // Faster foes can sidestep blows (up to 30%); magic always lands.
       if (physical) hit = 100 - Math.max(0, Math.min(30, (this.stat(v, 'spd') - this.stat(u, 'spd')) * 2));
+      // Hero magic hits harder than raw stats suggest: spells should feel like spells.
+      if (tech.kind === 'mag' && u.team === 0 && !u.guest) k *= 1.25;
       if (!physical && v.status.barrier) k *= 0.5;
       const aff = v.affinity[tech.elem];
       if (aff != null) k *= aff;
