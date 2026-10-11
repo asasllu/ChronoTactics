@@ -76,7 +76,8 @@ class VSheet(Sheet):
         """Remove a ground shadow drawn in the outline colour: detached flat blobs at the
         bottom, then (twice) shadow pixels in the bottom rows that touch no other colour
         (the inside of a blob fused to the feet). Same method as rip_ayla.py."""
-        S, h, w = self.shadow, len(px), len(px[0])
+        S = self.shadow if isinstance(self.shadow, (set, frozenset)) else {self.shadow}
+        h, w = len(px), len(px[0])
         seen = [[False] * w for _ in range(h)]
         for y in range(h):
             for x in range(w):
@@ -93,15 +94,15 @@ class VSheet(Sheet):
                                     seen[Y][X] = True
                                     st.append((X, Y))
                     ys = [q[1] for q in pts]
-                    if all(px[b][a] == S for a, b in pts) and max(ys) - min(ys) <= 4 and max(ys) >= h - 2:
+                    if all(px[b][a] in S for a, b in pts) and max(ys) - min(ys) <= 4 and max(ys) >= h - 2:
                         for a, b in pts:
                             px[b][a] = None
 
         def other(x, y):
-            return any(0 <= x + a < w and 0 <= y + b < h and px[y + b][x + a] and px[y + b][x + a] != S
+            return any(0 <= x + a < w and 0 <= y + b < h and px[y + b][x + a] and px[y + b][x + a] not in S
                        for a in (-1, 0, 1) for b in (-1, 0, 1))
         for _ in range(self.shadow_passes):
-            gone = [(x, y) for y in range(max(0, h - self.shadow_rows), h) for x in range(w) if px[y][x] == S and not other(x, y)]
+            gone = [(x, y) for y in range(max(0, h - self.shadow_rows), h) for x in range(w) if px[y][x] in S and not other(x, y)]
             for x, y in gone:
                 px[y][x] = None
         while px and not any(px[-1]):

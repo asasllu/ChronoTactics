@@ -1958,4 +1958,15 @@
   CT.techFx('heal', { anim: 'cast', fx: 'fx_heal', stagger: 30 });
   CT.techFx('leap_slash', { anim: 'tech_leap_slash', fx: 'fx_leap_slash', charge: false });
   CT.techFx('frog_squash', { anim: 'tech_frog_squash', fx: 'fx_frog_squash', stagger: 30 });
+  // ---- Spectacle staging (render.js stageFx): impact bits, rings, field dim, full-screen moments ----
+  Object.assign((CT.FX_STAGE = CT.FX_STAGE || {}), {
+    fx_hit_masamune: { elem: 'water', ring: 14, bits: { drop: 5, spark: 3 } },
+    fx_water: { elem: 'water', dim: ['#1c2c5c', 0.4, 900], wave: 34, ring: 20, y: 10, bits: { drop: 16, sparkle: 4 }, also: [{ at: 9, bits: { drop: 8 } }] },
+    fx_slurp: { elem: 'heal', y: 18, bits: { sparkle: 8, drop: 4 } },
+    fx_slurp_cut: { elem: 'water', ring: 14, bits: { drop: 6, spark: 4 } },
+    fx_heal: { elem: 'heal', y: 20, dim: ['#2c6430', 0.2, 700], bits: { sparkle: 6 } },
+    fx_leap_slash: { elem: 'water', wave: 34, ring: 20, bits: { drop: 10, debris: 6, spark: 6 } },
+    fx_frog_squash: { elem: 'water', dim: ['#1c2c5c', 0.35, 800], wave: 40, bits: { debris: 8, drop: 10 } },
+  });
+  // ---- end spectacle staging ----
 })();

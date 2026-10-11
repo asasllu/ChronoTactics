@@ -4481,4 +4481,25 @@
   CT.techFx('dark_staff', { anim: 'cast', fx: 'fx_dark_staff', stagger: 30 });
   CT.techFx('attack_spekkio', { anim: 'attack', fx: 'fx_hit_spekkio' });
   CT.techFx('spekkio_magic', { anim: 'cast', fx: 'fx_spekkio_magic', stagger: 30 });
+  // ---- Spectacle staging (render.js stageFx): impact bits, rings, field dim, full-screen moments ----
+  Object.assign((CT.FX_STAGE = CT.FX_STAGE || {}), {
+    fx_harpoon: { elem: 'water', trail: 'drop' },
+    fx_hit_harpoon: { elem: 'water', bits: { drop: 4, spark: 3 } },
+    fx_spear_gun: { elem: 'water', ring: 16, bits: { drop: 6, spark: 4 } },
+    fx_sushi: { elem: 'heal', y: 18, bits: { sparkle: 6 } },
+    fx_hit_spear: { elem: 'hit', bits: { spark: 4 } },
+    fx_bubble_jet: { elem: 'water', dim: ['#1c2c5c', 0.35, 800], bits: { drop: 6 } },
+    fx_depth_charge_proj: { elem: 'hit', trail: 'smoke' },
+    fx_depth_charge: { elem: 'fire', wave: 30, bits: { debris: 6, ember: 6, drop: 4 } },
+    fx_hit_ledger: { elem: 'porcelain', bits: { shard: 5 } },
+    fx_ledger_strike: { elem: 'porcelain', ring: 14, bits: { shard: 6, spark: 3 } },
+    fx_catalogue: { elem: 'porcelain', y: 20, bits: { sparkle: 6 } },
+    fx_preserve: { elem: 'glass', y: 20, bits: { sparkle: 6, shard: 4 } },
+    fx_sever: { elem: 'porcelain', ring: 18, wave: 24, bits: { shard: 10 } },
+    fx_hit_knight: { elem: 'shadow', bits: { spark: 5, mote: 4 } },
+    fx_dark_staff: { elem: 'shadow', dim: ['#2a1040', 0.4, 800], bits: { mote: 8 } },
+    fx_hit_spekkio: { elem: 'hit', bits: { sparkle: 4 } },
+    fx_spekkio_magic: { elem: 'fire', dim: ['#3c0a14', 0.35, 800], wave: 30, bits: { ember: 10 } },
+  });
+  // ---- end spectacle staging ----
 })();

@@ -2,7 +2,7 @@
 // Every frame is letter rows; the helper that laid them out lives outside the repo.
 (function () {
   const P = {'W': '#ffffff', 'Y': '#fff8c8', 'y': '#f8e070', 'o': '#f0a838', 'r': '#b8602c', 'c': '#d8f0ff', 'b': '#88b8f8', 'B': '#4c78d8', 'v': '#6048b8', 'V': '#2c1c68', 's': '#d0d8f0', 'S': '#9098c8', 'd': '#4c5490', 'p': '#c8b0f8'};
-  CT.fxSheet('fx_hit_katana', { pal: P, w: 48, h: 44, anchor: [24, 40], layer: 'front', frames: [
+  CT.fxSheet('fx_hit_katana', { pal: P, impact: 2, w: 48, h: 44, anchor: [24, 40], layer: 'front', frames: [
     { ms: 40, at: [28, 2], rows: [
       'WWWWWWW',
       '...SSssWW',
@@ -160,7 +160,7 @@
       'd...................r',
     ] },
   ] });
-  CT.fxSheet('fx_lightning', { pal: P, w: 56, h: 140, anchor: [28, 132], layer: 'front', shake: 5, flash: '#fff8c8', flashAt: 3, frames: [
+  CT.fxSheet('fx_lightning', { pal: P, impact: 3, w: 56, h: 140, anchor: [28, 132], layer: 'front', shake: 5, flash: '#fff8c8', flashAt: 3, frames: [
     { ms: 70, at: [27, 1], rows: [
       '.........y',
       '.........Y',
@@ -1089,7 +1089,7 @@
       '..............o',
     ] },
   ] });
-  CT.fxSheet('fx_cyclone', { pal: P, w: 108, h: 58, anchor: [54, 36], layer: 'front', frames: [
+  CT.fxSheet('fx_cyclone', { pal: P, impact: 6, w: 108, h: 58, anchor: [54, 36], layer: 'front', frames: [
     { ms: 40, at: [16, 40], rows: [
       'WWWbd',
       '.WWWWbbd',
@@ -1463,7 +1463,7 @@
       '...............................................b',
     ] },
   ] });
-  CT.fxSheet('fx_slash', { pal: P, w: 64, h: 60, anchor: [32, 54], layer: 'front', frames: [
+  CT.fxSheet('fx_slash', { pal: P, impact: 3, w: 64, h: 60, anchor: [32, 54], layer: 'front', frames: [
     { ms: 40, at: [5, 2], rows: [
       '............V',
       '...........VyV',
@@ -1755,7 +1755,7 @@
       'V',
     ] },
   ] });
-  CT.fxSheet('fx_spincut', { pal: P, w: 72, h: 96, anchor: [36, 90], layer: 'front', shake: 4, frames: [
+  CT.fxSheet('fx_spincut', { pal: P, impact: 5, w: 72, h: 96, anchor: [36, 90], layer: 'front', shake: 4, frames: [
     { ms: 40, at: [31, 14], rows: [
       '..WWWWWWW',
       'WWdddSssWWW',
@@ -2374,7 +2374,7 @@
       '.........V',
     ] },
   ] });
-  CT.fxSheet('fx_lightning2', { pal: P, w: 36, h: 88, anchor: [18, 82], layer: 'front', shake: 3, frames: [
+  CT.fxSheet('fx_lightning2', { pal: P, impact: 3, w: 36, h: 88, anchor: [18, 82], layer: 'front', shake: 3, frames: [
     { ms: 50, at: [17, 1], rows: [
       '.....Y',
       '....YWY',
@@ -2915,7 +2915,7 @@
       '.............o',
     ] },
   ] });
-  CT.fxSheet('fx_luminaire', { pal: P, w: 180, h: 120, anchor: [90, 74], layer: 'front', shake: 6, flash: '#fff8c8', flashAt: 4, frames: [
+  CT.fxSheet('fx_luminaire', { pal: P, impact: 6, w: 180, h: 120, anchor: [90, 74], layer: 'front', shake: 6, flash: '#fff8c8', flashAt: 4, frames: [
     { ms: 60, at: [9, 6], rows: [
       '...............................................................................................y',
       '...............................................................................................Y',
@@ -3830,7 +3830,7 @@
       '...........................................................o',
     ] },
   ] });
-  CT.fxSheet('fx_luminaire_tile', { pal: P, w: 32, h: 76, anchor: [16, 70], layer: 'front', frames: [
+  CT.fxSheet('fx_luminaire_tile', { pal: P, impact: 3, w: 32, h: 76, anchor: [16, 70], layer: 'front', frames: [
     { ms: 40, at: [9, 67], rows: [
       '.......o',
       '..ooooooooooo',
@@ -4288,4 +4288,16 @@
   CT.techFx('spincut', { anim: 'tech_spincut', fx: 'fx_spincut', charge: false });
   CT.techFx('lightning2', { anim: 'cast', fx: 'fx_lightning2', stagger: 40 });
   CT.techFx('luminaire', { anim: 'tech_luminaire', casterFx: 'fx_luminaire', fx: 'fx_luminaire_tile', stagger: 25 });
+  // ---- Spectacle staging (render.js stageFx): impact bits, rings, field dim, full-screen moments ----
+  Object.assign((CT.FX_STAGE = CT.FX_STAGE || {}), {
+    fx_hit_katana: { elem: 'slash', ring: 14, bits: { spark: 5 } },
+    fx_lightning: { elem: 'lightning', at: 3, bolt: 1, boltAt: 2, dim: ['#10183a', 0.5, 800], ring: 24, wave: 32, y: 16, bits: { spark: 14, crackle: 4 } },
+    fx_lightning2: { elem: 'lightning', at: 3, bolt: 1, boltAt: 1, dim: ['#10183a', 0.55, 1000], big: 'storm', bigMs: 900, wave: 44, ring: 16, bits: { spark: 6, crackle: 2 } },
+    fx_luminaire: { elem: 'lightning', at: 6, wave: 110, waveMs: 600, ring: 50, y: 20, bits: { sparkle: 24, spark: 16 } },
+    fx_luminaire_tile: { elem: 'lightning', at: 3, bits: { sparkle: 3, spark: 3 } },
+    fx_cyclone: { elem: 'slash', at: 5, wave: 40, bits: { spark: 10 } },
+    fx_slash: { elem: 'lightning', at: 3, ring: 20, bits: { spark: 10, crackle: 3 } },
+    fx_spincut: { elem: 'slash', at: 5, wave: 30, ring: 22, bits: { spark: 10, debris: 6 } },
+  });
+  // ---- end spectacle staging ----
 })();

@@ -5502,4 +5502,28 @@
   CT.techFx('consume', { anim: 'tech_consume', fx: 'fx_consume' });
   CT.techFx('erase_era', { anim: 'cast', casterFx: 'fx_erase_era' });
   CT.techFx('attack_curator_p2', { anim: 'attack', fx: 'fx_consume' });
+  // ---- Spectacle staging (render.js stageFx): impact bits, rings, field dim, full-screen moments ----
+  Object.assign((CT.FX_STAGE = CT.FX_STAGE || {}), {
+    fx_hit_jab: { elem: 'hit', bits: { spark: 4 } },
+    fx_hit_axe: { elem: 'hit', ring: 14, bits: { spark: 6, debris: 3 } },
+    fx_hit_bonk: { elem: 'hit', bits: { sparkle: 3 } },
+    fx_hit_claw: { elem: 'hit', bits: { spark: 5 } },
+    fx_rock: { elem: 'hit', trail: 'smoke' },
+    fx_rock_hit: { elem: 'hit', wave: 24, bits: { debris: 10 } },
+    fx_roll_hit: { elem: 'hit', wave: 26, bits: { debris: 8, spark: 4 } },
+    fx_porcelain_strike: { elem: 'porcelain', bits: { shard: 8 } },
+    fx_glass_bash: { elem: 'glass', ring: 16, bits: { shard: 10 } },
+    fx_bite: { elem: 'hit', ring: 16, bits: { spark: 6 } },
+    fx_fire_breath: { elem: 'fire', dim: ['#3c0a14', 0.35, 900], bits: { ember: 8 } },
+    fx_destruction_rain: { elem: 'lavos', dim: ['#3c0a14', 0.45, 1000], ring: 14, bits: { ember: 6, debris: 4 } },
+    fx_re_file: { elem: 'heal', y: 20, bits: { sparkle: 8 } },
+    fx_rearrange: { elem: 'porcelain', at: 3, dim: ['#3a3a52', 0.4, 900], bits: { sparkle: 10 } },
+    fx_catalogue_all: { elem: 'porcelain', bits: { sparkle: 3 } },
+    fx_deaccession: { elem: 'porcelain', big: 'erase', bigMs: 800, bigAt: 1, wave: 40, bits: { shard: 12 } },
+    fx_reconstruct: { elem: 'glass', at: 5, wave: 50, bits: { shard: 14, sparkle: 6 } },
+    fx_core_rain: { elem: 'lavos', at: 5, big: 'corerain', bigMs: 1400, bigAt: 0, wave: 70, bits: { ember: 16, debris: 8 } },
+    fx_consume: { elem: 'lavos', dim: ['#3c0a14', 0.5, 900], ring: 24, bits: { mote: 14, ember: 6 } },
+    fx_erase_era: { elem: 'porcelain', at: 3, big: 'erase', bigMs: 1000, bigAt: 0, wave: 120, bits: { shard: 16 } },
+  });
+  // ---- end spectacle staging ----
 })();

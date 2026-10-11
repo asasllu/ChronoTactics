@@ -1,11 +1,18 @@
 // Batch battle balancer: runs each story battle N times with the AI playing the
 // party at the intended level/gear, and reports win rates and rounds.
-// usage: PW=$(npm root -g)/playwright node tools/balance.js [B1,B2,...] [runs] [parallel]
+// usage: PW=$(npm root -g)/playwright node tools/balance.js [B1,B2,...] [runs] [parallel] [tuneJSON]
+// INTERACT=1: the AI heroes also use the interactive spots (js/interactives.js) and carry
+// the techs a good player would have learned from earlier battles' spots.
 const { chromium } = require(process.env.PW);
 const path = require('path');
+// Techs taught by earlier battles' spots (kept by a player who took them).
+const LEARNED = { B2: { crono: ['confuse'] }, B3: { crono: ['confuse'], ayla: ['dino_tail'] }, B4A: { crono: ['confuse'], ayla: ['dino_tail'], magus: ['magic_wall'] } };
+LEARNED.B4B = { ...LEARNED.B4A, frog: ['masamune_gale'] };
+LEARNED.B5 = LEARNED.B4B;
+const INTERACT = !!process.env.INTERACT;
 const url = 'file://' + path.resolve(__dirname, '../public/index.html') + '?sim&test&autoplay';
 const SETUP = {
-  B0: { level: 1, party: ['crono', 'frog'], gear: [] },
+  B0: { level: 1, party: ['crono', 'frog', 'marle', 'lucca', 'robo'], gear: [] },
   B1: { level: 3, party: ['crono', 'frog'], gear: [] },
   B2: { level: 6, party: ['crono', 'frog', 'ayla'], gear: ['steel_saber', 'iron_sword'] },
   B3: { level: 8, party: ['crono', 'frog', 'ayla', 'magus'], gear: ['steel_saber', 'iron_sword', 'bone_guard', 'fist_2'] },
@@ -20,9 +27,11 @@ async function runOne(browser, id, tune) {
   p.on('pageerror', (e) => errs.push(e.message));
   await p.goto(url);
   await p.waitForFunction(() => window.SIM_READY, null, { timeout: 30000 });
-  const res = await p.evaluate(async ([id, S, tune]) => {
+  const res = await p.evaluate(async ([id, S, tune, interact, learned]) => {
     const g = new CT.Game();
     for (const m of Object.keys(g.members)) g.members[m] = g.newMember(m, S.level);
+    CT.AI_INTERACT = interact;
+    if (interact) for (const [m, ts] of Object.entries(learned || {})) g.members[m].learned = ts.slice();
     g.setParty(S.party);
     g.gold = 1e6;
     for (const gear of S.gear) for (let i = 0; i < 4; i++) g.buyGear(gear);
@@ -44,8 +53,9 @@ async function runOne(browser, id, tune) {
     const log = window.TEST_LOG.filter((e) => e.battle).pop() || {};
     const b = window.LAST_BATTLE;
     const left = b ? b.units.filter((u) => u.alive && u.team === 1).map((u) => `${u.id}:${u.hp}`).join(' ') : '';
-    return { r, left, info: window.OUTCOME_INFO, round: log.round, hp: log.hp, secs: Math.round((performance.now() - t0) / 1000), hatched: !!g.flags.seed_hatched };
-  }, [id, SETUP[id], tune]);
+    const used = window.TEST_LOG.filter((e) => e.interact).map((e) => e.interact);
+    return { r, left, info: window.OUTCOME_INFO, round: log.round, hp: log.hp, used, secs: Math.round((performance.now() - t0) / 1000), hatched: !!g.flags.seed_hatched };
+  }, [id, SETUP[id], tune, INTERACT, LEARNED[id]]);
   await p.close();
   return { ...res, errs };
 }
@@ -72,7 +82,10 @@ async function runOne(browser, id, tune) {
     const wins = out.filter((o) => o.r === 'victory').length;
     if (verbose) out.forEach((o) => console.log('  ', o.r, o.info));
     const errs = [...new Set(out.flatMap((o) => o.errs))];
-    console.log(`${id}: ${wins}/${runs} wins | rounds ${out.map((o) => o.round).join(',')} | hatched ${out.filter((o) => o.hatched).length} | secs ${out.map((o) => o.secs).join(',')} | hp% ${out.filter((o) => o.hp).map((o) => o.hp.join('/')).join(' ')} | left ${out.filter((o) => o.r !== 'victory').map((o) => '[' + o.left + ']').join(' ')}${errs.length ? ' | ERR ' + errs.slice(0, 3).join(' ; ') : ''}`);
+    const kos = out.filter((o) => o.hp).map((o) => o.hp.filter((h) => h === 0).length);
+    const used = {};
+    for (const o of out) for (const u of o.used || []) used[u] = (used[u] || 0) + 1;
+    console.log(`${id}${INTERACT ? '+spots' : ''}: ${wins}/${runs} wins | KOs ${kos.join(',')} | spots ${JSON.stringify(used)} | rounds ${out.map((o) => o.round).join(',')} | hatched ${out.filter((o) => o.hatched).length} | secs ${out.map((o) => o.secs).join(',')} | hp% ${out.filter((o) => o.hp).map((o) => o.hp.join('/')).join(' ')} | left ${out.filter((o) => o.r !== 'victory').map((o) => '[' + o.left + ']').join(' ')}${errs.length ? ' | ERR ' + errs.slice(0, 3).join(' ; ') : ''}`);
   }
   await browser.close();
 })();

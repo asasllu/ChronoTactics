@@ -1449,6 +1449,16 @@
   CT.getPortrait = function (id, emotion) {
     const k = id + '|' + emotion;
     if (!cache[k]) {
+      // Recast portraits (sheets/portraits_recast.js, tools/crono_lab/portraits_recast.py):
+      // 48x48 per emotion, drawn to match the CT menu portraits. A missing emotion falls
+      // back to sad for `broken`, else neutral.
+      const set = CT.RECAST_PORTRAITS && CT.RECAST_PORTRAITS[id];
+      if (set) {
+        const em = String(emotion || 'neutral');
+        const rows = set[em] || (em === 'broken' && set.sad) || set.neutral || Object.values(set)[0];
+        cache[k] = ripPortrait(rows);
+        return cache[k];
+      }
       const rip = CT.RIP_PORTRAITS && CT.RIP_PORTRAITS[id];
       if (rip) {
         // The original Chrono Trigger portrait (48x48), centred in the 64x64 frame.

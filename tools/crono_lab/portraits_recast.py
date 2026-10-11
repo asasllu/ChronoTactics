@@ -385,8 +385,8 @@ def curator(e):
     if c.get('spikes'):      # anger: hard shards of light knit into a frown above the slit
         cx = int(ax)
         cy = int(ay)
-        for (dx_, dy_, col) in ((-3, -3, GLOW[5]), (-2, -2, GLOW[6]), (-1, -1, GLOW[7]),
-                                (3, -3, GLOW[5]), (2, -2, GLOW[6]), (1, -1, GLOW[7])):
+        for (dx_, dy_, col) in ((-4, -2, GLOW[5]), (-3, -1, GLOW[6]), (-2, 0, GLOW[5]),
+                                (4, -2, GLOW[5]), (3, -1, GLOW[6]), (2, 0, GLOW[5])):
             p.put(cx + dx_, cy + dy_, col)
     if c.get('flare'):       # surprise: a cross-flare
         cy = int((ay + by2) / 2)
@@ -403,6 +403,627 @@ def curator(e):
     if c.get('gleam'):       # resolve: a glint on the brow ornament
         gx, gy = T([(24.5, 8.6)])[0]
         p.stamp(int(gx) - 2, int(gy) - 2, ['..w..', '..w..', 'wwWww', '..w..', '..w..'], {'w': GOLD[4], 'W': '#ffffff'})
+    return p
+
+
+
+# =========================================================================================
+# SPEKKIO as the FROG KING (frog_king.png): a big green frog in a jewelled crown.
+# =========================================================================================
+FROGG = ['#0c1a04', '#1e3a0c', '#346414', '#4e8c1c', '#74b42c', '#a4d850', '#d4f090']
+CREAM = ['#5c4418', '#a08040', '#d8c078', '#f4e8b0', '#fffcec']
+IRISB = ['#0a1438', '#1c3480', '#3460c0', '#5c90e8', '#a0c8ff']
+VELVET = ['#2c0408', '#5c0c14', '#901c1c', '#c03424', '#e86848']
+GEMB = ['#081040', '#1834a0', '#3c6ce0', '#90c0ff', '#ffffff']
+FK = {  # lids: (top lid drop 0..1 of the eye, slant + = inner corner lower), crown lift, iris scale
+    'neutral': dict(lid=0.38, slant=0.0, lift=0, iris=1.0, mouth='smile'),
+    'happy': dict(lid=None, slant=0, lift=-1, iris=1.0, mouth='grin', blush=True),
+    'angry': dict(lid=0.42, slant=0.5, lift=1, iris=0.85, mouth='roar', vein=True),
+    'sad': dict(lid=0.45, slant=-0.45, lift=1.5, iris=1.0, mouth='frown', tear=True),
+    'surprised': dict(lid=0.0, slant=0, lift=-4, iris=0.6, mouth='o', sweat=True),
+    'determined': dict(lid=0.5, slant=0.25, lift=0, iris=1.0, mouth='firm', gleam=True),
+}
+
+
+@portrait('spekkio', EMO6)
+def frog_king(e):
+    c = FK[e]
+    p = Pic('#e6eef0', '#0a1404')
+    m = p.mask
+    p.material('body', FROGG, 3, z=1, edge=True, edgecol=FROGG[0])
+    p.material('throat', CREAM, 3, z=2, edge=True, edgecol=CREAM[0])
+    p.material('mouthin', ['#300808', '#701820', '#b03848', '#e07080', '#f8a8b0'], 1, z=3, edge=True, edgecol=FROGG[0])
+    p.material('tongue', ['#601020', '#a02838', '#d85868', '#f490a0', '#ffc8d0'], 2, z=4, edge=True, edgecol='#401018')
+    p.material('bulge', FROGG, 3, z=5, edge=True, edgecol=FROGG[0])
+    p.material('eye', CREAM, 3, z=6, edge=False)
+    p.material('iris', IRISB, 2, z=7, edge=True, edgecol=IRISB[0])
+    p.material('pupil', ['#04040c'], 0, z=8)
+    p.material('lid', FROGG, 4, z=9, edge=True, edgecol=FROGG[0])
+    p.material('velvet', VELVET, 3, z=10, edge=True, edgecol='#200000')
+    p.material('crown', GOLD, 3, z=11, edge=True, edgecol=GOLD[0])
+    p.material('gem', GEMB, 2, z=12, edge=True, edgecol=GEMB[0])
+    p.material('ruby', VELVET, 3, z=12, edge=True, edgecol='#200000')
+    # Body: a squat, wide dome.
+    body = [(-4, 50), (-3, 36), (1, 26), (6, 20), (14, 14), (24, 11), (34, 14), (42, 20), (47, 26), (51, 36), (52, 50)]
+    p.fill('body', m('blob', body))
+    p.shade(+1, m('blob', [(2, 30), (6, 22), (13, 18), (10, 25), (5, 34)]), on=['body'])
+    p.shade(-1, m('blob', [(36, 26), (46, 26), (50, 38), (50, 50), (40, 50), (42, 38)]), on=['body'])
+    p.shade(-1, m('blob', [(-2, 40), (6, 40), (8, 50), (-2, 50)]), on=['body'])
+    # Throat / belly, the big cream circle of the sprite.
+    p.fill('throat', m('ell', 24, 47, 15.5, 10.5))
+    p.shade(-1, m('blob', [(31, 39), (40, 44), (40, 50), (30, 50)]), on=['throat'])
+    p.shade(+1, m('blob', [(14, 41), (20, 38), (22, 41), (15, 44)]), on=['throat'])
+    # Mouth.
+    mo = c['mouth']
+    if mo in ('grin', 'roar', 'o'):
+        if mo == 'grin':
+            hole = [(7, 29), (16, 31), (24, 31.6), (32, 31), (41, 29), (37, 35.6), (24, 39), (11, 35.6)]
+        elif mo == 'roar':
+            hole = [(8, 31), (16, 29.6), (24, 29.2), (32, 29.6), (40, 31), (37, 38), (24, 40.6), (11, 38)]
+        else:
+            hole = [(19, 30.4), (24, 29.6), (29, 30.4), (30, 34.6), (24, 37), (18, 34.6)]
+        p.fill('mouthin', m('blob', hole))
+        if mo != 'o':
+            p.fill('tongue', m('ell', 24, 38.6, 7.5, 3.6), on=['mouthin'])
+    # Warts: paler spots scattered over the hide.
+    for (wx, wy, r) in [(5, 28, 1.2), (9, 24, 0.9), (40, 24, 1.0), (44, 30, 1.2), (4, 36, 1.0), (45, 38, 0.9),
+                        (16, 24, 0.8), (33, 23.6, 0.8)]:
+        p.shade(+1, m('ell', wx, wy, r, r), on=['body'])
+    # Eye bulges and eyes (sitting high, like the sprite).
+    for (ex, ey) in ((14, 17.5), (34, 17.5)):
+        p.fill('bulge', m('ell', ex, ey, 8.6, 8.0))
+        p.shade(+1, m('ell', ex - 3, ey - 3.4, 3.6, 2.4), on=['bulge'])
+        p.shade(-1, m('blob', [(ex + 2, ey + 6), (ex + 8, ey + 1), (ex + 8.6, ey + 5), (ex + 4, ey + 8)]), on=['bulge'])
+        p.fill('eye', m('ell', ex + 0.4, ey + 0.2, 6.0, 5.6))
+        p.shade(-1, m('blob', [(ex - 5.6, ey + 1.4), (ex + 6.4, ey + 1.4), (ex + 4, ey + 5.6), (ex - 3, ey + 5.6)]), on=['eye'])
+        ir = 3.6 * c['iris']
+        ix = ex + (0.9 if ex < 24 else 0.0)
+        p.fill('iris', m('ell', ix, ey + 0.6, ir, ir * 1.05), on=['eye'])
+        p.shade(+1, m('ell', ix + 0.6, ey + 1.6, ir * 0.6, ir * 0.5), on=['iris'])
+        p.fill('pupil', m('ell', ix, ey + 0.6, ir * 0.42, ir * 0.62), on=['iris'])
+        # Lids.
+        if c['lid'] is None:      # happy: lids shut (the smiling arcs are drawn at 1x)
+            p.fill('bulge', m('ell', ex + 0.4, ey + 0.2, 6.4, 6.0), on=['eye', 'iris', 'pupil'])
+            p.shade(+1, m('ell', ex - 1, ey - 1.6, 4.0, 2.4), on=['bulge'])
+        elif c['lid'] > 0:
+            inner = 1 if ex < 24 else -1          # +x toward the face centre for the left eye
+            drop = c['lid'] * 11.2
+            sl = c['slant'] * 6
+            yo = ey - 5.8 + drop - sl / 2          # outer corner
+            yi = ey - 5.8 + drop + sl / 2          # inner corner
+            xo, xi = (ex - 7, ex + 7.4) if inner == 1 else (ex + 7.4, ex - 7)
+            p.fill('lid', m('poly', [(xo, ey - 9), (xi, ey - 9), (xi, yi), (xo, yo)]), on=['eye', 'iris', 'pupil'])
+    p.shade(-1, m('rect', 0, 0, 48, 48), on=['lid'])
+    # Crown: red velvet cap, gold band and points, a blue jewel in front, rubies on the band.
+    L = c['lift'] - 1.5
+    p.fill('velvet', m('blob', [(16.4, 9.4 + L), (18.4, 4 + L), (24, 1.6 + L), (29.6, 4 + L), (31.6, 9.4 + L), (24, 10.6 + L)]))
+    p.shade(-1, m('blob', [(25, 2 + L), (30, 4 + L), (31.6, 9.6 + L), (26.6, 9.6 + L)]), on=['velvet'])
+    p.shade(+1, m('ell', 20.6, 5.4 + L, 1.6, 1.4), on=['velvet'])
+    pts = [(14.6, 13 + L), (14.4, 7.4 + L), (17, 10 + L), (19.4, 5.2 + L), (21.8, 9.4 + L), (24, 3.6 + L),
+           (26.2, 9.4 + L), (28.6, 5.2 + L), (31, 10 + L), (33.6, 7.4 + L), (33.4, 13 + L), (24, 14.2 + L)]
+    p.fill('crown', m('poly', pts))
+    p.fill('crown', m('blob', [(14.4, 11 + L), (24, 11.8 + L), (33.6, 11 + L), (33.4, 14 + L), (24, 15.2 + L), (14.6, 14 + L)]))
+    p.shade(-1, m('blob', [(26, 9 + L), (34, 7 + L), (34, 14 + L), (26, 15 + L)]), on=['crown'])
+    p.shade(+1, m('blob', [(14.6, 11.4 + L), (20, 11.6 + L), (20, 12.6 + L), (14.6, 12.6 + L)]), on=['crown'])
+    p.fill('gem', m('poly', [(24, 9 + L), (26.4, 12 + L), (24, 15 + L), (21.6, 12 + L)]))
+    p.shade(+1, m('poly', [(24, 9.4 + L), (24, 12 + L), (22.2, 12 + L)]), on=['gem'])
+    for gx in (17.4, 30.6):
+        p.fill('ruby', m('ell', gx, 12.8 + L, 1.4, 1.3))
+    p.reduce()
+    p.render()
+    ink = FROGG[0]
+    # Pearls on the crown's points.
+    Li = int(round(L))
+    for (qx, qy) in ((14, 7), (19, 4), (24, 2), (28, 4), (33, 7)):
+        p.put(qx, qy + Li, '#fffcec')
+    # Mouth line for the closed mouths.
+    if mo == 'smile':
+        p.line([(6, 29), (14, 31.4), (24, 32), (34, 31.4), (42, 29)], ink)
+        p.put(5, 28, ink); p.put(42, 28, ink)
+    elif mo == 'frown':
+        p.line([(7, 33), (14, 31), (24, 30.4), (34, 31), (41, 33)], ink)
+    elif mo == 'firm':
+        p.line([(6, 30.4), (14, 31.4), (24, 31.6), (34, 31.4), (42, 30.4)], ink)
+    # Nostrils.
+    p.put(21, 25, ink); p.put(27, 25, ink)
+    # Eye glints.
+    if c['lid'] is None:
+        for ex in (14, 34):
+            p.stamp(ex - 4, 16, ['..kkkkk..', '.k.....k.', 'k.......k'], {'k': ink})
+    else:
+        for ex in (14, 34):
+            gx = int(ex + (0.9 if ex < 24 else 0) - 1.5 * c['iris'])
+            gy = int(17.5 + 0.6 - 1.5 * c['iris'])
+            if not (c['lid'] and c['lid'] > 0.45):
+                p.put(gx, gy, '#ffffff')
+    if c.get('blush'):
+        for bx in (6, 37):
+            p.stamp(bx, 26, ['p.p.p', '.p.p.'], {'p': '#f08080'})
+    if c.get('vein'):
+        p.stamp(39, 3, ['.r.r.', 'rr.rr', '.....', 'rr.rr', '.r.r.'], {'r': '#e02828'})
+    if c.get('tear'):
+        p.stamp(6, 22, ['w', 'b', 'b', 'bb', '.b'], {'w': '#ffffff', 'b': '#90c8f8'})
+    if c.get('sweat'):
+        p.stamp(41, 6, ['.w.', 'wbb', 'bbb', '.b.'], {'w': '#ffffff', 'b': '#90c8f8'})
+    if c.get('gleam'):
+        p.stamp(25, 4 + c['lift'], ['..w..', '..w..', 'wwWww', '..w..', '..w..'], {'w': GOLD[4], 'W': '#ffffff'})
+    return p
+
+
+
+# =========================================================================================
+# Shared 3/4 human head (facing screen-right) for the NPCs.
+# =========================================================================================
+FACE3Q = [(16.4, 15.2), (21.4, 11.8), (29, 11.6), (34.4, 14.6), (36.6, 21), (36, 27.6), (33.6, 33.8),
+          (28.4, 37.8), (23, 37.2), (18.8, 33.2), (17, 27), (16.4, 21)]
+NEAR = dict(CY_NEAR, broken=['......', '.kkkkk', 'kwhiIk', '.ssss.'])
+FAR = dict(CY_FAR, broken=['.....', 'kkkk.', 'hiIwk', '.sss.'])
+# Lashed variants (Leene): a flick at the outer corner.
+NEAR_L = {k: (['k' + r[1:] if i == 1 and k not in ('happy',) else r for i, r in enumerate(v)]) for k, v in NEAR.items()}
+BROW_N = {k: [(a[0] - 18, a[1] - 19), (b[0] - 18, b[1] - 19)] for k, (a, b) in CY_BROW_N.items()}
+BROW_F = {k: [(a[0] - 30, a[1] - 19), (b[0] - 30, b[1] - 19)] for k, (a, b) in CY_BROW_F.items()}
+BROW_N['broken'] = [(0, -2), (6, -3)]
+BROW_F['broken'] = [(-1, -3), (5, -2)]
+MOUTHS = {
+    'neutral': ['kkkk'],
+    'happy': ['k.....k', '.kkkkk.', '.kwwwk.', '..kkk..'],
+    'angry': ['kkkkkkk', 'kwwwwwk', 'kmmmmmk', '.kkkkk.'],
+    'sad': ['.kkk.', 'k...k'],
+    'surprised': ['.kk.', 'kmmk', 'kmmk', '.kk.'],
+    'determined': ['kkkkk'],
+    'broken': ['k...k', '.kkk.'],
+}
+SOFT_MOUTHS = dict(MOUTHS, neutral=['.kk.'], happy=['k....k', '.kkkk.'], determined=['kkk'],
+                   angry=['.kkkk.', 'kwwwwk', '.kkkk.'], sad=['.kk.', 'k..k'])
+
+
+def face3q(p, skin='skin', ear=True, shade=True, pts=FACE3Q):
+    m = p.mask
+    if ear:
+        p.fill('ear', m('ell', 15.2, 24.2, 2.3, 3.4))
+        p.shade(-1, m('ell', 15.6, 24.6, 1.0, 2.0), on=['ear'])
+    p.fill(skin, m('blob', pts))
+    if shade:
+        p.shade(+1, m('blob', [(19, 13.6), (25, 12.2), (23, 15), (19.2, 17.2)]), on=[skin])
+        p.shade(-1, m('blob', [(30, 14), (35, 15.4), (36.8, 22), (35.6, 29), (32, 31.6), (32.6, 24), (31, 18)]), on=[skin])
+        p.shade(-1, m('blob', [(21, 35), (27, 36.4), (31, 35), (28, 37.6), (23, 37.4)]), on=[skin])
+
+
+def features3q(p, e, iris=('#4a6ab0', '#24346c'), brow=None, lips='#2a0c06', near=NEAR, far=FAR,
+               mouths=MOUTHS, dy=0, mouth_dy=0, skin=SKIN, nose=True, brows=True, fx=None):
+    cm = {'k': INK, 'w': '#ece4ea', 'i': iris[0], 'I': iris[1], 'h': '#fff8f0', 's': skin[2], 'm': '#802c20'}
+    eyes(p, [(18, 19 + dy, near), (29, 19 + dy, far)], e, cm)
+    if brows:
+        for (ox, oy), tab in (((18, 19 + dy), BROW_N), ((29, 19 + dy), BROW_F)):
+            (a, b) = tab.get(e, tab['neutral'])
+            p.line([(ox + a[0], oy + a[1]), (ox + b[0], oy + b[1])], brow or INK)
+    if nose:
+        p.stamp(26, 25 + dy, ['.s', 'ss', 'k.'], {'s': skin[2], 'k': skin[1]})
+    rows = mouths.get(e, mouths['neutral'])
+    p.stamp(int(round(26.5 - len(rows[0]) / 2)), 32 + dy + mouth_dy, rows, {'k': lips, 'w': '#f4ece4', 'm': '#902c28'})
+    fx = fx or {}
+    if e == 'angry' and fx.get('vein', True):
+        p.stamp(36, 9 + dy, ['.r.r.', 'rr.rr', '.....', 'rr.rr', '.r.r.'], {'r': '#e02828'})
+    if e == 'sad' and fx.get('tear', True):
+        p.stamp(19, 23 + dy, ['w', 'b', 'b'], {'w': '#ffffff', 'b': '#90c8f8'})
+    if e == 'surprised' and fx.get('sweat', True):
+        p.stamp(38, 12 + dy, ['.w.', 'wbb', 'bbb', '.b.'], {'w': '#ffffff', 'b': '#90c8f8'})
+    if e == 'happy' and fx.get('blush', True):
+        p.stamp(18, 27 + dy, ['p.p.p'], {'p': '#f07878'})
+        p.stamp(31, 27 + dy, ['p.p'], {'p': '#f07878'})
+
+
+
+# =========================================================================================
+# KING GUARDIA: the npc_king sprite is a gold-armoured knight-king in a red cape, so the
+# portrait is a warrior king: gold crown-helm with a white crest, red cape, brown beard.
+# =========================================================================================
+REDC = ['#2c0408', '#600c18', '#981028', '#c82840', '#e85868', '#f8a0a0']
+KGOLD = ['#3c2008', '#784010', '#a87018', '#d0a010', '#e8cc28', '#fcf080', '#fffcd8']
+
+
+@portrait('king', EMO6)
+def king(e):
+    p = Pic('#ece6e0', INK)
+    m = p.mask
+    p.material('cape', REDC, 2, z=1, edge=True)
+    p.material('plate', KGOLD, 3, z=2, edge=True, edgecol=KGOLD[0])
+    p.material('collar', REDC, 3, z=3, edge=True)
+    p.material('chest', KGOLD, 2, z=4, edge=True, edgecol=KGOLD[0])
+    p.material('ear', SKIN, 3, z=5, edge=True)
+    p.material('skin', SKIN, 3, z=6, edge=True)
+    p.material('beard', BROWN, 2, z=7, edge=True)
+    p.material('helm', KGOLD, 3, z=8, edge=True, edgecol=KGOLD[0])
+    p.material('crown', KGOLD, 4, z=8.5, edge=True, edgecol=KGOLD[1])
+    p.material('crest', ['#606070', '#9090a8', '#c8c8d8', '#f0f0f8', '#ffffff'], 3, z=9, edge=True, edgecol=KGOLD[0])
+    p.material('jewel', REDC, 3, z=10, edge=True, edgecol=REDC[0])
+    # Cape and the high red collar of the sprite.
+    p.fill('cape', m('blob', [(1, 48), (0, 36), (4, 27), (12, 22), (24, 21), (37, 22), (45, 28), (48, 37), (48, 48)]))
+    p.shade(-1, m('blob', [(32, 24), (44, 27), (48, 40), (48, 48), (36, 48)]), on=['cape'])
+    p.shade(+1, m('blob', [(2, 36), (5, 28), (12, 24), (8, 32)]), on=['cape'])
+    # Gold pauldrons.
+    p.fill('plate', m('blob', [(-2, 48), (-1, 40), (5, 36), (14, 37), (18, 42), (19, 48)]))
+    p.fill('plate', m('blob', [(31, 48), (32, 41), (37, 36.6), (45, 36.6), (50, 40), (50, 48)]))
+    p.shade(+1, m('blob', [(1, 41), (6, 37.4), (13, 38), (8, 41.4)]), on=['plate'])
+    p.shade(+2, m('blob', [(3, 40), (6, 38.4), (9, 38.6), (6, 39.8)]), on=['plate'])
+    p.shade(-1, m('blob', [(12, 44), (19, 42), (19, 48), (11, 48)]), on=['plate'])
+    p.shade(-1, m('blob', [(41, 43), (49, 41), (49, 48), (39, 48)]), on=['plate'])
+    p.shade(+1, m('blob', [(34, 40.6), (38, 37.4), (44, 37.6), (40, 41)]), on=['plate'])
+    p.fill('jewel', m('ell', 9, 43.4, 1.6, 1.6))
+    p.fill('jewel', m('ell', 40, 43.4, 1.6, 1.6))
+    p.fill('collar', m('blob', [(12, 47), (13, 37), (18, 33), (33, 33), (37, 37), (37, 47), (25, 48.6)]))
+    p.shade(-1, m('blob', [(28, 34), (36, 37), (37, 47), (30, 47)]), on=['collar'])
+    p.shade(+1, m('blob', [(14, 39), (18, 35), (20, 40), (16, 45)]), on=['collar'])
+    # Gold breastplate under the beard.
+    p.fill('chest', m('blob', [(17, 49), (16.6, 40), (24, 37.4), (33, 40), (33, 49)]))
+    p.shade(-1, m('blob', [(27, 39), (33, 40), (33, 49), (28, 49)]), on=['chest'])
+    p.shade(+1, m('blob', [(18, 41), (22, 39.4), (21, 44), (18, 45)]), on=['chest'])
+    p.fill('jewel', m('ell', 24.6, 45.4, 1.6, 1.6))
+    # Head.
+    face3q(p)
+    beard = [(17, 23), (18.6, 23), (19.6, 29), (22.6, 31.6), (25.4, 30.6), (28.4, 31.6), (33, 29), (35, 26),
+             (36.4, 27), (35, 34.6), (30, 40.6), (24.6, 42), (19.4, 38.4), (17.4, 31)]
+    p.fill('beard', m('blob', beard), on=['skin', 'ear', 'collar', 'cape'])
+    p.fill('beard', m('blob', [(21.4, 30), (24.6, 28.6), (27, 29.2), (30.6, 28.4), (33, 29.6), (30, 30.8), (27, 30.4), (24, 31.2)]))
+    p.shade(-1, m('blob', [(27, 35), (35, 30), (34, 36), (28, 41.4)]), on=['beard'])
+    p.shade(+1, m('blob', [(18.4, 26), (19.6, 29), (21.6, 33), (19.4, 33)]), on=['beard'])
+    p.shade(+1, m('stroke', [(22, 30), (25, 29.4)], 0.9), on=['beard'])
+    # Crown-helm: a gold dome down to the brow with cheek guards, open face.
+    p.fill('helm', m('blob', [(10.6, 26), (9.6, 16), (12, 10.6), (17.6, 7.6), (25, 6.6), (32, 7.6), (37.6, 10.6),
+                              (40, 16), (39.6, 24), (37.4, 22), (36.6, 16.2), (31, 14.6), (24, 15), (18.4, 16.6),
+                              (16.4, 22), (15.6, 30), (12.6, 31)]))
+    p.shade(+1, m('blob', [(11, 20), (11.6, 13), (14, 16), (13, 22)]), on=['helm'])
+    p.material('velvet', REDC, 3, z=7.5, edge=True)
+    p.fill('velvet', m('blob', [(14, 12), (17, 6.4), (24.6, 3.6), (32, 6), (36, 11), (24.6, 12)]), on=['bg', 'helm'])
+    p.shade(+1, m('ell', 19, 7.6, 2.2, 1.4), on=['velvet'])
+    p.shade(-1, m('blob', [(31, 5), (38, 10), (40, 18), (39.4, 24), (37, 21), (35.6, 13)]), on=['helm'])
+    # Crown band with points across the brow.
+    p.fill('crown', m('poly', [(12.4, 16.4), (11.6, 7.4), (15.6, 11.6), (18.4, 4.4), (21.4, 10.4), (24.6, 1.6), (27.8, 10.2),
+                               (31, 4.2), (33.4, 10.6), (37.6, 6.6), (38, 16.4), (31, 14.6), (24, 15), (17.6, 16.6)]))
+    p.shade(-1, m('blob', [(29, 9), (38, 6), (38.4, 16.6), (29, 15)]), on=['crown'])
+    p.shade(+1, m('stroke', [(13, 14.6), (18, 13.8), (24, 13), (30, 12.8)], 1.0), on=['crown'])
+    # White crest spike up the front (the sprite's white streak).
+    p.fill('jewel', m('poly', [(24.6, 9.6), (26.4, 12), (24.6, 14.4), (22.8, 12)]))
+    p.fill('jewel', m('ell', 16.4, 14.2, 1.1, 1.1))
+    p.fill('jewel', m('ell', 33, 13.4, 1.1, 1.1))
+    p.reduce()
+    p.render()
+    features3q(p, e, iris=('#6a4a30', '#3a2414'), brow=BROWN[0], fx={'blush': False}, lips='#2a0c06')
+    return p
+
+
+
+# =========================================================================================
+# QUEEN LEENE (npc_leene): a red-haired court lady in a white-and-lavender headdress and a
+# gold gown with a lavender bodice.
+# =========================================================================================
+REDH = ['#2c0606', '#5c1412', '#a0302f', '#c84e40', '#e87860', '#ffb090']
+LAV = ['#1c1838', '#3c3870', '#6068a0', '#8090c0', '#a8b8e0', '#d8e0f8']
+WHITE = ['#585870', '#9090a8', '#c4c4d4', '#dfdfe8', '#f4f4fa', '#ffffff']
+GOWN = ['#401404', '#7c2c08', '#bf500f', '#df8f30', '#f4c060', '#fff0b0']
+FACE_F = [(16.6, 15), (21.4, 11.8), (29, 11.6), (34.4, 14.6), (36.4, 21), (35.6, 27), (32.6, 32.4), (28.4, 35.6),
+          (24.4, 35.8), (20, 32.6), (17.6, 27), (16.6, 21)]
+
+
+@portrait('leene', EMO6)
+def leene(e):
+    p = Pic('#f0e6ec', INK)
+    m = p.mask
+    p.material('hairback', REDH, 2, z=1, edge=True, edgecol=REDH[0])
+    p.material('ear', SKIN, 3, z=5.5, edge=True)
+    p.material('gown', GOWN, 3, z=2, edge=True, edgecol=GOWN[0])
+    p.material('bodice', LAV, 3, z=3, edge=True)
+    p.material('neck', SKIN, 3, z=4, edge=True)
+    p.material('ruff', WHITE, 3, z=5, edge=True, edgecol=WHITE[0])
+    p.material('skin', SKIN, 4, z=6, edge=True, edgecol='#602818')
+    p.material('hair', REDH, 2, z=7, edge=True, edgecol=REDH[0])
+    p.material('veil', WHITE, 3, z=8, edge=True, edgecol=WHITE[0])
+    p.material('trim', LAV, 3, z=9, edge=True)
+    p.material('gold', GOLD, 4, z=10, edge=True, edgecol=GOLD[1])
+    p.material('gem', GEMB, 2, z=11, edge=True, edgecol=GEMB[0])
+    # Long red hair falling behind the shoulders.
+    p.fill('hairback', m('blob', [(4, 48), (4, 34), (6, 20), (10, 10), (18, 5), (29, 4.6), (37, 8), (41.6, 17), (42, 31), (45, 48)]))
+    p.shade(-1, m('blob', [(34, 14), (42, 20), (43, 34), (45, 48), (36, 48), (37, 30)]), on=['hairback'])
+    p.shade(+1, m('blob', [(6, 26), (8, 16), (12, 11), (10, 22), (8, 34)]), on=['hairback'])
+    for st in ([(8, 46), (7, 34), (9, 22)], [(39, 46), (39.6, 32), (38, 20)], [(11, 46), (10, 36)]):
+        p.shade(-1, m('stroke', st, 0.9), on=['hairback'])
+    # Gown: gold shoulders, lavender bodice, white ruffed collar.
+    p.fill('gown', m('blob', [(-2, 49), (0, 42), (8, 38.4), (18, 37), (30, 37), (40, 38.4), (48, 42), (50, 49)]))
+    p.shade(-1, m('blob', [(30, 39), (42, 39), (50, 44), (50, 49), (32, 49)]), on=['gown'])
+    p.shade(+1, m('blob', [(1, 43), (6, 39.6), (12, 39), (6, 43)]), on=['gown'])
+    p.fill('bodice', m('blob', [(14, 49), (15, 41), (24.4, 39.4), (34, 41), (35, 49)]))
+    p.shade(-1, m('blob', [(27, 41), (35, 42), (35, 49), (28, 49)]), on=['bodice'])
+    p.fill('neck', m('blob', [(21.6, 30), (29.6, 30), (30, 39), (25, 41), (21.2, 39)]))
+    p.shade(-1, m('blob', [(20, 30), (31, 30), (31, 35), (25, 36.4), (20, 34.4)]), on=['neck'])
+    p.fill('ruff', m('blob', [(14.4, 42), (17, 38), (21, 39.6), (25, 41.4), (29.4, 39.6), (33.4, 38), (36, 42), (31, 44), (25, 44.6), (19, 44)]))
+    p.shade(-1, m('blob', [(27, 41), (36, 41.4), (31, 44), (26, 44.6)]), on=['ruff'])
+    p.fill('gold', m('stroke', [(19, 37.6), (22, 39.6), (25, 40.4), (28, 39.6), (31, 37.6)], 0.9))
+    p.fill('gem', m('poly', [(25, 39.6), (26.4, 41.2), (25, 42.8), (23.6, 41.2)]))
+    face3q(p, ear=False, pts=FACE_F)
+    # Bangs and the side lock that frames the near cheek.
+    p.fill('hair', m('blob', [(14.4, 22), (14.6, 14), (19, 9), (26, 7.6), (33, 9), (37.6, 14), (38, 21), (35.4, 15.6),
+                              (31, 13.6), (28.4, 16.4), (26, 13.6), (22, 17), (19.4, 15.4), (17.4, 21), (17, 30), (15, 34), (13.6, 28)]))
+    p.shade(+1, m('blob', [(15, 18), (17, 12), (22, 9.4), (19.6, 13), (16.6, 19)]), on=['hair'])
+    p.shade(-1, m('blob', [(31, 10), (37, 13), (38, 21), (35, 15)]), on=['hair'])
+    p.shade(-1, m('stroke', [(26.4, 9), (26, 13)], 0.9), on=['hair'])
+    p.shade(-1, m('stroke', [(15.6, 32), (16, 24)], 0.9), on=['hair'])
+    # The white headdress band over the crown, lavender trim, gold diadem with a sapphire.
+    p.fill('veil', m('blob', [(9.6, 14), (11.6, 7.4), (17.6, 3.4), (26, 2), (33.6, 3.6), (38.4, 7.6), (40, 12.6),
+                              (36, 10.4), (26, 8.6), (16, 10), (11.6, 14.6)]))
+    p.shade(-1, m('blob', [(30, 3.4), (38, 7), (40, 12.6), (34, 9.4)]), on=['veil'])
+    p.shade(+1, m('blob', [(13, 8.4), (18, 4.6), (24, 3.2), (18, 6.4)]), on=['veil'])
+    p.fill('trim', m('stroke', [(10.6, 14.6), (16, 10.4), (26, 9), (36, 10.6), (40, 13.4)], 1.4))
+    p.fill('gold', m('stroke', [(13, 11.2), (18, 9.2), (26, 8.2), (34, 9.4)], 0.9))
+    p.fill('gem', m('ell', 26, 8.2, 1.4, 1.3))
+    p.reduce()
+    p.render()
+    near = {'neutral': ['kkkkkk', 'kwhiIk', '.wiIIk', '..sss.'], 'happy': ['......', 'kkkkk.', 'k....k', '......'],
+            'angry': ['kk....', '.kkkkk', '.whiIk', '..wII.'], 'sad': ['....kk', 'kkkkk.', 'kwhiIk', '.wiII.'],
+            'surprised': ['.kkkk.', 'kwhiIk', 'kwiIIk', '.kkkk.'], 'determined': ['kkkkkk', 'kkhiIk', '.wiIIk', '..ss..']}
+    features3q(p, e, iris=('#3c8c6c', '#1c4838'), brow=REDH[0], lips='#8c2c2c', near=near,
+               mouths=SOFT_MOUTHS, mouth_dy=0, skin=SKIN, fx={'vein': False})
+    # A touch of lip colour.
+    if e in ('neutral', 'determined', 'sad'):
+        p.put(26, 33, '#e07070')
+    return p
+
+
+
+def bushy_brows(p, e, mat, dy=0, big=1.0):
+    """Thick brows painted at 4x (white for the old men), angled by emotion."""
+    m = p.mask
+    for (ox, oy), tab, sgn in (((18, 19 + dy), BROW_N, 1), ((29, 19 + dy), BROW_F, -1)):
+        (a, b) = tab.get(e, tab['neutral'])
+        x0, y0 = ox + a[0] - (1 if sgn == 1 else -0.6), oy + a[1]
+        x1, y1 = ox + b[0] + (1 if sgn == -1 else -0.6), oy + b[1]
+        t = 1.7 * big
+        p.fill(mat, m('poly', [(x0, y0 - t * 0.6), (x1, y1 - t * 0.6), (x1, y1 + t * 0.5), (x0, y0 + t * 0.9)]))
+        # Tufts hanging off the outer end.
+        ex_, ey_ = (x0, y0) if sgn == 1 else (x1, y1)
+        p.fill(mat, m('poly', [(ex_ + 2 * sgn, ey_ - 0.6), (ex_ - 2.6 * sgn, ey_ + 2.4), (ex_ + 0.6 * sgn, ey_ + 1.4)]))
+
+
+# =========================================================================================
+# GASPAR (npc_gaspar): a bald old man with a white beard and a cane, a brown coat over a
+# blue robe.
+# =========================================================================================
+COAT = ['#2c1408', '#5a3010', '#86501c', '#b06c20', '#cc8a3c', '#e8b070']
+ROBEB = ['#141430', '#282860', '#3c3c88', '#5050a0', '#8080d0', '#b0b0f0']
+BALD = [(16, 20), (15.6, 13), (18.6, 7.6), (24.6, 4.6), (31, 5.4), (35.6, 9.6), (37, 16.6), (36.6, 23), (36, 27.6),
+        (33.6, 33.8), (28.4, 37.8), (23, 37.2), (18.8, 33.2), (17, 27)]
+
+
+@portrait('gaspar', EMO6)
+def gaspar(e):
+    p = Pic('#ebe7dc', INK)
+    m = p.mask
+    p.material('robe', ROBEB, 3, z=1, edge=True)
+    p.material('coat', COAT, 3, z=2, edge=True, edgecol=COAT[0])
+    p.material('tuft', WHITE, 3, z=3, edge=True, edgecol=WHITE[0])
+    p.material('ear', SKIN, 3, z=4, edge=True)
+    p.material('skin', SKIN, 3, z=5, edge=True)
+    p.material('beard', WHITE, 3, z=6, edge=True, edgecol=WHITE[0])
+    p.material('mous', WHITE, 4, z=7, edge=True, edgecol=WHITE[0])
+    p.material('brow', WHITE, 4, z=8, edge=True, edgecol=WHITE[0])
+    # Blue robe and the brown coat's broad collar.
+    p.fill('robe', m('blob', [(-2, 49), (0, 42), (8, 38), (18, 36.4), (31, 36.4), (41, 38), (49, 42), (50, 49)]))
+    p.fill('coat', m('blob', [(-2, 49), (-1, 41), (6, 37), (13, 36.6), (19, 42), (18, 49)]))
+    p.fill('coat', m('blob', [(31, 49), (30, 42), (36, 36.6), (43, 37), (50, 41), (50, 49)]))
+    p.shade(+1, m('blob', [(1, 42), (6, 38.4), (12, 38.4), (7, 42)]), on=['coat'])
+    p.shade(-1, m('blob', [(38, 39), (50, 41), (50, 49), (36, 49)]), on=['coat'])
+    p.shade(-1, m('blob', [(14, 41), (19, 42), (18, 49), (13, 49)]), on=['coat'])
+    p.shade(-1, m('blob', [(27, 38), (34, 38), (32, 49), (26, 49)]), on=['robe'])
+    # White tufts at the back of the head.
+    p.fill('tuft', m('blob', [(10.4, 27), (9.6, 21), (11, 15.6), (14.6, 13), (17, 17), (17.4, 26), (14, 30)]))
+    p.shade(-1, m('blob', [(10, 24), (14, 26), (13.6, 30), (10.6, 28)]), on=['tuft'])
+    p.fill('ear', m('ell', 15.6, 24.2, 2.3, 3.4))
+    p.shade(-1, m('ell', 16, 24.6, 1.0, 2.0), on=['ear'])
+    face3q(p, ear=False, pts=BALD)
+    # The shine on the pate (yellow-white, like the sprite).
+    p.shade(+1, m('blob', [(18, 9.6), (23, 6), (30, 6.4), (26, 9), (21, 12)]), on=['skin'])
+    p.shade(+2, m('ell', 22.6, 8.2, 2.4, 1.2), on=['skin'])
+    # Long white beard and drooping moustache.
+    p.fill('beard', m('blob', [(17.4, 24), (19, 24), (20, 30), (24, 32.6), (29, 32.6), (33.4, 29.6), (35.6, 25),
+                               (37, 27), (36, 35), (32.6, 42), (28, 48), (25, 49), (21, 46), (18.6, 38)]))
+    p.shade(-1, m('blob', [(28, 34), (36, 30), (34.6, 40), (29, 49), (27, 44)]), on=['beard'])
+    p.shade(+1, m('blob', [(18.4, 28), (20, 32), (22, 38), (20, 40), (18.6, 34)]), on=['beard'])
+    for st in ([(22.6, 36), (23.4, 44)], [(26.4, 37), (27, 46)], [(30.4, 36), (30, 42)]):
+        p.shade(-1, m('stroke', st, 0.8), on=['beard'])
+    p.fill('mous', m('blob', [(19.6, 32.4), (22, 29.2), (26.6, 28.4), (31, 28.6), (35, 31.4), (33, 33), (29.4, 31.4),
+                              (26.6, 31), (23.6, 31.6), (21, 34.6)]))
+    p.shade(-1, m('blob', [(28, 30.4), (35, 31.4), (33, 33), (29, 31.6)]), on=['mous'])
+    bushy_brows(p, e, 'brow', dy=0, big=1.0)
+    p.shade(-1, m('rect', 30, 0, 48, 48), on=['brow'])
+    p.reduce()
+    p.render()
+    mouths = {'neutral': [''], 'happy': ['kwwwk', '.kkk.'], 'angry': ['kwwwwk', 'kmmmmk'], 'sad': ['.kkk.'],
+              'surprised': ['.kk.', 'kmmk', '.kk.'], 'determined': ['']}
+    features3q(p, e, iris=('#5a5070', '#2c2438'), brows=False, lips='#401810',
+               mouths={k: [r for r in v if r] or ['....'] for k, v in mouths.items()}, mouth_dy=1,
+               fx={'blush': True, 'vein': True})
+    return p
+
+
+# =========================================================================================
+# KINO (npc_kino): the red-haired caveman.
+# =========================================================================================
+KHAIR = ['#3c1008', '#7c2c1c', '#b85434', '#e8805c', '#f8a47c', '#ffd0b0']
+KSKIN = ['#4a1c0c', '#884424', '#bc6e3c', '#dc9a64', '#f2c48e', '#fff0d4']
+FUR = ['#241808', '#4c3418', '#785a30', '#a48450', '#c8ac78']
+
+
+@portrait('kino', EMO6)
+def kino(e):
+    p = Pic('#ece6dc', INK)
+    m = p.mask
+    p.material('body', KSKIN, 3, z=1, edge=True)
+    p.material('fur', FUR, 2, z=2, edge=True)
+    p.material('hairback', KHAIR, 2, z=3, edge=True, edgecol=KHAIR[0])
+    p.material('ear', KSKIN, 3, z=4, edge=True)
+    p.material('skin', KSKIN, 3, z=5, edge=True)
+    p.material('tooth', ['#806850', '#c8b490', '#f0e8d0', '#ffffff'], 2, z=6, edge=True)
+    # Bare shoulders and chest, a fur strap over one shoulder.
+    p.fill('body', m('blob', [(-2, 49), (-1, 41), (7, 37), (17, 35), (32, 35), (42, 37), (50, 41), (50, 49)]))
+    p.shade(-1, m('blob', [(31, 37), (43, 38), (50, 43), (50, 49), (34, 49)]), on=['body'])
+    p.shade(+1, m('blob', [(2, 41), (8, 38), (14, 38.4), (8, 41.6)]), on=['body'])
+    p.shade(-1, m('stroke', [(19, 46), (24, 47), (29, 46)], 0.9), on=['body'])
+    p.fill('fur', m('blob', [(5, 49), (8, 42), (14, 37), (19, 36.6), (17, 41), (12, 46), (11, 49)]))
+    p.shade(+1, m('blob', [(8, 43), (12, 39), (15, 38.6), (11, 42)]), on=['fur'])
+    # Neck.
+    p.fill('body', m('blob', [(19.6, 30), (31, 30), (32, 38), (25, 40), (19, 38)]))
+    p.shade(-1, m('blob', [(19, 30), (32, 30), (31.6, 35), (25, 37), (19, 35)]), on=['body'])
+    # Wild hair mass behind.
+    p.fill('hairback', m('blob', [(7, 32), (5, 22), (6.6, 12), (11.6, 5), (19, 1.6), (29, 1.6), (37, 5), (41.6, 12),
+                                  (42.4, 22), (40, 30), (37, 22), (33, 14), (24, 12), (17, 15), (15, 24), (12, 33)]))
+    p.shade(-1, m('blob', [(36, 10), (42, 16), (42, 28), (39, 28), (37, 18)]), on=['hairback'])
+    face3q(p, pts=[(16.4, 15.2), (21.4, 11.8), (29, 11.6), (34.4, 14.6), (36.6, 21), (36.4, 27.6), (34.4, 33.4),
+                   (29, 37.4), (23, 37.2), (18.8, 33.2), (17, 27), (16.4, 21)])
+    # A fang on a thong.
+    p.fill('fur', m('stroke', [(19, 37.6), (22, 40.6), (25, 41.4), (28, 40.6), (31, 37.6)], 0.9))
+    p.fill('tooth', m('poly', [(23.6, 40.6), (26.4, 40.6), (25.2, 45.4)]))
+    # Spiky locks: up and outward, a few falling over the brow.
+    locks = [((10, 22), (13, 30), (3, 33), -1), ((9, 14), (13, 22), (1.6, 18), 0.6), ((12, 8), (17, 13), (4.4, 5), 1),
+             ((18, 5), (22, 11), (13, -1), 1), ((24, 4), (27.6, 10.6), (24, -2.6), 0.4), ((30, 5), (32.6, 11.6), (35.6, -1.4), -1),
+             ((34, 9), (36.6, 15), (44.4, 5.4), -1), ((36.4, 14), (38.4, 21), (46, 17), -0.6), ((38, 21), (39, 28), (45.4, 30), 0.6),
+             ((19, 10.4), (25.4, 10.4), (20, 18.6), 1.2), ((25.4, 10.4), (31.6, 11), (29.4, 18.4), -1), ((31.4, 11), (36, 13.6), (35.6, 19.4), -0.6)]
+    for i, (ra, rb, tip, bend) in enumerate(locks):
+        nm = 'klock%d' % i
+        p.material(nm, KHAIR, 3, z=10 + i, edge=True, edgecol=KHAIR[0])
+        p.fill(nm, m('lock', ra, rb, tip, bend))
+        mid = ((ra[0] + rb[0]) / 2, (ra[1] + rb[1]) / 2)
+        p.shade(-1, m('lock', mid, rb, tip, bend), on=[nm])
+    lk = ['klock%d' % i for i in range(len(locks))]
+    p.shade(+1, m('stroke', [(5, 16), (10, 7.6), (18, 3.6), (27, 2.6)], 2.2), on=lk)
+    p.shade(-1, m('blob', [(32, 0), (48, 0), (48, 32), (38, 30), (36, 12)]), on=lk)
+    p.reduce()
+    p.render()
+    near = dict(NEAR, happy=['......', '.kkkk.', 'k....k', '......'])
+    mouths = dict(MOUTHS, neutral=['kkkk.', '....k'], happy=['k......k', '.kwwwwk.', '..kkkk..'],
+                  determined=['kkkkk.', '.....k'])
+    features3q(p, e, iris=('#5a3020', '#2c140c'), brow=KHAIR[0], lips='#3c1008', near=near,
+               mouths=mouths, skin=KSKIN, fx={'blush': False})
+    # Thick brows: double the brow line.
+    for (ox, oy), tab in (((18, 19), BROW_N), ((29, 19), BROW_F)):
+        (a, b) = tab.get(e, tab['neutral'])
+        p.line([(ox + a[0], oy + a[1] - 1), (ox + b[0], oy + b[1] - 1)], KHAIR[0])
+    return p
+
+
+# =========================================================================================
+# THE ELDER (npc_elder): the white-haired Earthbound elder with a cane, olive robe.
+# =========================================================================================
+OLIVE = ['#1c1c10', '#3a3a24', '#585838', '#707050', '#929270', '#b8b898']
+ESKIN = ['#3c1c08', '#7c4418', '#b06828', '#e09850', '#f8b870', '#ffe0b0']
+
+
+@portrait('elder', EMO6)
+def elder(e):
+    p = Pic('#e6e6dc', INK)
+    m = p.mask
+    p.material('robe', OLIVE, 3, z=1, edge=True)
+    p.material('cord', COAT, 3, z=2, edge=True, edgecol=COAT[0])
+    p.material('hairback', WHITE, 3, z=3, edge=True, edgecol=WHITE[0])
+    p.material('ear', ESKIN, 3, z=4, edge=True)
+    p.material('skin', ESKIN, 3, z=5, edge=True)
+    p.material('beard', WHITE, 3, z=6, edge=True, edgecol=WHITE[0])
+    p.material('mous', WHITE, 4, z=7, edge=True, edgecol=WHITE[0])
+    p.material('brow', WHITE, 4, z=8, edge=True, edgecol=WHITE[0])
+    # Robe with a hood bunched around the shoulders, a brown cord.
+    p.fill('robe', m('blob', [(-2, 49), (-1, 39), (6, 33), (16, 31), (34, 31), (43, 34), (50, 40), (50, 49)]))
+    p.shade(-1, m('blob', [(30, 33), (44, 35), (50, 42), (50, 49), (34, 49)]), on=['robe'])
+    p.shade(+1, m('blob', [(1, 40), (6, 35), (13, 33), (8, 39)]), on=['robe'])
+    for st in ([(8, 49), (10, 41), (14, 35)], [(40, 49), (39, 42), (36, 36)]):
+        p.shade(-1, m('stroke', st, 1.0), on=['robe'])
+    p.fill('cord', m('stroke', [(12, 37), (18, 41), (25, 42.4), (32, 41), (38, 37)], 1.3))
+    # Wild white hair.
+    p.fill('hairback', m('blob', [(10, 30), (8.6, 22), (9.6, 14), (13, 8.4), (19, 5.4), (28, 5.2), (34.6, 7.6), (38.6, 12.6),
+                                  (39, 19), (37, 17), (33, 12.4), (25, 10.6), (18, 13), (15.6, 22), (13.4, 31)]))
+    p.shade(-1, m('blob', [(8, 24), (13, 26), (12.6, 31), (9, 30)]), on=['hairback'])
+    p.shade(-1, m('blob', [(34, 6), (41, 12), (41, 20), (37, 15)]), on=['hairback'])
+    for st in ([(11, 26), (11, 17), (14.6, 10.6)], [(17, 8), (22, 6.6)], [(28, 7), (33.6, 9.6)], [(13.6, 21), (15.6, 14)]):
+        p.shade(-1, m('stroke', st, 0.9), on=['hairback'])
+    # Spiky tufts sticking out of the mane.
+    for (ra, rb, tip, bend) in [((9.4, 16), (10, 22), (4.6, 17.6), 0.6), ((13, 9), (17, 6.4), (10, 3.6), 0.6),
+                                ((22, 5.4), (27, 5.2), (25.4, 1.4), -0.6), ((34, 7.4), (37.6, 11), (41.4, 6.4), -0.6),
+                                ((38.4, 14), (39, 19), (43, 16.4), 0.4)]:
+        p.fill('hairback', m('lock', ra, rb, tip, bend))
+    face3q(p, pts=[(16.4, 15.2), (21.4, 11.8), (29, 11.6), (34.4, 14.6), (36.6, 21), (36, 27.6), (33.6, 33.8),
+                   (28.4, 37.8), (23, 37.2), (18.8, 33.2), (17, 27), (16.4, 21)])
+    # Wrinkles: forehead lines and the cheek crease.
+    for st in ([(20, 14.4), (26, 13.6), (31, 14.2)], [(21.4, 16), (25.6, 15.4)]):
+        p.shade(-1, m('stroke', st, 0.8), on=['skin'])
+    p.shade(-1, m('stroke', [(30.6, 24), (31.6, 27.6)], 0.8), on=['skin'])
+    p.fill('beard', m('blob', [(17.4, 24), (19, 24), (20, 30), (24, 32.6), (29, 32.6), (33.4, 29.6), (35.6, 25),
+                               (37, 27), (36.6, 35), (34, 41), (29, 46), (24, 47), (20, 43), (18.4, 35)]))
+    p.shade(-1, m('blob', [(28, 34), (36.6, 30), (35, 40), (29, 46.6), (27, 41)]), on=['beard'])
+    for st in ([(22, 36), (23, 43)], [(26, 37), (26.6, 45)], [(30.4, 36), (30, 42)]):
+        p.shade(-1, m('stroke', st, 0.8), on=['beard'])
+    p.fill('mous', m('blob', [(19.6, 32.4), (22, 29.2), (26.6, 28.4), (31, 28.6), (35, 31.4), (33, 33), (29.4, 31.4),
+                              (26.6, 31), (23.6, 31.6), (21, 34.6)]))
+    p.shade(-1, m('blob', [(28, 30.4), (35, 31.4), (33, 33), (29, 31.6)]), on=['mous'])
+    bushy_brows(p, e, 'brow', dy=0, big=1.1)
+    p.shade(-1, m('rect', 30, 0, 48, 48), on=['brow'])
+    p.reduce()
+    p.render()
+    near = dict(NEAR, neutral=['......', '.kkkkk', 'kwhiIk', '..ss..'], determined=['......', 'kkkkkk', 'kkhiIk', '..ss..'])
+    far = dict(FAR, neutral=['.....', 'kkkk.', 'hiIwk', '.ss..'], determined=['.....', 'kkkkk', 'hiIkk', '.ss..'])
+    mouths = {'neutral': ['....'], 'happy': ['kwwwk', '.kkk.'], 'angry': ['kwwwwk', 'kmmmmk'], 'sad': ['.kkk.'],
+              'surprised': ['.kk.', 'kmmk', '.kk.'], 'determined': ['....']}
+    features3q(p, e, iris=('#4c3c30', '#241a14'), brows=False, lips='#401810', near=near, far=far,
+               mouths=mouths, mouth_dy=1, skin=ESKIN, fx={'blush': False})
+    return p
+
+
+# =========================================================================================
+# GUARDIA SOLDIER (npc_guard): teal helmet and armour, green underlayer.
+# =========================================================================================
+TEAL = ['#101820', '#202c40', '#384060', '#3c5c78', '#387890', '#68a8c0', '#a8d8e8']
+TGREEN = ['#1c2410', '#383c1c', '#505828', '#688838', '#78a848', '#a8d070']
+
+
+@portrait('guard', EMO6)
+def guard(e):
+    p = Pic('#e4e6ea', INK)
+    m = p.mask
+    p.material('armour', TEAL, 3, z=1, edge=True)
+    p.material('under', TGREEN, 3, z=2, edge=True)
+    p.material('ear', SKIN, 3, z=3, edge=True)
+    p.material('skin', SKIN, 3, z=4, edge=True)
+    p.material('hair', BROWN, 2, z=5, edge=True)
+    p.material('helm', TEAL, 4, z=6, edge=True)
+    p.material('brim', TEAL, 3, z=7, edge=True)
+    p.fill('armour', m('blob', [(-2, 49), (-1, 40), (6, 35.6), (16, 35.4), (24, 37), (33, 35.4), (43, 35.6), (50, 40), (50, 49)]))
+    p.shade(+1, m('blob', [(1, 40.6), (6, 37), (13, 37), (8, 40.6)]), on=['armour'])
+    p.shade(+2, m('blob', [(3, 39.4), (6, 37.8), (9, 38), (6, 39.2)]), on=['armour'])
+    p.shade(-1, m('blob', [(30, 40), (50, 41), (50, 49), (28, 49)]), on=['armour'])
+    p.fill('under', m('blob', [(16.6, 49), (16.4, 39), (21, 35), (30, 35), (33.6, 39), (33.4, 49)]))
+    p.shade(-1, m('blob', [(27, 36), (33.6, 39), (33.4, 49), (27, 49)]), on=['under'])
+    p.fill('skin', m('blob', [(19.6, 30), (31, 30), (31.6, 38.6), (25, 40), (19.4, 38)]))
+    p.shade(-1, m('blob', [(19, 30), (32, 30), (31.6, 35), (25, 37), (19, 35)]), on=['skin'])
+    face3q(p)
+    # Short brown hair at the temple.
+    p.fill('hair', m('blob', [(14.6, 20), (15, 14), (18, 13), (19.6, 18), (17.6, 24)]))
+    # Helmet: a teal kettle helm with a ridge and a wide brim shading the eyes.
+    p.fill('helm', m('blob', [(12.4, 18), (13, 11), (16.6, 5.4), (22, 1.6), (25, -0.6), (28, 1.6), (33.6, 5.6),
+                              (37, 11), (37.6, 18), (24, 16.6)]))
+    p.shade(+1, m('blob', [(13, 15), (15, 9), (20, 4), (19, 9), (15.6, 16)]), on=['helm'])
+    p.shade(+2, m('blob', [(15.6, 9), (18.6, 5), (20, 5.4), (17, 9.4)]), on=['helm'])
+    p.shade(-1, m('blob', [(28, 2), (34, 6), (37.6, 15), (31, 15)]), on=['helm'])
+    p.shade(-2, m('blob', [(32, 6.4), (37, 11), (37.6, 16), (34.6, 15.4)]), on=['helm'])
+    p.shade(-1, m('stroke', [(25.6, 0), (26.4, 8), (26.4, 15)], 1.0), on=['helm'])
+    p.shade(+1, m('stroke', [(24.4, 0.4), (25, 8), (25, 15)], 0.8), on=['helm'])
+    p.fill('brim', m('blob', [(10.6, 19), (13, 15.6), (24, 14.6), (36, 14.8), (39.4, 17.6), (36.4, 19.4), (24, 18.6), (13, 19.8)]))
+    p.shade(+1, m('blob', [(11, 18.6), (13.4, 16), (20, 15.4), (14, 18)]), on=['brim'])
+    p.shade(-1, m('blob', [(28, 17.4), (39.4, 17.4), (36.4, 19.6), (28, 19.4)]), on=['brim'])
+    # The brim's shadow over the eyes.
+    p.shade(-1, m('blob', [(16, 18.6), (37, 18.6), (36.8, 21.4), (16.4, 21.6)]), on=['skin', 'hair', 'ear'])
+    # Cheek straps.
+    p.fill('brim', m('stroke', [(17.2, 20), (17.6, 27), (19.6, 33)], 1.4))
+    p.fill('brim', m('stroke', [(35.8, 19.6), (35.4, 26), (33.6, 32)], 1.2))
+    p.reduce()
+    p.render()
+    features3q(p, e, iris=('#5a3c28', '#2c1c10'), brow=BROWN[0], dy=1, mouth_dy=0, lips='#3c1810',
+               mouths=dict(MOUTHS, neutral=['kkk']), fx={'blush': False})
     return p
 
 

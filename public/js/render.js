@@ -1245,7 +1245,7 @@
       }
       if (ms > 50) {
         this.casts = (this.casts || []).filter((c) => c.u !== u);
-        this.casts.push({ u, elem, ramp, t0: now, ms: ms + 260, last: -1, crack: null });
+        this.casts.push({ u, elem, ramp, t0: now, ms: ms + 260, last: -1, crack: null, n: [...String(u.id || u.key || '')].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) % 997, 0) });
       }
     }
     drawCast(c, now, half) {
@@ -1281,7 +1281,7 @@
           const gx = Math.round(cx + Math.cos(a) * (rx - 2.5)), gy = Math.round(cy + s * (ry - 1));
           // Runes lift off the circle as the charge builds.
           const lift = Math.min(4, st >> 3);
-          glyph(ctx, RUNES[(i + (u.id || 0)) % RUNES.length], gx - 1, gy - 5 - lift, R[ci], dark ? '#0a0612' : R[Math.min(5, 4)]);
+          glyph(ctx, RUNES[(i + c.n) % RUNES.length], gx - 1, gy - 5 - lift, R[ci], dark ? '#0a0612' : R[Math.min(5, 4)]);
         }
       }
       if (half <= 0 || st === c.last) {
@@ -1291,13 +1291,13 @@
       c.last = st;
       if (out > 0) return;
       // Elemental gathering, one beat per step.
-      const a = hashI(st, u.id || 1, 7) * TAU;
+      const a = hashI(st, c.n, 7) * TAU;
       const px = cx + Math.cos(a) * rx, py = cy + Math.sin(a) * ry;
       const e = c.elem;
       if (e === 'lightning' || e === 'laser') {
         if (st % 2 === 0) {
           const b = a + 1 + hashI(st, 3) * 2;
-          c.crack = { st, pts: zig(st + (u.id || 0) * 31, 0, px, py - 2, cx + Math.cos(b) * rx * 0.7, cy - 10 - hashI(st, 9) * 18, 5, 3) };
+          c.crack = { st, pts: zig(st + c.n * 31, 0, px, py - 2, cx + Math.cos(b) * rx * 0.7, cy - 10 - hashI(st, 9) * 18, 5, 3) };
         }
         this.addBit({ k: 'spark', x: px, y: py, vx: (cx - px) * 0.03, vy: -1.2, g: 0, life: 200, ramp: R });
       } else if (e === 'fire' || e === 'lavos') {
@@ -1367,45 +1367,55 @@
         const col = (o = 0) => R[Math.max(0, Math.min(R.length - 1, Math.floor(k * 4) + o))];
         switch (b.k) {
           case 'ember': {
-            if (k > 0.55 && (st + Math.floor(b.ph)) % 3 === 0) break;
+            // A licking flame that shrinks to a fleck and blinks out.
+            if (k > 0.6 && (st + Math.floor(b.ph)) % 3 === 0) break;
             const sx = x + Math.round(Math.sin(t / 130 + b.ph) * 2);
-            ctx.fillStyle = col(1);
-            ctx.fillRect(sx, y, 1, 1);
-            if (k < 0.45) { ctx.fillStyle = col(0); ctx.fillRect(sx, y - 1, 1, 1); }
+            if (k < 0.3) {
+              ctx.fillStyle = R[3]; ctx.fillRect(sx, y, 2, 1);
+              ctx.fillStyle = R[1]; ctx.fillRect(sx, y - 1, 2, 1);
+              ctx.fillStyle = R[0]; ctx.fillRect(sx + (st & 1), y - 2, 1, 1);
+            } else if (k < 0.6) {
+              ctx.fillStyle = R[3]; ctx.fillRect(sx, y, 2, 1);
+              ctx.fillStyle = R[2]; ctx.fillRect(sx, y - 1, 1, 1);
+            } else { ctx.fillStyle = col(1); ctx.fillRect(sx, y, 1, 1); }
             break;
           }
           case 'shard': {
-            // A tumbling crystal splinter: tip, body, tail; glints every few steps.
+            // A tumbling crystal splinter: dark edge, bright body, white tip that glints.
             const o = (st + Math.floor(b.ph)) % 4;
             const [dx, dy] = [[1, -1], [1, 0], [1, 1], [0, 1]][o];
-            if (k > 0.7 && st % 2) break;
-            ctx.fillStyle = R[3]; ctx.fillRect(x - dx, y - dy, 1, 1);
-            ctx.fillStyle = R[1]; ctx.fillRect(x, y, 1, 1);
-            ctx.fillStyle = o === 0 ? '#ffffff' : R[2]; ctx.fillRect(x + dx, y + dy, 1, 1);
+            if (k > 0.75 && st % 2) break;
+            ctx.fillStyle = R[4]; ctx.fillRect(x - 2 * dx + (dy ? 1 : 0), y - 2 * dy + (dx ? 1 : 0), 1, 1);
+            ctx.fillStyle = R[3]; ctx.fillRect(x - 2 * dx, y - 2 * dy, 1, 1); ctx.fillRect(x - dx + (dy ? 1 : 0), y - dy + (dx ? 1 : 0), 1, 1);
+            ctx.fillStyle = R[1]; ctx.fillRect(x - dx, y - dy, 1, 1); ctx.fillRect(x, y, 1, 1);
+            ctx.fillStyle = o === 0 || k < 0.15 ? '#ffffff' : R[1]; ctx.fillRect(x + dx, y + dy, 1, 1);
             break;
           }
           case 'debris': {
             if (k > 0.75 && st % 2) break;
-            ctx.fillStyle = '#3e3230'; ctx.fillRect(x, y, 2, 2);
-            ctx.fillStyle = b.bounce ? '#7a665a' : '#9c8674'; ctx.fillRect(x, y, 1, 1);
+            const big = (b.ph | 0) % 3 === 0;
+            ctx.fillStyle = '#3e3230'; ctx.fillRect(x, y, big ? 3 : 2, 2);
+            ctx.fillStyle = b.bounce ? '#7a665a' : '#9c8674'; ctx.fillRect(x, y, big ? 2 : 1, 1);
             break;
           }
           case 'drop': {
-            ctx.fillStyle = R[1]; ctx.fillRect(x, y - 1, 1, 1);
-            ctx.fillStyle = R[3]; ctx.fillRect(x, y, 1, 1);
+            ctx.fillStyle = R[3]; ctx.fillRect(x, y, 2, 2);
+            ctx.fillStyle = R[1]; ctx.fillRect(x, y - 1, 1, 2);
+            ctx.fillStyle = '#ffffff'; ctx.fillRect(x, y, 1, 1);
             break;
           }
           case 'splash': {
             ctx.fillStyle = R[1];
+            ctx.fillRect(x - 3, y - 2, 1, 1); ctx.fillRect(x + 3, y - 2, 1, 1);
             ctx.fillRect(x - 2, y - 1, 1, 1); ctx.fillRect(x + 2, y - 1, 1, 1);
-            ctx.fillStyle = R[3]; ctx.fillRect(x - 1, y, 3, 1);
+            ctx.fillStyle = R[3]; ctx.fillRect(x - 2, y, 5, 1);
             break;
           }
           case 'spark': {
             ctx.fillStyle = col(1);
-            PXD.line(ctx, x - b.vx * 1.5, y - b.vy * 1.5, x, y, 1);
+            PXD.line(ctx, x - b.vx * 2.5, y - b.vy * 2.5, x, y, 1);
             ctx.fillStyle = k < 0.5 ? '#ffffff' : col(0);
-            ctx.fillRect(x, y, 1, 1);
+            ctx.fillRect(x, y, k < 0.3 ? 2 : 1, k < 0.3 ? 2 : 1);
             break;
           }
           case 'mote': {
@@ -1415,14 +1425,15 @@
             const r = 1 - e;
             const mx = Math.round(b.cx + (b.x0 - b.cx) * r * Math.cos(k * 1.4) - (b.y0 - b.cy) * r * Math.sin(k * 1.4) * 0.5);
             const my = Math.round(b.cy + (b.y0 - b.cy) * r + Math.sin(a) * r * 2);
-            ctx.fillStyle = R[Math.min(5, 3 + Math.floor(k * 3))];
-            ctx.fillRect(mx + 1, my, 1, 1);
-            ctx.fillStyle = R[Math.min(5, Math.floor(k * 3))];
+            ctx.fillStyle = '#0a0612';
+            ctx.fillRect(mx, my, 2, 2);
+            ctx.fillStyle = R[Math.min(5, Math.floor(k * 4))];
             ctx.fillRect(mx, my, 1, 1);
+            if (k < 0.5) { ctx.fillStyle = R[3]; ctx.fillRect(mx + 2, my, 1, 1); }
             break;
           }
           case 'sparkle': {
-            const s = [0, 1, 2, 1, 0, 0, 1, 0][(st + Math.floor(b.ph)) % 8];
+            const s = [0, 1, 2, 3, 2, 1, 0, 1][(st + Math.floor(b.ph)) % 8];
             if (k > 0.8 && st % 2) break;
             star(ctx, x, y, s, '#ffffff', col(1));
             break;
@@ -1513,7 +1524,9 @@
     //   y: height above ground of the burst centre, ring / wave: impact ring radius (chest /
     //   ground), bits: { ember|shard|debris|drop|spark|mote|sparkle|crackle: n },
     //   bolt: n sky bolts (boltAt), dim: [colour, amount, ms], big: full-screen moment
-    //   (bigAt, bigMs), all: true to run dim/big on every tile instead of once per area.
+    //   (bigAt, bigMs), all: true to run dim/big on every tile instead of once per area,
+    //   also: [more stages] (later beats: a shatter, a second burst), trail (on a proj sheet:
+    //   the bit kind it sheds in flight).
     stageFx(key, st, fx, x, y, h, opts) {
       const first = !opts.noShake;
       const d0 = opts.delay || 0;
@@ -1530,6 +1543,7 @@
         const n = first ? st.bolt : Math.max(0, st.bolt - 1);
         setTimeout(() => { const [sx, sy] = pos(); for (let i = 0; i < n; i++) this.skyBolt(sx + (i ? (Math.random() - 0.5) * 16 : 0), sy - (st.boltY || 0), { delay: i * 70, ramp: R, ms: st.boltMs || 300 }); }, at(st.boltAt != null ? st.boltAt : imp) - (st.lead || 0));
       }
+      for (const s2 of st.also || []) this.stageFx(key, Object.assign({ elem: st.elem, y: st.y }, s2), fx, x, y, h, opts);
       setTimeout(() => {
         const [sx, gy] = pos();
         const cy = gy - (st.y != null ? st.y : 12);
@@ -1783,9 +1797,14 @@
               const a = (arm * TAU) / 3 + st * 0.24 + u * 4.4;
               const r = R0 * (1.15 - u) + 3;
               const x = Math.round(cx + Math.cos(a) * r * 1.35), y = Math.round(cy + Math.sin(a) * r * 0.55);
-              ctx.fillStyle = V[Math.max(0, 5 - Math.floor(u * 6))];
-              ctx.fillRect(x, y, u < 0.5 ? 2 : 1, 1);
+              ctx.fillStyle = (j + st) % 7 === 0 ? '#ffffff' : V[Math.max(0, 3 - Math.floor(u * 4))];
+              ctx.fillRect(x, y, u < 0.45 ? 2 : 1, u < 0.25 ? 2 : 1);
             }
+          // Accretion disc: two dashed rings turning against each other.
+          ctx.fillStyle = V[1];
+          dashRing(ctx, cx, cy, Math.round(R0 * 1.1) + 4, Math.round(R0 * 0.4) + 2, 64, st, 0, 3, 4);
+          ctx.fillStyle = V[3];
+          dashRing(ctx, cx, cy, Math.round(R0 * 0.75) + 3, Math.round(R0 * 0.28) + 2, 48, 1000 - st, 0, 2, 3);
           const hr = Math.max(1, Math.round(R0 * 0.32));
           ctx.fillStyle = V[0];
           PXD.ellipseRing(ctx, cx, cy, hr + 1, Math.round(hr * 0.7) + 1);
@@ -1806,6 +1825,10 @@
             PXD.ellipseRing(ctx, cx, cy, rx, ry);
             ctx.fillStyle = V[1];
             PXD.ellipseRing(ctx, cx, cy, rx + 2, ry + 1);
+            ctx.fillStyle = V[3];
+            dashRing(ctx, cx, cy, Math.round(rx * 0.7), Math.round(ry * 0.7), 40, st, 0, 4, 6);
+            ctx.fillStyle = V[2];
+            dashRing(ctx, cx, cy, Math.round(rx * 0.45), Math.round(ry * 0.45), 28, 1000 - st, 0, 3, 5);
             ctx.fillStyle = V[0];
             for (let i = 0; i < 6; i++) {
               const a = (i / 6) * TAU + st * 0.3;
@@ -2002,8 +2025,8 @@
                 const u = j / 20;
                 const a = (arm * TAU) / 4 - st * 0.3 + u * 3;
                 const r = 14 + u * 90 * Math.min(1, k * 3);
-                ctx.fillStyle = V[Math.min(5, 1 + Math.floor(u * 5))];
-                ctx.fillRect(Math.round(cx + Math.cos(a) * r), Math.round(cy + Math.sin(a) * r * 0.5), u < 0.3 ? 2 : 1, 1);
+                ctx.fillStyle = (j + st) % 6 === 0 ? '#ffffff' : V[Math.min(3, Math.floor(u * 4))];
+                ctx.fillRect(Math.round(cx + Math.cos(a) * r), Math.round(cy + Math.sin(a) * r * 0.5), u < 0.5 ? 3 : 2, u < 0.3 ? 2 : 1);
               }
           if (b.kind === 'prism' || b.kind === 'laser')
             for (let i = 0; i < 24; i++) {

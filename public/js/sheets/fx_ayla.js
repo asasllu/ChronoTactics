@@ -2209,4 +2209,15 @@
   CT.techFx('charm', { anim: 'tech_charm', fx: 'fx_charm', charge: false });
   CT.techFx('triple_kick', { anim: 'tech_triple_kick', fx: 'fx_triple_kick', charge: false });
   CT.techFx('kiss', { anim: 'tech_kiss', fx: 'fx_kiss', charge: false });
+  // ---- Spectacle staging (render.js stageFx): impact bits, rings, field dim, full-screen moments ----
+  Object.assign((CT.FX_STAGE = CT.FX_STAGE || {}), {
+    fx_hit_fist: { elem: 'hit', ring: 14, bits: { spark: 6 } },
+    fx_kiss: { elem: 'charm', y: 22, bits: { sparkle: 8 } },
+    fx_rollo_kick: { elem: 'hit', wave: 26, bits: { debris: 6, spark: 6 } },
+    fx_cat_attack: { elem: 'hit', ring: 16, bits: { spark: 8 } },
+    fx_tail_spin: { elem: 'slash', wave: 44, bits: { debris: 10 } },
+    fx_charm: { elem: 'charm', y: 24, bits: { sparkle: 10 } },
+    fx_triple_kick: { elem: 'hit', wave: 34, ring: 22, bits: { spark: 12, debris: 8 } },
+  });
+  // ---- end spectacle staging ----
 })();

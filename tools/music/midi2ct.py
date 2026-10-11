@@ -428,7 +428,10 @@ def convert(src_dir, cfg):
     if 'loopstart' in mk and 'loopend' in mk and not cfg.get('nomarkers'):
         ls, le = mk['loopstart'] + shift, mk['loopend'] + shift  # noqa
         pad = (-ls) % barT
-        if pad:
+        if pad and cfg.get('pickup') == 'trim':  # drop the pickup instead of opening with silence
+            pad -= barT
+            log.append(f'pickup: trimmed the first {-pad} ticks so the loop starts on a bar line')
+        elif pad:
             log.append(f'pickup: padded {pad} ticks so the loop starts on a bar line')
         shift += pad
         ls += pad
@@ -441,6 +444,11 @@ def convert(src_dir, cfg):
     for x in notes + drums:
         x.s += shift
         x.e += shift
+    trimmed = sum(1 for x in notes + drums if x.s < 0)
+    if trimmed:
+        log.append(f'{trimmed} notes/hits before the trimmed start dropped')
+    notes = [x for x in notes if x.s >= 0]
+    drums = [x for x in drums if x.s >= 0]
     last = max([n.e for n in notes] + [x.s + 6 for x in drums])
     nbars = -(-last // barT)
     if loop_bar is None:
@@ -630,7 +638,7 @@ def convert(src_dir, cfg):
         kv = cfg.get('kitvol', 0.7)
         if isinstance(kv, list):
             kv = kv[gi]
-        v[name] = ['kit', compress(toks, maxk=16), {'vol': kv}]
+        v[name] = ['kit', compress(toks, maxk=16), {'vol': round(kv * cfg.get('mvol', 1.0), 2)}]
         vinfo.append({'name': name, 'inst': 'kit', 'ch': 10, 'notes': len(hits), 'ticks': endT})
     used_hits = len(drums)
     if lost:
@@ -716,42 +724,42 @@ FIELD = [0.75, 0.35, 0.3]
 BATTLE = [0.5, 0.25, 0.2]
 AMBIENT = [1, 0.5, 0.45]
 TRACKS = [
-    dict(id='mus_title', title='Chrono Trigger', file='ct_chrono1.mid', seq='Quietust', slow=0.7,
+    dict(id='mus_title', mvol=0.81, title='Chrono Trigger', file='ct_chrono1.mid', seq='Quietust', slow=0.7,
          inst={1: {48: 'strings', 66: 'brass'}, 7: {46: 'harp', 66: 'horn'}}, kitvol=0.5, echo=[0.75, 0.4, 0.35]),
-    dict(id='mus_fair_night', title='Leene Square', file='millenialfair.mid', seq='Alex Jarvis', slow=0.85,
+    dict(id='mus_fair_night', mvol=0.55, title='Leene Square', file='millenialfair.mid', seq='Alex Jarvis', slow=0.85,
          drumch=[4], drummap={83: 'h'}, kit_groups=['xg', 'h'], inst={1: 'harp', 2: 'harp', 3: 'tuba', 5: 'accordion', 6: 'accordion', 7: 'flute'},
          kitvol=0.6, echo=FIELD),
-    dict(id='mus_rift', title="Lavos's Theme", file='lavos.mid', seq='Valius (Chris Hatfield)', slow=0.85, echo=AMBIENT),
-    dict(id='mus_battle', title='Battle', file='chrono_trigger_battle1.mid', seq='', slow=0.85, inst={1: 'sbass'},
+    dict(id='mus_rift', mvol=1.17, title="Lavos's Theme", file='lavos.mid', seq='Valius (Chris Hatfield)', slow=0.85, echo=AMBIENT),
+    dict(id='mus_battle', mvol=1.26, title='Battle', file='chrono_trigger_battle1.mid', seq='', pickup='trim', slow=0.85, inst={1: 'sbass'},
          kitvol=0.7, echo=BATTLE),
-    dict(id='mus_battle_boss', title='Boss Battle 1', file='CB_CTBoss1.mid', seq='', slow=0.85, scale=4 / 3, meter=[4, 4],
+    dict(id='mus_battle_boss', mvol=0.74, title='Boss Battle 1', file='CB_CTBoss1.mid', seq='', slow=0.85, scale=4 / 3, meter=[4, 4],
          drop=[9, 11, 12, 13], kitvol=0.7, echo=BATTLE),
-    dict(id='mus_victory', title='Fanfare 2 (victory)', file='ct-winner.mid', seq='', slow=1.0, rebeat=(640, 416.5), grid=[16], inst={5: 'tuba'}, mono=True,
+    dict(id='mus_victory', mvol=1.64, title='Fanfare 2 (victory)', file='ct-winner.mid', seq='', slow=1.0, rebeat=(640, 416.5), grid=[16], inst={5: 'tuba'}, mono=True,
          oneShot=True, kitvol=0.45, echo=[0.5, 0.3, 0.25]),
-    dict(id='mus_end_of_time', title='End of Time', file='EndOfTime.mid', seq='', slow=0.85, echo=AMBIENT),
-    dict(id='mus_guardia_600', title='Guardia Castle', file='guardia.mid', seq='Valius, modified by Noah Sp.', slow=0.85,
+    dict(id='mus_end_of_time', mvol=0.99, title='End of Time', file='EndOfTime.mid', seq='', slow=0.85, echo=AMBIENT),
+    dict(id='mus_guardia_600', mvol=0.95, title='Guardia Castle', file='guardia.mid', seq='Valius, modified by Noah Sp.', slow=0.85,
          kitvol=0.6, echo=FIELD),
-    dict(id='mus_frog_theme', title="Frog's Theme", file='FROGct.mid', seq='Magnius', slow=0.85, kitvol=0.6, echo=FIELD),
-    dict(id='mus_denadoro', title='Middle Ages: World Map ("Wind Scene")', file='ctwndscene.mid', seq='Jaroban', slow=0.85,
+    dict(id='mus_frog_theme', mvol=0.56, title="Frog's Theme", file='FROGct.mid', seq='Magnius', slow=0.85, kitvol=0.6, echo=FIELD),
+    dict(id='mus_denadoro', mvol=1.92, title='Middle Ages: World Map ("Wind Scene")', file='ctwndscene.mid', seq='Jaroban', slow=0.85,
          tokit={6: 'q'}, kitvol=0.6, echo=FIELD),
-    dict(id='mus_ioka', title='Prehistoric World Map ("Rhythm of Earth, Wind and Sky")',
+    dict(id='mus_ioka', mvol=3.01, title='Prehistoric World Map ("Rhythm of Earth, Wind and Sky")',
          file='Chrono_Trigger_-_20_-_Rhythm_of_Earth_Wind_and_Sky.mid', seq='Wotan', slow=0.85,
          kit_tracks=[[3], [4], [5], [2], [6]], kitvol=[0.8, 0.7, 0.6, 0.5, 0.5], echo=FIELD),
-    dict(id='mus_ayla_theme', title="Ayla's Theme", file='cavegirl_song.mid', seq='', slow=0.85, kits=2, kitvol=0.65, echo=FIELD),
-    dict(id='mus_tyrano', title='Tyrano Lair', file='cttyrano.mid', seq='Mark Jansen', slow=0.85, kits=2, kitvol=0.6, echo=FIELD),
-    dict(id='mus_last_village', title='Silent Light', file='CT-SilentLight.mid', seq='Powerlord', slow=0.85, echo=FIELD),
-    dict(id='mus_zeal_wreck', title='Zeal ("Corridors of Time")', file='ctzeal.mid', seq='', slow=0.85, kitvol=0.55, echo=FIELD),
-    dict(id='mus_magus_theme', title="Magus's Theme", file='Magus1.mid', seq='', slow=0.85, kitvol=0.6, echo=FIELD),
-    dict(id='mus_hollow', title='Future: World Map ("Ruined World")', file='ct2300ad.mid', seq='KDS', slow=0.9,
+    dict(id='mus_ayla_theme', mvol=1.45, title="Ayla's Theme", file='cavegirl_song.mid', seq='', slow=0.85, kits=2, kitvol=0.65, echo=FIELD),
+    dict(id='mus_tyrano', mvol=1.77, title='Tyrano Lair', file='cttyrano.mid', seq='Mark Jansen', slow=0.85, kits=2, kitvol=0.6, echo=FIELD),
+    dict(id='mus_last_village', mvol=1.16, title='Silent Light', file='CT-SilentLight.mid', seq='Powerlord', slow=0.85, echo=FIELD),
+    dict(id='mus_zeal_wreck', mvol=0.66, title='Zeal ("Corridors of Time")', file='ctzeal.mid', seq='', slow=0.85, kitvol=0.55, echo=FIELD),
+    dict(id='mus_magus_theme', mvol=0.56, title="Magus's Theme", file='Magus1.mid', seq='', slow=0.85, kitvol=0.6, echo=FIELD),
+    dict(id='mus_hollow', mvol=0.79, title='Future: World Map ("Ruined World")', file='ct2300ad.mid', seq='KDS', slow=0.9,
          inst={2: 'wind', 3: 'wind', 9: 'wind', 4: 'wind', 5: 'wind'}, transpose={2: 48, 3: 48, 9: 48, 4: 24, 5: 24},
          keep=[7, 8], echo=AMBIENT),
-    dict(id='mus_curator', title='Boss Battle 2', file='ct_bossbattle2.mid', seq='Quietust', slow=0.85, meter=[6, 8],
+    dict(id='mus_curator', mvol=0.53, title='Boss Battle 2', file='ct_bossbattle2.mid', seq='Quietust', slow=0.85, meter=[6, 8],
          kitvol=0.65, echo=BATTLE),
-    dict(id='mus_curator_core', title='Lavos ("World Revolution")', file='CB_WorldRevolution.mid', seq='', slow=0.85,
+    dict(id='mus_curator_core', mvol=0.68, title='Lavos ("World Revolution")', file='CB_WorldRevolution.mid', seq='', pickup='trim', slow=0.85,
          meter=[4, 4], drop=[12, 13, 14, 15, 16], inst={5: 'sbass'}, kitvol=0.65, echo=BATTLE),
-    dict(id='mus_ending', title='Epilogue ("To Good Friends")', file='ctmarle1.mid', seq='Masashi Ito', slow=0.9,
+    dict(id='mus_ending', mvol=1.01, title='Epilogue ("To Good Friends")', file='ctmarle1.mid', seq='Masashi Ito', slow=0.9,
          drop=[3, 4, 5, 6, 14, 15], oneShot=True, echo=FIELD),
-    dict(id='mus_credits', title='To Far Away Times', file='ct_tofarawaytimes.mid', seq='Quietust', slow=0.85,
+    dict(id='mus_credits', mvol=0.91, title='To Far Away Times', file='ct_tofarawaytimes.mid', seq='Quietust', slow=0.85,
          oneShot=True, kitvol=0.5, echo=FIELD),
 ]
 

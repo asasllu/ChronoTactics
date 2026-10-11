@@ -3223,4 +3223,17 @@
   CT.techFx('dark_mist', {'anim': 'cast', 'casterFx': 'fx_dark_mist_cast', 'fx': 'fx_dark_mist', 'stagger': 20});
   CT.techFx('black_hole', {'anim': 'cast', 'fx': 'fx_black_hole', 'stagger': 30});
   CT.techFx('dark_matter', {'anim': 'tech_dark_matter', 'fx': 'fx_dark_matter', 'stagger': 25});
+  // ---- Spectacle staging (render.js stageFx): impact bits, rings, field dim, full-screen moments ----
+  Object.assign((CT.FX_STAGE = CT.FX_STAGE || {}), {
+    fx_hit_scythe: { elem: 'shadow', ring: 14, bits: { mote: 6, spark: 3 } },
+    fx_m_lightning2: { elem: 'lightning', bolt: 1, boltAt: 2, dim: ['#10183a', 0.5, 900], wave: 40, bits: { spark: 6, crackle: 2 } },
+    fx_ice2: { elem: 'ice', dim: ['#1c2c5c', 0.45, 1000], big: 'frost', bigMs: 1100, wave: 40, bits: { sparkle: 4, shard: 4 }, also: [{ at: 7, ring: 18, bits: { shard: 12 } }] },
+    fx_fire2: { elem: 'fire', dim: ['#3c0a14', 0.4, 1000], big: 'inferno', bigMs: 800, wave: 40, bits: { ember: 12 }, also: [{ at: 6, bits: { ember: 8 } }] },
+    fx_dark_bomb: { elem: 'shadow', dim: ['#2a1040', 0.5, 900], big: 'shock', bigMs: 800, bigAt: 4, wave: 44, ring: 24, bits: { mote: 12, debris: 4 } },
+    fx_dark_mist_cast: { elem: 'shadow', at: 2, dim: ['#2a1040', 0.55, 1300], bits: { mote: 16 } },
+    fx_dark_mist: { elem: 'shadow', bits: { mote: 6 } },
+    fx_black_hole: { elem: 'shadow', big: 'singularity', bigMs: 1300, bigAt: 0, bits: { mote: 10 } },
+    fx_dark_matter: { elem: 'shadow', big: 'dm_burst', bigMs: 1200, bigAt: 0, wave: 60, bits: { mote: 6, spark: 4 } },
+  });
+  // ---- end spectacle staging ----
 })();
