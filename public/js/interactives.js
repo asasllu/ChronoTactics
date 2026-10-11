@@ -223,7 +223,17 @@
         if (!s.gone) m.set(key(s.x, s.y), s);
       }
       b.spotAt = m;
-      return m;
+      // For drawing: also chevrons along each ready boulder's rolling path.
+      const draw = new Map(m);
+      for (const s of b.spots) {
+        if (s.spent || s.gone || !s.effect || !s.effect.roll) continue;
+        const [dx, dy] = s.effect.roll.dir;
+        for (let i = 1; i <= s.effect.roll.len; i++) {
+          const k = key(s.x + dx * i, s.y + dy * i);
+          if (b.tile(s.x + dx * i, s.y + dy * i) && !draw.has(k)) draw.set(k, { trail: true, spot: s, i, x: s.x + dx * i, y: s.y + dy * i, dir: [dx, dy] });
+        }
+      }
+      return draw;
     },
     at(b, x, y) {
       const s = b.spotAt && b.spotAt.get(key(x, y));
@@ -579,24 +589,55 @@
     // layer 'base': pulsing diamond + light pool on the tile; 'icon': the floating icon (after decor).
     drawMarker(R, ctx, s, sx, sy, now, lights, layer) {
       if (s.gone) return;
-      const k = KIND[s.kind] || KIND.chest;
       const PXD = CT.PXD;
+      if (s.trail) {
+        // Boulder path: a chevron per tile pointing the way it will roll.
+        if (layer !== 'base') return;
+        const t = R.map && R.map.tiles[s.y] && R.map.tiles[s.y][s.x];
+        const h = t ? R.tileHeight(t) : 0;
+        const a = R.project(s.x, s.y, h), b2 = R.project(s.x + s.dir[0], s.y + s.dir[1], h);
+        let vx = b2[0] - a[0], vy = b2[1] - a[1];
+        const L = Math.hypot(vx, vy) || 1;
+        vx /= L;
+        vy /= L;
+        const on = Math.floor(now / 140 - s.i) % 4 === 0;
+        ctx.fillStyle = on ? '#fff0c0' : 'rgba(230,190,130,0.85)';
+        for (let k = -3; k <= 3; k++) {
+          const w = 3 - Math.abs(k);
+          ctx.fillRect(Math.round(sx + vx * (2 - w * 1.4) - vy * k * 1.6), Math.round(sy + vy * (2 - w * 1.4) + vx * k * 1.6), 2, 1);
+        }
+        return;
+      }
+      const k = KIND[s.kind] || KIND.chest;
       const ph = (now / 600 + (s.x * 7 + s.y * 3) * 0.37) % (Math.PI * 2);
       const pulse = 0.5 + 0.5 * Math.sin(ph * 2);
       if (layer === 'base') {
         if (s.spent) {
           if (s.kind === 'lever' || s.kind === 'placard') return;
-          ctx.fillStyle = 'rgba(120,120,140,0.25)';
-          PXD.diamond(ctx, sx, sy, 6, true);
+          ctx.fillStyle = 'rgba(120,120,140,0.35)';
+          PXD.diamond(ctx, sx, sy, 8, true);
           return;
         }
-        ctx.fillStyle = `rgba(${k.color},${0.14 + 0.12 * pulse})`;
+        const [cr, cg, cb] = k.color.split(',').map(Number);
+        const hi = `rgb(${Math.min(255, cr + 60)},${Math.min(255, cg + 60)},${Math.min(255, cb + 60)})`;
+        ctx.fillStyle = `rgba(${k.color},${0.3 + 0.2 * pulse})`;
         PXD.diamond(ctx, sx, sy, 15, true);
-        ctx.fillStyle = `rgba(${k.color},${0.55 + 0.35 * pulse})`;
+        ctx.fillStyle = Math.floor(now / 260) % 2 ? hi : `rgb(${k.color})`;
         PXD.diamond(ctx, sx, sy, 15, false);
-        ctx.fillStyle = `rgba(255,255,255,${0.25 + 0.4 * pulse})`;
-        PXD.diamond(ctx, sx, sy, Math.round(5 + 6 * ((now / 900 + s.x) % 1)), false);
-        if (lights) lights.push({ x: sx, y: sy - 6, color: k.color, radius: 26 + 6 * pulse, flicker: false });
+        PXD.diamond(ctx, sx, sy, 13, false);
+        ctx.fillStyle = 'rgba(255,255,255,0.8)';
+        PXD.diamond(ctx, sx, sy, Math.round(4 + 9 * ((now / 1000 + s.x * 0.3) % 1)), false);
+        // A shimmering shaft of light so the spot reads from across the map.
+        for (let y = 0; y < 22; y++) {
+          const a = (1 - y / 22) * (0.35 + 0.25 * pulse);
+          ctx.fillStyle = `rgba(${k.color},${a.toFixed(2)})`;
+          ctx.fillRect(sx - 2, sy - y, 5, 1);
+          if ((y + Math.floor(now / 90)) % 7 === 0) {
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(sx + ((y * 5) % 9) - 4, sy - y - 2, 1, 1);
+          }
+        }
+        if (lights) lights.push({ x: sx, y: sy - 6, color: k.color, radius: 30 + 6 * pulse, flicker: false });
         return;
       }
       if (s.spent && s.kind !== 'lever') return;
