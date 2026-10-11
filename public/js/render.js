@@ -100,6 +100,118 @@
   const rampOf = (k) => RAMPS[k] || RAMPS.hit;
   const rampAt = (r, k) => r[Math.max(0, Math.min(r.length - 1, Math.floor(k * r.length)))];
 
+  // ---- Spectacle helpers (charge circles, impact bits, sky bolts, full-screen moments) ----
+  // All drawn as hard palette pixels on a 33 ms step clock, like SNES sprite/colour-math work.
+  const TAU = Math.PI * 2;
+  const STEP = 33;
+  const hashI = (a, b, c = 0) => {
+    let h = (a * 374761393 + b * 668265263 + c * 2147483647) | 0;
+    h = Math.imul(h ^ (h >>> 13), 1274126177);
+    return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+  };
+  // Hand-drawn 3x5 runes that stand on the casting circle.
+  const RUNES = [
+    ['xxx', 'x..', 'xx.', 'x..', 'x..'],
+    ['.x.', 'x.x', '.x.', 'x.x', '.x.'],
+    ['x.x', 'x.x', '.x.', '.x.', '.x.'],
+    ['xxx', '..x', '.x.', 'x..', 'xxx'],
+    ['x..', 'xx.', 'x.x', 'xx.', 'x..'],
+    ['.x.', '.x.', 'xxx', '.x.', '.x.'],
+    ['x.x', '.x.', 'x.x', '.x.', 'x.x'],
+    ['xx.', 'x.x', 'xx.', 'x..', 'xxx'],
+  ];
+  function glyph(ctx, g, x, y, col, shade) {
+    for (let j = 0; j < g.length; j++)
+      for (let i = 0; i < 3; i++)
+        if (g[j][i] === 'x') {
+          if (shade) { ctx.fillStyle = shade; ctx.fillRect(x + i, y + j + 1, 1, 1); }
+          ctx.fillStyle = col;
+          ctx.fillRect(x + i, y + j, 1, 1);
+        }
+  }
+  // Half of a 1px ellipse ring: half < 0 the back (upper) arc, > 0 the front arc, 0 both.
+  function ringArc(ctx, cx, cy, rx, ry, half) {
+    cx = Math.round(cx); cy = Math.round(cy);
+    const hw = (y) => {
+      if (y < -ry || y > ry) return -1;
+      const t = 1 - (y * y) / ((ry + 0.5) * (ry + 0.5));
+      return t > 0 ? Math.round(rx * Math.sqrt(t)) : -1;
+    };
+    for (let y = -ry; y <= ry; y++) {
+      if ((half < 0 && y > 0) || (half > 0 && y <= 0)) continue;
+      const w = hw(y);
+      if (w < 0) continue;
+      const inner = Math.min(hw(y - 1), hw(y + 1));
+      const from = Math.min(w, inner + 1);
+      ctx.fillRect(cx - w, cy + y, w - from + 1, 1);
+      ctx.fillRect(cx + from, cy + y, w - from + 1, 1);
+    }
+  }
+  // Dashed ellipse: n marks, `on` of every `per` lit, rotating with `ph`.
+  function dashRing(ctx, cx, cy, rx, ry, n, ph, half, on, per) {
+    for (let i = 0; i < n; i++) {
+      if ((i + ph) % per >= on) continue;
+      const a = (i / n) * TAU;
+      const s = Math.sin(a);
+      if ((half < 0 && s > 0) || (half > 0 && s <= 0)) continue;
+      ctx.fillRect(Math.round(cx + Math.cos(a) * rx), Math.round(cy + s * ry), 1, 1);
+    }
+  }
+  // 4-point star of arm length s (0 = single pixel).
+  function star(ctx, x, y, s, core, arm) {
+    ctx.fillStyle = arm;
+    if (s > 0) {
+      ctx.fillRect(x - s, y, s * 2 + 1, 1);
+      ctx.fillRect(x, y - s, 1, s * 2 + 1);
+    }
+    ctx.fillStyle = core;
+    ctx.fillRect(x, y, 1, 1);
+    if (s > 1) { ctx.fillRect(x - 1, y, 3, 1); ctx.fillRect(x, y - 1, 1, 3); }
+  }
+  // Jagged polyline from a hashed seed: [[x, y]...] from (x0, y0) to (x1, y1).
+  function zig(seed, ph, x0, y0, x1, y1, seg, amp) {
+    const n = Math.max(2, Math.round(Math.hypot(x1 - x0, y1 - y0) / seg));
+    const pts = [[x0, y0]];
+    for (let i = 1; i < n; i++) {
+      const k = i / n;
+      pts.push([x0 + (x1 - x0) * k + (hashI(seed, ph, i) - 0.5) * amp * 2, y0 + (y1 - y0) * k + (hashI(seed, ph, i + 50) - 0.5) * amp * 0.6]);
+    }
+    pts.push([x1, y1]);
+    return pts;
+  }
+  function poly(ctx, pts, w, upto = 1) {
+    const n = Math.max(1, Math.ceil((pts.length - 1) * upto));
+    for (let i = 1; i <= n && i < pts.length; i++) PXD.line(ctx, pts[i - 1][0], pts[i - 1][1], pts[i][0], pts[i][1], w);
+  }
+  // Which bits an element leaves behind when it lands.
+  const ELEM_BITS = {
+    lightning: 'spark', fire: 'ember', ice: 'shard', water: 'drop', shadow: 'mote', dark: 'mote', heal: 'sparkle',
+    charm: 'sparkle', holy: 'sparkle', glass: 'shard', porcelain: 'shard', lavos: 'ember', hit: 'spark', slash: 'spark', laser: 'spark', psy: 'mote',
+  };
+  // Full-screen moments: field dim [colour, amount, extra ms], letterbox, shake, flash.
+  // shake/flash: [amount|colour, ms, at (fraction of the moment)].
+  const BIG = {
+    luminaire: { dim: ['#4a2a16', 0.55, 900], lb: 1, flash: ['255,250,220', 160, 0.33], shake: [6, 420, 0.36] },
+    blackhole: { dim: ['#0a0612', 0.72, 1300], lb: 1 },
+    singularity: { dim: ['#0a0612', 0.6, 300], shake: [5, 500, 0.15], flash: ['224,192,252', 140, 0.9] },
+    darkmatter: { dim: ['#2a1040', 0.8, 1300], lb: 1, shake: [4, 900, 0.1] },
+    dm_burst: { dim: ['#0a0612', 0.6, 300], shake: [10, 700, 0.5], flash: ['240,220,255', 180, 0.5] },
+    eclipse: { dim: ['#0a0612', 0.72, 900], lb: 1, flash: ['255,255,255', 160, 0.48], shake: [6, 500, 0.5] },
+    erase: { dim: ['#3a3a52', 0.45, 300], lb: 1, flash: ['255,255,255', 260, 0.55], shake: [8, 600, 0.55] },
+    corerain: { dim: ['#3c0a14', 0.62, 500], lb: 1, shake: [5, 1200, 0.2] },
+    xslash: { flash: ['216,240,255', 120, 0.3], shake: [7, 380, 0.3] },
+    storm: { dim: ['#10183a', 0.55, 500] },
+    frost: { dim: ['#1c2c5c', 0.45, 400] },
+    bloom: { dim: ['#2c6430', 0.25, 300] },
+    gale: { dim: ['#2a1040', 0.5, 300] },
+    shock: { dim: ['#2a1040', 0.4, 200] },
+    inferno: { dim: ['#3c0a14', 0.45, 300] },
+    psy: { dim: ['#4a1c6c', 0.45, 300] },
+    prism: { dim: ['#10183a', 0.5, 300] },
+    laser: { dim: ['#10183a', 0.45, 300] },
+  };
+  CT.BIG_FX = BIG;
+
   // Legacy (960-scale) art is halved until it is redrawn natively: each 2x2 block
   // takes its most common opaque colour (darkest on ties), then snaps to the palette.
   function halve(src) {
@@ -649,18 +761,26 @@
       }
       this.sheetFx = this.sheetFx.filter((e) => now - e.t0 < e.until);
       for (const e of this.sheetFx) if (e.fx.def.layer === 'back') drawables.push({ z: this.depth(Math.round(e.u ? e.u.rx : e.x), Math.round(e.u ? e.u.ry : e.y)), sub: 0.9, e });
+      if (this.casts) {
+        this.casts = this.casts.filter((c) => now - c.t0 < c.ms);
+        for (const c of this.casts) drawables.push({ z: Math.max(this.depth(Math.floor(c.u.rx), Math.floor(c.u.ry)), this.depth(Math.ceil(c.u.rx), Math.ceil(c.u.ry))), sub: 1.4, c });
+      }
       drawables.sort((a, b) => a.z - b.z || a.sub - b.sub);
 
       const lights = [];
       for (const d of drawables) {
         if (d.t) this.drawTile(d.t, ui, now, lights);
         else if (d.e) this.drawSheetFx(d.e, now);
+        else if (d.c) this.drawCast(d.c, now, -1);
         else this.drawUnit(d.u, world, ui, now, lights);
       }
       for (const r of this.rifts) this.drawRift(r, now);
 
       this.drawGrading(lights, now);
+      this.drawDim(now);
+      for (const b of this.big) this.drawBig(b, now);
       for (const e of this.sheetFx) if (e.fx.def.layer !== 'back') this.drawSheetFx(e, now);
+      if (this.casts) for (const c of this.casts) this.drawCast(c, now, 1);
       this.drawEffects(now);
       this.drawWeather(now);
       this.drawUnitHud(world, ui, now);
@@ -773,7 +893,8 @@
       const ctx = this.ctx;
       ctx.save();
       ctx.setTransform(1, 0, 0, 1, 0, 0);
-      for (const b of this.big) this.drawBig(b, now);
+      if (!this.world || !this.world.map) for (const b of this.big) this.drawBig(b, now);
+      this.drawLetterbox(now);
       this.big = this.big.filter((b) => now - b.t0 < b.ms);
       if (this.screenFlash) {
         const k = (now - this.screenFlash.t0) / this.screenFlash.ms;
@@ -1110,17 +1231,316 @@
         });
       }
       this.rings.push({ x: sx, y: sy, t0: now, ms: elem === 'hit' ? 180 : 320, r: Math.round((opts.r || (elem === 'hit' ? 22 : 40)) / 2), ramp });
-      if (elem === 'lightning') this.bolts.push({ x: sx, y: sy + 4, t0: now });
+      if (elem === 'lightning') this.skyBolt(sx, sy + 4);
       if (!up && !opts.noShake) this.shake(elem === 'hit' ? 3 : 6);
     }
 
-    // Charge-up: sparks spiral in to a unit's hands (or its middle) for `ms`.
+    // Charge-up: sparks spiral in to a unit's hands (or its middle) for `ms`, over a
+    // rune circle that opens at its feet (drawn in two halves so the caster stands inside it).
     charge(u, elem = 'shadow', ms = 700) {
       const now = performance.now();
       const ramp = rampOf(elem);
       for (let i = 0; i < 22; i++) {
         this.orbits.push({ u, t0: now + (i / 22) * ms * 0.7, life: 300 + Math.random() * 220, a0: Math.random() * Math.PI * 2, r0: 9 + Math.random() * 8, w: (0.012 + Math.random() * 0.008) * (i % 2 ? 1 : -1), ramp });
       }
+      if (ms > 50) {
+        this.casts = (this.casts || []).filter((c) => c.u !== u);
+        this.casts.push({ u, elem, ramp, t0: now, ms: ms + 260, last: -1, crack: null });
+      }
+    }
+    drawCast(c, now, half) {
+      const t = now - c.t0;
+      const u = c.u;
+      if (t < 0 || t > c.ms || u.hidden) return;
+      const ctx = this.ctx, R = c.ramp;
+      const st = Math.floor(t / STEP);
+      const [sx0, sy0] = this.unitScreenPos(u);
+      const cx = Math.round(sx0), cy = Math.round(sy0) + 1;
+      const sz = u.big ? 1.5 : 1;
+      const open = Math.min(1, (st + 1) / 5);
+      const out = Math.max(0, (t - (c.ms - 220)) / 220);
+      const ci = Math.min(3, Math.floor(out * 4));
+      const dark = c.elem === 'shadow' || c.elem === 'dark' || c.elem === 'psy';
+      const rx = Math.round(19 * sz * (0.35 + 0.65 * open)), ry = Math.max(3, Math.round(rx * 0.45));
+      // Outer ring with a dark under-line, an inner dashed ring turning the other way.
+      ctx.fillStyle = dark ? '#0a0612' : R[Math.min(5, 4 + (ci >> 1))];
+      ringArc(ctx, cx, cy + 1, rx, ry, half);
+      ctx.fillStyle = R[Math.min(5, (dark ? 2 : 1) + ci)];
+      ringArc(ctx, cx, cy, rx, ry, half);
+      if (open >= 0.6) {
+        ctx.fillStyle = R[Math.min(5, 2 + ci)];
+        dashRing(ctx, cx, cy, rx - 5, Math.max(2, ry - 2), 28, st, half, 2, 3);
+        ctx.fillStyle = R[Math.min(5, 3 + ci)];
+        dashRing(ctx, cx, cy, rx + 3, ry + 1, 36, 1000 - st, half, 1, 4);
+      }
+      if (open >= 1 && out < 0.75) {
+        for (let i = 0; i < 6; i++) {
+          const a = (i / 6) * TAU + st * 0.07 * (dark ? -1 : 1);
+          const s = Math.sin(a);
+          if ((half < 0 && s > 0) || (half > 0 && s <= 0)) continue;
+          const gx = Math.round(cx + Math.cos(a) * (rx - 2.5)), gy = Math.round(cy + s * (ry - 1));
+          // Runes lift off the circle as the charge builds.
+          const lift = Math.min(4, st >> 3);
+          glyph(ctx, RUNES[(i + (u.id || 0)) % RUNES.length], gx - 1, gy - 5 - lift, R[ci], dark ? '#0a0612' : R[Math.min(5, 4)]);
+        }
+      }
+      if (half <= 0 || st === c.last) {
+        if (half > 0 && c.crack && c.crack.st === st) { ctx.fillStyle = R[2]; poly(ctx, c.crack.pts, 1); ctx.fillStyle = '#ffffff'; ctx.fillRect(c.crack.pts[0][0], c.crack.pts[0][1], 1, 1); }
+        return;
+      }
+      c.last = st;
+      if (out > 0) return;
+      // Elemental gathering, one beat per step.
+      const a = hashI(st, u.id || 1, 7) * TAU;
+      const px = cx + Math.cos(a) * rx, py = cy + Math.sin(a) * ry;
+      const e = c.elem;
+      if (e === 'lightning' || e === 'laser') {
+        if (st % 2 === 0) {
+          const b = a + 1 + hashI(st, 3) * 2;
+          c.crack = { st, pts: zig(st + (u.id || 0) * 31, 0, px, py - 2, cx + Math.cos(b) * rx * 0.7, cy - 10 - hashI(st, 9) * 18, 5, 3) };
+        }
+        this.addBit({ k: 'spark', x: px, y: py, vx: (cx - px) * 0.03, vy: -1.2, g: 0, life: 200, ramp: R });
+      } else if (e === 'fire' || e === 'lavos') {
+        this.addBit({ k: 'ember', x: px, y: py, vx: 0, vy: -0.55 - hashI(st, 4) * 0.4, g: 0, life: 520, ramp: R, ph: st });
+      } else if (e === 'ice' || e === 'glass' || e === 'porcelain') {
+        this.addBit({ k: 'sparkle', x: px, y: py - 2, vx: (cx - px) * 0.02, vy: -0.35, g: 0, life: 360, ramp: R, ph: st });
+      } else if (e === 'water') {
+        this.addBit({ k: 'drop', x: px, y: py, vx: (cx - px) * 0.015, vy: -1.4 - hashI(st, 5) * 0.6, g: 0.08, life: 600, ramp: R, floor: py });
+      } else if (dark) {
+        this.addBit({ k: 'mote', x: cx + Math.cos(a) * rx * 2.4, y: cy - 14 + Math.sin(a) * ry * 3, cx, cy: cy - 18, life: 420, ramp: R, ph: a });
+      } else {
+        this.addBit({ k: 'sparkle', x: px, y: py, vx: 0, vy: -0.6, g: 0, life: 520, ramp: R, ph: st });
+      }
+    }
+
+    // ---- Impact bits: embers, shards, debris, droplets, sparks, motes, sparkles -------------
+    addBit(b) {
+      const bits = this.bits || (this.bits = []);
+      if (bits.length > 600) bits.shift();
+      b.t0 = b.t0 || performance.now();
+      b.lt = b.t0;
+      b.vx = b.vx || 0; b.vy = b.vy || 0; b.g = b.g || 0;
+      b.x0 = b.x; b.y0 = b.y;
+      bits.push(b);
+    }
+    // Scatter `n` bits of kind k from (x, y); `gy` is the ground line under them.
+    scatter(k, n, x, y, gy, ramp, opts = {}) {
+      const now = performance.now();
+      for (let i = 0; i < n; i++) {
+        const a = Math.random() * TAU;
+        const sp = (opts.speed || 1) * (0.5 + Math.random());
+        const d = { k, x: x + (Math.random() - 0.5) * (opts.spread || 10), y: y + (Math.random() - 0.5) * (opts.spread || 10) * 0.5, ramp, t0: now + (opts.delay || 0) + Math.random() * (opts.jitter || 60), ph: Math.random() * 100 };
+        if (k === 'ember') Object.assign(d, { vx: Math.cos(a) * sp * 0.8, vy: -0.4 - Math.random() * 0.8, g: -0.004, life: 700 + Math.random() * 700, drag: 0.97 });
+        else if (k === 'shard') Object.assign(d, { vx: Math.cos(a) * sp * 1.6, vy: -1.4 - Math.random() * 1.4, g: 0.11, life: 650 + Math.random() * 350, floor: gy + Math.random() * 6 });
+        else if (k === 'debris') Object.assign(d, { vx: Math.cos(a) * sp * 1.3, vy: -1.6 - Math.random() * 1.6, g: 0.13, life: 800 + Math.random() * 300, floor: gy + Math.random() * 6 - 2 });
+        else if (k === 'drop') Object.assign(d, { vx: Math.cos(a) * sp * 1.2, vy: -1.8 - Math.random() * 1.6, g: 0.12, life: 900, floor: gy + Math.random() * 6 - 2 });
+        else if (k === 'spark') Object.assign(d, { vx: Math.cos(a) * sp * 2.6, vy: Math.sin(a) * sp * 1.8 - 0.6, g: 0.05, life: 200 + Math.random() * 160, drag: 0.93 });
+        else if (k === 'mote') Object.assign(d, { x: x + Math.cos(a) * (18 + Math.random() * 16), y: y + Math.sin(a) * (10 + Math.random() * 8), cx: x, cy: y, life: 420 + Math.random() * 300, ph: a });
+        else if (k === 'sparkle') Object.assign(d, { x: x + (Math.random() - 0.5) * (opts.spread || 26), y: y - Math.random() * 22, vx: 0, vy: -0.15 - Math.random() * 0.25, life: 600 + Math.random() * 600 });
+        else if (k === 'smoke') Object.assign(d, { vx: (Math.random() - 0.5) * 0.25, vy: -0.12 - Math.random() * 0.1, life: 360 + Math.random() * 240 });
+        else if (k === 'crackle') Object.assign(d, { x: x + (Math.random() - 0.5) * 22, y: gy + (Math.random() - 0.5) * 8, life: 380 + Math.random() * 300 });
+        this.addBit(d);
+      }
+    }
+    drawBits(now) {
+      if (!this.bits || !this.bits.length) return;
+      const ctx = this.ctx;
+      this.bits = this.bits.filter((b) => now - b.t0 < b.life);
+      for (const b of this.bits) {
+        const t = now - b.t0;
+        if (t < 0) { b.lt = now; continue; }
+        const dt = Math.min(3, (now - b.lt) / 16);
+        b.lt = now;
+        const k = t / b.life, R = b.ramp, st = Math.floor(t / STEP);
+        if (b.k !== 'mote') {
+          b.vy += b.g * dt;
+          if (b.drag) { const f = Math.pow(b.drag, dt); b.vx *= f; b.vy *= f; }
+          b.x += b.vx * dt;
+          b.y += b.vy * dt;
+          if (b.floor != null && b.y >= b.floor && b.vy > 0) {
+            if (b.k === 'drop') { b.k = 'splash'; b.t0 = now; b.life = 140; b.y = b.floor; continue; }
+            b.y = b.floor; b.vy *= -0.35; b.vx *= 0.5; b.bounce = (b.bounce || 0) + 1;
+            if (b.bounce > 2) { b.vy = 0; b.g = 0; b.vx = 0; }
+          }
+        }
+        const x = Math.round(b.x), y = Math.round(b.y);
+        const col = (o = 0) => R[Math.max(0, Math.min(R.length - 1, Math.floor(k * 4) + o))];
+        switch (b.k) {
+          case 'ember': {
+            if (k > 0.55 && (st + Math.floor(b.ph)) % 3 === 0) break;
+            const sx = x + Math.round(Math.sin(t / 130 + b.ph) * 2);
+            ctx.fillStyle = col(1);
+            ctx.fillRect(sx, y, 1, 1);
+            if (k < 0.45) { ctx.fillStyle = col(0); ctx.fillRect(sx, y - 1, 1, 1); }
+            break;
+          }
+          case 'shard': {
+            // A tumbling crystal splinter: tip, body, tail; glints every few steps.
+            const o = (st + Math.floor(b.ph)) % 4;
+            const [dx, dy] = [[1, -1], [1, 0], [1, 1], [0, 1]][o];
+            if (k > 0.7 && st % 2) break;
+            ctx.fillStyle = R[3]; ctx.fillRect(x - dx, y - dy, 1, 1);
+            ctx.fillStyle = R[1]; ctx.fillRect(x, y, 1, 1);
+            ctx.fillStyle = o === 0 ? '#ffffff' : R[2]; ctx.fillRect(x + dx, y + dy, 1, 1);
+            break;
+          }
+          case 'debris': {
+            if (k > 0.75 && st % 2) break;
+            ctx.fillStyle = '#3e3230'; ctx.fillRect(x, y, 2, 2);
+            ctx.fillStyle = b.bounce ? '#7a665a' : '#9c8674'; ctx.fillRect(x, y, 1, 1);
+            break;
+          }
+          case 'drop': {
+            ctx.fillStyle = R[1]; ctx.fillRect(x, y - 1, 1, 1);
+            ctx.fillStyle = R[3]; ctx.fillRect(x, y, 1, 1);
+            break;
+          }
+          case 'splash': {
+            ctx.fillStyle = R[1];
+            ctx.fillRect(x - 2, y - 1, 1, 1); ctx.fillRect(x + 2, y - 1, 1, 1);
+            ctx.fillStyle = R[3]; ctx.fillRect(x - 1, y, 3, 1);
+            break;
+          }
+          case 'spark': {
+            ctx.fillStyle = col(1);
+            PXD.line(ctx, x - b.vx * 1.5, y - b.vy * 1.5, x, y, 1);
+            ctx.fillStyle = k < 0.5 ? '#ffffff' : col(0);
+            ctx.fillRect(x, y, 1, 1);
+            break;
+          }
+          case 'mote': {
+            // Light swallowed: a speck spirals into the centre and goes out.
+            const e = k * k;
+            const a = b.ph + k * 2.2;
+            const r = 1 - e;
+            const mx = Math.round(b.cx + (b.x0 - b.cx) * r * Math.cos(k * 1.4) - (b.y0 - b.cy) * r * Math.sin(k * 1.4) * 0.5);
+            const my = Math.round(b.cy + (b.y0 - b.cy) * r + Math.sin(a) * r * 2);
+            ctx.fillStyle = R[Math.min(5, 3 + Math.floor(k * 3))];
+            ctx.fillRect(mx + 1, my, 1, 1);
+            ctx.fillStyle = R[Math.min(5, Math.floor(k * 3))];
+            ctx.fillRect(mx, my, 1, 1);
+            break;
+          }
+          case 'sparkle': {
+            const s = [0, 1, 2, 1, 0, 0, 1, 0][(st + Math.floor(b.ph)) % 8];
+            if (k > 0.8 && st % 2) break;
+            star(ctx, x, y, s, '#ffffff', col(1));
+            break;
+          }
+          case 'smoke': {
+            // A puff that swells and greys out.
+            if (k > 0.7 && st % 2) break;
+            const S = RAMPS.slash;
+            if (k < 0.3) { ctx.fillStyle = S[2]; ctx.fillRect(x, y, 2, 2); ctx.fillStyle = S[0]; ctx.fillRect(x, y, 1, 1); }
+            else { ctx.fillStyle = k < 0.65 ? S[3] : S[4]; ctx.fillRect(x - 1, y, 3, 2); ctx.fillRect(x, y - 1, 1, 1); ctx.fillStyle = k < 0.65 ? S[2] : S[3]; ctx.fillRect(x - 1, y, 1, 1); }
+            break;
+          }
+          case 'crackle': {
+            if (st % 3 === 2) break;
+            ctx.fillStyle = col(1);
+            poly(ctx, zig(Math.floor(b.ph * 10), st >> 1, x - 4, y, x + 4, y - 1, 3, 2), 1);
+            break;
+          }
+        }
+      }
+    }
+
+    // Field dim: colour-math darkening of everything under the effects (stepped like a palette fade).
+    dimField(color = '#2a1040', amt = 0.5, ms = 900, fin = 140, fout = 320, delay = 0) {
+      (this.dims || (this.dims = [])).push({ rgb: CT.PAL.hex(color), amt, t0: performance.now() + delay, ms, fin, fout });
+    }
+    drawDim(now) {
+      if (!this.dims || !this.dims.length) return;
+      this.dims = this.dims.filter((d) => now - d.t0 < d.ms);
+      let best = null, lv = 0;
+      for (const d of this.dims) {
+        const t = now - d.t0;
+        if (t < 0) continue;
+        const l = d.amt * Math.max(0, Math.min(1, t / d.fin, (d.ms - t) / d.fout));
+        if (l > lv) { lv = l; best = d; }
+      }
+      if (!best || lv < 0.06) return;
+      const s = Math.round(lv * 8) / 8;
+      const c = (v) => Math.round(255 + (v - 255) * s);
+      const ctx = this.ctx;
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.globalCompositeOperation = 'multiply';
+      ctx.fillStyle = `rgb(${c(best.rgb[0])},${c(best.rgb[1])},${c(best.rgb[2])})`;
+      ctx.fillRect(0, 0, this.W, this.H);
+      ctx.restore();
+    }
+
+    // Lightning from the sky: a forked channel that re-forms every other step.
+    skyBolt(x, y, opts = {}) {
+      this.bolts.push({ x: Math.round(x), y: Math.round(y), t0: performance.now() + (opts.delay || 0), ms: opts.ms || 300, seed: (Math.random() * 9999) | 0, w: opts.w || 3, ramp: opts.ramp || RAMPS.lightning, top: opts.top != null ? opts.top : -8 });
+    }
+    drawBolt(b, now) {
+      const t = now - b.t0;
+      if (t < 0) return;
+      const st = Math.floor(t / STEP);
+      if (st % 4 === 3 && st > 2) return; // strobe
+      const ctx = this.ctx, R = b.ramp;
+      const ph = st >> 1;
+      const x0 = b.x + (hashI(b.seed, 0, 1) - 0.5) * 50;
+      const pts = zig(b.seed, ph, x0, b.top, b.x, b.y, 11, 7);
+      const forks = [];
+      for (let f = 0; f < 2; f++) {
+        const j = 1 + Math.floor(hashI(b.seed, ph, 90 + f) * Math.max(1, pts.length - 3));
+        const [fx, fy] = pts[j];
+        const dir = f ? 1 : -1;
+        forks.push(zig(b.seed + 7 * f, ph, fx, fy, fx + dir * (14 + hashI(b.seed, f) * 16), fy + 18 + hashI(b.seed, f, 3) * 14, 6, 4));
+      }
+      const fat = st < 2;
+      ctx.fillStyle = R[3];
+      poly(ctx, pts, fat ? b.w + 2 : b.w);
+      ctx.fillStyle = R[2];
+      for (const f of forks) poly(ctx, f, 1);
+      ctx.fillStyle = R[1];
+      poly(ctx, pts, fat ? 3 : 1);
+      ctx.fillStyle = '#ffffff';
+      poly(ctx, pts, 1);
+      if (st < 5) {
+        // Strike point: a hot cross and a ground ring.
+        star(ctx, b.x, b.y, st < 2 ? 4 : 2, '#ffffff', R[1]);
+        ctx.fillStyle = R[2];
+        PXD.ellipseRing(ctx, b.x, b.y + 1, 4 + st * 3, 2 + Math.round(st * 1.5));
+      }
+    }
+
+    // Spectacle staging for an effect sheet (CT.FX_STAGE[key], see public/js/sheets/fx_*.js):
+    //   at: frame the bits fire on (default the sheet's impact frame), elem: palette ramp,
+    //   y: height above ground of the burst centre, ring / wave: impact ring radius (chest /
+    //   ground), bits: { ember|shard|debris|drop|spark|mote|sparkle|crackle: n },
+    //   bolt: n sky bolts (boltAt), dim: [colour, amount, ms], big: full-screen moment
+    //   (bigAt, bigMs), all: true to run dim/big on every tile instead of once per area.
+    stageFx(key, st, fx, x, y, h, opts) {
+      const first = !opts.noShake;
+      const d0 = opts.delay || 0;
+      const at = (i) => d0 + fx.frames.slice(0, Math.max(0, i)).reduce((a, f) => a + f.ms, 0);
+      const imp = st.at != null ? st.at : fx.def.impact != null ? fx.def.impact : 0;
+      const pos = () => {
+        if (opts.unit) { const [sx, sy] = this.unitScreenPos(opts.unit); return [sx, sy]; }
+        return this.project(x, y, h);
+      };
+      const R = rampOf(st.elem || 'hit');
+      if (st.dim && (first || st.all)) this.dimField(st.dim[0], st.dim[1], st.dim[2] || 900, st.dim[3] || 140, 320, d0 + (st.dimAt != null ? at(st.dimAt) : 0));
+      if (st.big && first) setTimeout(() => this.bigFx(st.big, st.bigMs || 1000, { key, x, y, h, unit: opts.unit }), at(st.bigAt != null ? st.bigAt : 0));
+      if (st.bolt) {
+        const n = first ? st.bolt : Math.max(0, st.bolt - 1);
+        setTimeout(() => { const [sx, sy] = pos(); for (let i = 0; i < n; i++) this.skyBolt(sx + (i ? (Math.random() - 0.5) * 16 : 0), sy - (st.boltY || 0), { delay: i * 70, ramp: R, ms: st.boltMs || 300 }); }, at(st.boltAt != null ? st.boltAt : imp) - (st.lead || 0));
+      }
+      setTimeout(() => {
+        const [sx, gy] = pos();
+        const cy = gy - (st.y != null ? st.y : 12);
+        const now = performance.now();
+        if (st.ring) this.rings.push({ x: Math.round(sx), y: Math.round(cy), t0: now, ms: st.ringMs || 300, r: Math.round(st.ring / (first ? 1 : 1.5)), ramp: R, two: true });
+        if (st.wave && (first || st.all)) this.rings.push({ x: Math.round(sx), y: Math.round(gy), t0: now, ms: st.waveMs || 420, r: st.wave, ramp: R, flat: true, two: true });
+        for (const [k, n0] of Object.entries(st.bits || {})) {
+          const n = first ? n0 : Math.ceil(n0 * 0.5);
+          this.scatter(k, n, sx, k === 'mote' ? cy - 4 : cy, gy, k === 'debris' ? RAMPS.slash : R, { spread: st.spread, speed: st.speed });
+        }
+      }, at(imp));
     }
 
     // Hand-pixelled effect sheet (CT.fxSheet). At a tile (x, y, h), or following a unit
@@ -1135,6 +1555,9 @@
       const d = fx.def;
       if (d.shake && !opts.noShake) setTimeout(() => this.shake(d.shake), (opts.delay || 0) + (d.shakeAt != null ? fx.frames.slice(0, d.shakeAt).reduce((a, f) => a + f.ms, 0) : 0));
       if (d.flash && !opts.noShake) setTimeout(() => this.flashScreen(CT.PAL.hex(d.flash).join(','), 120), (opts.delay || 0) + (d.flashAt != null ? fx.frames.slice(0, d.flashAt).reduce((a, f) => a + f.ms, 0) : 0));
+      const st = CT.FX_STAGE && CT.FX_STAGE[key];
+      if (st && !e.travel) this.stageFx(key, st, fx, x, y, h, opts);
+      else if (st && e.travel && st.trail) e.trail = st;
       return (opts.delay || 0) + e.until;
     }
     drawSheetFx(e, now) {
@@ -1160,6 +1583,15 @@
         ox = img.width - 1 - ax;
       }
       this.ctx.drawImage(img, Math.round(sx - ox + (e.flip ? -fr.dx : fr.dx)), Math.round(sy - ay + fr.dy));
+      if (e.trail) {
+        // Projectile trail: one puff / glint / ember per step along the flight.
+        const st = Math.floor(t / STEP);
+        if (st !== e.tst) {
+          e.tst = st;
+          const tr = e.trail;
+          this.scatter(tr.trail, tr.trailN || 1, sx, sy - (tr.trailY || 0), sy + 12, rampOf(tr.elem || 'hit'), { spread: 3, speed: 0.3, jitter: 1 });
+        }
+      }
     }
 
     projectile(from, to, kind, dur) {
@@ -1214,63 +1646,409 @@
       }
     }
 
-    // Full-screen tech spectacles: 'eclipse', 'luminaire', 'blackhole', 'darkmatter', 'erase'.
-    bigFx(kind, ms = 1400) {
-      this.big.push({ kind, t0: performance.now(), ms });
+    // Full-screen tech spectacles (see BIG): 'luminaire', 'blackhole', 'darkmatter', 'eclipse',
+    // 'erase', and the positioned moments the effect stages call ('singularity', 'dm_burst',
+    // 'corerain', 'xslash', 'storm', 'frost', 'bloom', 'gale', 'shock', 'inferno', 'psy', 'prism', 'laser').
+    // `at` ({ key, x, y, h, unit }) centres it on that effect; otherwise on the acting unit.
+    bigFx(kind, ms = 1400, at = null) {
+      const now = performance.now();
+      const b = { kind, t0: now, ms, at, seed: (Math.random() * 9999) | 0, fired: {} };
+      if (!at) {
+        const a = this.world && this.world.active;
+        if (a && a._sx != null) b.c = [a._sx, a._sy - 18];
+      }
+      this.big.push(b);
+      const P = BIG[kind];
+      if (!P) return;
+      if (P.dim) this.dimField(P.dim[0], P.dim[1], ms + (P.dim[2] || 600), 160, 420);
+      if (P.lb) b.lb = 1;
+      if (P.shake) setTimeout(() => this.shake(P.shake[0], P.shake[1]), P.shake[2] * ms);
+      if (P.flash) setTimeout(() => this.flashScreen(P.flash[0], P.flash[1]), P.flash[2] * ms);
+    }
+    bigCentre(b) {
+      const a = b.at;
+      if (a && a.unit) { const [x, y] = this.unitScreenPos(a.unit); return [Math.round(x), Math.round(y) - 16]; }
+      if (a && a.key) {
+        let n = 0, sx = 0, sy = 0;
+        for (const e of this.sheetFx) if (e.fx.def.key === a.key && !e.u) { const [x, y] = this.project(e.x, e.y, e.h); sx += x; sy += y; n++; }
+        if (n) return (b.last = [Math.round(sx / n), Math.round(sy / n) - 12]);
+        if (b.last) return b.last;
+        const [x, y] = this.project(a.x, a.y, a.h);
+        return [Math.round(x), Math.round(y) - 12];
+      }
+      return b.c || [this.W >> 1, (this.H >> 1) - 10];
     }
     drawBig(b, now) {
       const ctx = this.ctx;
-      const k = (now - b.t0) / b.ms;
+      const t = now - b.t0;
+      const k = t / b.ms;
       if (k < 0 || k > 1) return;
-      const W = this.W;
-      const H = this.H;
-      const step = (v) => Math.round(v * 6) / 6;
-      if (b.kind === 'eclipse') {
-        ctx.fillStyle = `rgba(0,0,0,${step(Math.sin(k * Math.PI) * 0.7)})`;
-        ctx.fillRect(0, 0, W, H);
-        const rw = Math.round(W * Math.min(1, k * 2.2));
-        ctx.fillStyle = '#0a0612';
-        ctx.fillRect(Math.round(W / 2 - rw / 2), Math.round(H * 0.3) - 3, rw, 6);
-        ctx.fillStyle = '#9450c0';
-        ctx.fillRect(Math.round(W / 2 - rw / 2), Math.round(H * 0.3) - 4, rw, 1);
-        if (k > 0.35) {
-          const s = (k - 0.35) / 0.65;
-          ctx.fillStyle = s < 0.5 ? '#ffffff' : '#e0c0fc';
-          PXD.line(ctx, W * 0.1 + s * W * 0.4, H * 0.1, W * 0.5 + s * W * 0.3, H * 0.9, 3);
-          PXD.line(ctx, W * 0.9 - s * W * 0.4, H * 0.1, W * 0.5 - s * W * 0.3, H * 0.9, 3);
-        }
-      } else if (b.kind === 'luminaire') {
-        const r = Math.round(k * W * 0.7);
-        ctx.fillStyle = k < 0.5 ? '#fff4b0' : '#fce068';
-        const par = Math.floor(now / 50) % 2;
-        for (let y = -r; y <= r; y += 1) {
-          const hw = Math.round(Math.sqrt(Math.max(0, r * r - y * y)));
-          const inner = Math.round(Math.sqrt(Math.max(0, (r - 6) * (r - 6) - y * y)));
-          for (let x = inner; x <= hw; x++) if (((x + y + par) & 1) === 0) {
-            ctx.fillRect(W / 2 + x, H / 2 + y, 1, 1);
-            ctx.fillRect(W / 2 - x, H / 2 + y, 1, 1);
+      const W = this.W, H = this.H;
+      const st = Math.floor(t / STEP);
+      const [cx, cy] = this.bigCentre(b);
+      const once = (id, fn) => { if (!b.fired[id]) { b.fired[id] = 1; fn(); } };
+      const G = RAMPS.lightning, V = RAMPS.shadow;
+      switch (b.kind) {
+        case 'luminaire': {
+          const g = 0.33;
+          if (k < g) {
+            // Needles of light rush in from the whole screen to Crono's sword.
+            const q = k / g;
+            for (let i = 0; i < 16; i++) {
+              const a = (i / 16) * TAU + 0.2;
+              const r0 = 230 * (1 - q) * (0.7 + 0.3 * hashI(i, 5)) + 6;
+              ctx.fillStyle = i % 2 ? G[2] : G[3];
+              PXD.line(ctx, cx + Math.cos(a) * r0, cy + Math.sin(a) * r0 * 0.6, cx + Math.cos(a) * (r0 + 8 + q * 10), cy + Math.sin(a) * (r0 + 8 + q * 10) * 0.6, 1);
+              ctx.fillStyle = '#ffffff';
+              ctx.fillRect(Math.round(cx + Math.cos(a) * r0), Math.round(cy + Math.sin(a) * r0 * 0.6), 1, 1);
+            }
+            const r = 1 + Math.floor(q * 5);
+            ctx.fillStyle = G[2];
+            PXD.ellipseRing(ctx, cx, cy, r + 2, r + 2);
+            ctx.fillStyle = '#ffffff';
+            PXD.disc(ctx, cx, cy, r);
+            star(ctx, cx, cy, 3 + Math.floor(q * 12), '#ffffff', G[1]);
+          } else {
+            const s = (k - g) / (1 - g);
+            for (let j = 0; j < 3; j++) {
+              const rr = s * 1.25 - j * 0.2;
+              if (rr <= 0 || rr > 1) continue;
+              const rx = Math.round(16 + rr * 320), ry = Math.round(rx * 0.5);
+              ctx.fillStyle = G[Math.min(4, Math.floor(rr * 5))];
+              PXD.ellipseRing(ctx, cx, cy + 14, rx, ry);
+              PXD.ellipseRing(ctx, cx, cy + 14, rx - 1, ry - 1);
+              ctx.fillStyle = '#ffffff';
+              if (rr < 0.4) PXD.ellipseRing(ctx, cx, cy + 14, rx - 3, ry - 2);
+            }
+            if (s < 0.75) {
+              for (let i = 0; i < 8; i++) {
+                const a = (i / 8) * TAU + s * 0.6;
+                const L = 30 + s * 300;
+                const x1 = cx + Math.cos(a) * L, y1 = cy + Math.sin(a) * L * 0.62;
+                ctx.fillStyle = G[2];
+                PXD.line(ctx, cx + Math.cos(a) * 10, cy + Math.sin(a) * 6, x1, y1, s < 0.4 ? 3 : 1);
+                if (s < 0.5) { ctx.fillStyle = '#ffffff'; PXD.line(ctx, cx + Math.cos(a) * 10, cy + Math.sin(a) * 6, x1, y1, 1); }
+              }
+            }
+            for (let i = 0; i < 40; i++) {
+              const p = (st + i * 3) % 10;
+              if (p > 5 || hashI(i, b.seed) * 1.2 > s + 0.3) continue;
+              star(ctx, Math.round(hashI(i, 1, b.seed) * W), Math.round(hashI(i, 2, b.seed) * H * 0.9), [0, 1, 2, 3, 2, 1][p], '#ffffff', G[2]);
+            }
           }
+          break;
         }
-      } else if (b.kind === 'blackhole' || b.kind === 'darkmatter') {
-        ctx.fillStyle = `rgba(20,0,40,${step(Math.sin(k * Math.PI) * 0.5)})`;
-        ctx.fillRect(0, 0, W, H);
-      } else if (b.kind === 'erase') {
-        ctx.fillStyle = `rgba(255,255,255,${step(Math.sin(k * Math.PI) * 0.6)})`;
-        ctx.fillRect(0, 0, W, H);
+        case 'blackhole':
+        case 'darkmatter': {
+          // Light drains toward the caster: specks of the field streak in and go out.
+          for (let i = 0; i < 44; i++) {
+            const p = ((t / 700 + hashI(i, b.seed)) % 1);
+            const a = hashI(i, 3, b.seed) * TAU + p * (b.kind === 'blackhole' ? 2.4 : -1.6);
+            const r = (1 - p * p) * (170 + hashI(i, 4) * 120);
+            const x = Math.round(cx + Math.cos(a) * r), y = Math.round(cy + Math.sin(a) * r * 0.62);
+            ctx.fillStyle = V[Math.min(5, Math.floor(p * 4))];
+            ctx.fillRect(x, y, p < 0.5 ? 2 : 1, 1);
+            ctx.fillStyle = p > 0.7 ? '#0a0612' : V[0];
+            ctx.fillRect(x, y, 1, 1);
+          }
+          if (b.kind === 'darkmatter') {
+            // A dark sun forms over Magus, cracking with violet light.
+            const r = Math.min(14, 2 + st);
+            ctx.fillStyle = V[2];
+            PXD.ellipseRing(ctx, cx, cy - 26, r + 2, r + 2);
+            ctx.fillStyle = '#0a0612';
+            PXD.disc(ctx, cx, cy - 26, r);
+            ctx.fillStyle = V[0];
+            ctx.fillRect(cx - (r >> 1), cy - 26 - (r >> 1), 2, 1);
+            if (st % 2 === 0) {
+              ctx.fillStyle = V[1];
+              for (let i = 0; i < 3; i++) { const a = hashI(st, i, b.seed) * TAU; poly(ctx, zig(b.seed + i, st, cx + Math.cos(a) * r, cy - 26 + Math.sin(a) * r, cx + Math.cos(a) * (r + 14), cy - 26 + Math.sin(a) * (r + 14), 4, 3), 1); }
+            }
+          } else {
+            const r = Math.min(8, 1 + (st >> 1));
+            ctx.fillStyle = V[1];
+            PXD.ellipseRing(ctx, cx, cy, r + 1, r + 1);
+            ctx.fillStyle = '#0a0612';
+            PXD.disc(ctx, cx, cy, r);
+          }
+          break;
+        }
+        case 'singularity': {
+          // Accretion spiral around a black core, collapsing to a point at the end.
+          const env = k < 0.2 ? k / 0.2 : k > 0.82 ? Math.max(0, (1 - k) / 0.18) : 1;
+          const R0 = 40 * env;
+          for (let arm = 0; arm < 3; arm++)
+            for (let j = 0; j < 28; j++) {
+              const u = j / 28;
+              const a = (arm * TAU) / 3 + st * 0.24 + u * 4.4;
+              const r = R0 * (1.15 - u) + 3;
+              const x = Math.round(cx + Math.cos(a) * r * 1.35), y = Math.round(cy + Math.sin(a) * r * 0.55);
+              ctx.fillStyle = V[Math.max(0, 5 - Math.floor(u * 6))];
+              ctx.fillRect(x, y, u < 0.5 ? 2 : 1, 1);
+            }
+          const hr = Math.max(1, Math.round(R0 * 0.32));
+          ctx.fillStyle = V[0];
+          PXD.ellipseRing(ctx, cx, cy, hr + 1, Math.round(hr * 0.7) + 1);
+          ctx.fillStyle = '#0a0612';
+          PXD.ellipse(ctx, cx, cy, hr, Math.round(hr * 0.7));
+          if (st % 3 === 0) { ctx.fillStyle = '#ffffff'; ctx.fillRect(cx - (hr >> 1), cy - (hr >> 1), 1, 1); }
+          if (k > 0.9) star(ctx, cx, cy, Math.round((1 - k) * 60), '#ffffff', V[0]);
+          break;
+        }
+        case 'dm_burst': {
+          // A sphere of dark matter swells over the cross, then breaks into a ring of light.
+          if (k < 0.5) {
+            const q = k / 0.5;
+            const rx = Math.round(10 + q * 64), ry = Math.round(rx * 0.62);
+            ctx.fillStyle = '#0a0612';
+            PXD.ellipse(ctx, cx, cy, rx, ry);
+            ctx.fillStyle = V[3];
+            PXD.ellipseRing(ctx, cx, cy, rx, ry);
+            ctx.fillStyle = V[1];
+            PXD.ellipseRing(ctx, cx, cy, rx + 2, ry + 1);
+            ctx.fillStyle = V[0];
+            for (let i = 0; i < 6; i++) {
+              const a = (i / 6) * TAU + st * 0.3;
+              poly(ctx, zig(b.seed + i, st >> 1, cx, cy, cx + Math.cos(a) * rx * 0.9, cy + Math.sin(a) * ry * 0.9, 5, 3), 1);
+            }
+          } else {
+            const q = (k - 0.5) / 0.5;
+            for (let j = 0; j < 2; j++) {
+              const rr = q * 1.2 - j * 0.25;
+              if (rr <= 0 || rr > 1) continue;
+              const rx = Math.round(70 + rr * 240), ry = Math.round(rx * 0.5);
+              ctx.fillStyle = j ? V[2] : rr < 0.3 ? '#ffffff' : V[0];
+              PXD.ellipseRing(ctx, cx, cy, rx, ry);
+              PXD.ellipseRing(ctx, cx, cy, rx - 1, ry - 1);
+            }
+            const r2 = Math.round(64 * (1 - q));
+            if (r2 > 2) { ctx.fillStyle = '#0a0612'; PXD.ellipseRing(ctx, cx, cy, r2, Math.round(r2 * 0.62)); }
+          }
+          break;
+        }
+        case 'eclipse': {
+          // The moon slides over the sun; a diamond ring flares; Crono and Frog cut through.
+          const sx = W >> 1, sy = 56;
+          for (let i = 0; i < 12; i++) {
+            const a = (i / 12) * TAU + st * 0.05;
+            const L = 18 + ((i + st) % 3) * 3;
+            ctx.fillStyle = G[i % 2 ? 2 : 3];
+            PXD.line(ctx, sx + Math.cos(a) * 15, sy + Math.sin(a) * 15, sx + Math.cos(a) * L, sy + Math.sin(a) * L, 1);
+          }
+          ctx.fillStyle = G[1];
+          PXD.disc(ctx, sx, sy, 14);
+          const mx = Math.round(sx - 60 + Math.min(1, k / 0.42) * 60);
+          ctx.fillStyle = '#0a0612';
+          PXD.disc(ctx, mx, sy, 14);
+          ctx.fillStyle = V[2];
+          ringArc(ctx, mx, sy, 14, 14, 0);
+          if (k > 0.42 && k < 0.6) star(ctx, sx + 10, sy - 10, 6 + (st % 2) * 3, '#ffffff', G[0]);
+          const rw = Math.round(W * Math.min(1, k * 2.2));
+          ctx.fillStyle = '#0a0612';
+          ctx.fillRect(Math.round(W / 2 - rw / 2), Math.round(H * 0.3) - 3, rw, 6);
+          ctx.fillStyle = V[3];
+          ctx.fillRect(Math.round(W / 2 - rw / 2), Math.round(H * 0.3) - 4, rw, 1);
+          if (k > 0.45) {
+            const s = Math.min(1, (k - 0.45) / 0.3);
+            const fade = k > 0.85;
+            for (const [w, col] of fade ? [[1, V[1]]] : [[5, V[2]], [3, V[0]], [1, '#ffffff']]) {
+              ctx.fillStyle = col;
+              PXD.line(ctx, W * 0.1, H * 0.08, W * 0.1 + s * W * 0.75, H * 0.08 + s * H * 0.86, w);
+              PXD.line(ctx, W * 0.9, H * 0.08, W * 0.9 - s * W * 0.75, H * 0.08 + s * H * 0.86, w);
+            }
+          }
+          break;
+        }
+        case 'erase': {
+          // The archive deletes the era: white scan-tears sweep the screen, glyphs flake away.
+          const S = RAMPS.slash;
+          for (let y = 0; y < H; y += 3) {
+            const p = hashI(y, b.seed);
+            const len = Math.round(Math.max(0, k * 1.6 - p * 0.6) * W);
+            if (len <= 0) continue;
+            const dir = hashI(y, 7) < 0.5;
+            ctx.fillStyle = (y + st) % 6 < 3 ? '#ffffff' : S[1];
+            ctx.fillRect(dir ? 0 : W - len, y, len, (y / 3 + st) % 4 === 0 ? 2 : 1);
+          }
+          for (let i = 0; i < 40; i++) {
+            const p = (t / 900 + hashI(i, b.seed)) % 1;
+            const x = Math.round(hashI(i, 1, b.seed) * W), y = Math.round(H * (1 - p) - 10);
+            glyph(ctx, RUNES[i % RUNES.length], x, y, i % 3 ? S[3] : S[4], null);
+          }
+          if (k < 0.3) { ctx.fillStyle = S[4]; PXD.line(ctx, 0, cy, W, cy, 1); ctx.fillStyle = '#ffffff'; ctx.fillRect(0, cy - 1, Math.round(W * k / 0.3), 3); }
+          break;
+        }
+        case 'corerain': {
+          // The core screams: red needles rain diagonally across the whole field.
+          const L = RAMPS.lavos;
+          for (let i = 0; i < 46; i++) {
+            const p = (t / 520 + hashI(i, b.seed)) % 1;
+            if (k > 0.85 && hashI(i, 9) > (1 - k) / 0.15) continue;
+            const gx = hashI(i, 1, b.seed) * (W + 120);
+            const gyy = 60 + hashI(i, 2, b.seed) * (H - 70);
+            const y = Math.round(-20 + (gyy + 20) * p), x = Math.round(gx - (gyy - y) * 0.35);
+            if (p > 0.92) { star(ctx, Math.round(gx - 0), Math.round(gyy), 2, L[0], L[1]); continue; }
+            ctx.fillStyle = L[3];
+            PXD.line(ctx, x + 5, y - 14, x, y, 3);
+            ctx.fillStyle = L[1];
+            PXD.line(ctx, x + 5, y - 14, x, y, 1);
+            ctx.fillStyle = L[0];
+            ctx.fillRect(x, y, 1, 1);
+          }
+          break;
+        }
+        case 'xslash': {
+          // Two giant blade cuts cross over the target.
+          const S = RAMPS.slash;
+          const cut = (x0, y0, x1, y1, s0) => {
+            const s = Math.max(0, Math.min(1, (k - s0) / 0.12));
+            if (s <= 0) return;
+            const x = x0 + (x1 - x0) * s, y = y0 + (y1 - y0) * s;
+            const thin = k > 0.62;
+            for (const [w, col] of thin ? [[1, S[2]]] : [[7, S[3]], [5, S[1]], [3, '#ffffff']]) {
+              ctx.fillStyle = col;
+              PXD.line(ctx, x0, y0, x, y, w);
+            }
+          };
+          cut(cx - 110, cy - 70, cx + 110, cy + 70, 0);
+          cut(cx + 110, cy - 70, cx - 110, cy + 70, 0.16);
+          if (k > 0.28 && k < 0.5) star(ctx, cx, cy, 12 - (st % 3) * 3, '#ffffff', S[1]);
+          break;
+        }
+        case 'storm': {
+          // Rain lashes the field and lightning walks across it.
+          const B = RAMPS.water;
+          ctx.fillStyle = B[2];
+          for (let i = 0; i < 70; i++) {
+            const p = (t / 300 + hashI(i, b.seed)) % 1;
+            const x = Math.round(hashI(i, 1, b.seed) * (W + 60) - p * 40), y = Math.round(p * (H + 20) - 10);
+            ctx.fillRect(x, y, 1, 4);
+          }
+          for (let i = 0; i < 3; i++) {
+            const at = 0.1 + i * 0.22;
+            if (k > at) once('bolt' + i, () => this.skyBolt(cx + (hashI(i, b.seed) - 0.5) * 220, cy + (hashI(i, 2, b.seed) - 0.3) * 60, { ms: 260 }));
+          }
+          break;
+        }
+        case 'frost': {
+          // Frost ferns creep in from the screen edges, then shatter.
+          const I = RAMPS.ice;
+          const grow = Math.min(1, k / 0.55);
+          const brk = k > 0.8;
+          for (let i = 0; i < 16; i++) {
+            const side = i % 4;
+            const p = hashI(i, b.seed);
+            const [x0, y0, a] = side === 0 ? [p * W, 0, Math.PI / 2] : side === 1 ? [p * W, H, -Math.PI / 2] : side === 2 ? [0, p * H, 0] : [W, p * H, Math.PI];
+            const L = (24 + hashI(i, 3) * 40) * grow;
+            const a2 = a + (hashI(i, 4) - 0.5) * 0.6;
+            const x1 = x0 + Math.cos(a2) * L, y1 = y0 + Math.sin(a2) * L;
+            ctx.fillStyle = brk && st % 2 ? I[3] : I[1];
+            PXD.line(ctx, x0, y0, x1, y1, brk ? 1 : 2);
+            ctx.fillStyle = I[2];
+            for (let s = 6; s < L; s += 6) {
+              const bx = x0 + Math.cos(a2) * s, by = y0 + Math.sin(a2) * s;
+              const bl = Math.min(8, (L - s) * 0.5);
+              PXD.line(ctx, bx, by, bx + Math.cos(a2 + 1.05) * bl, by + Math.sin(a2 + 1.05) * bl, 1);
+              PXD.line(ctx, bx, by, bx + Math.cos(a2 - 1.05) * bl, by + Math.sin(a2 - 1.05) * bl, 1);
+            }
+            if (!brk) { ctx.fillStyle = '#ffffff'; ctx.fillRect(Math.round(x1), Math.round(y1), 1, 1); }
+          }
+          for (let i = 0; i < 26; i++) {
+            const p = (t / 1400 + hashI(i, b.seed, 5)) % 1;
+            star(ctx, Math.round(hashI(i, 6, b.seed) * W + Math.sin(t / 300 + i) * 3), Math.round(p * H), (st + i) % 6 === 0 ? 1 : 0, '#ffffff', I[1]);
+          }
+          break;
+        }
+        case 'bloom': {
+          // Shafts of green-gold light fall on the party; petals of light drift down.
+          const Hh = RAMPS.heal;
+          for (let i = 0; i < 5; i++) {
+            const on = (st + i * 2) % 10 < 7 && k < 0.85;
+            if (!on) continue;
+            const x = Math.round(cx + (i - 2) * 26 + (hashI(i, b.seed) - 0.5) * 10);
+            ctx.fillStyle = Hh[2];
+            ctx.fillRect(x - 3, 0, 1, cy + 20);
+            ctx.fillRect(x + 3, 0, 1, cy + 20);
+            ctx.fillStyle = Hh[1];
+            ctx.fillRect(x - 1, 0, 3, cy + 22);
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(x, 0, 1, cy + 22);
+          }
+          for (let i = 0; i < 30; i++) {
+            const p = (t / 1200 + hashI(i, b.seed)) % 1;
+            star(ctx, Math.round(cx + (hashI(i, 1, b.seed) - 0.5) * 200 + Math.sin(t / 200 + i) * 4), Math.round(p * (cy + 30)), (st + i) % 5 === 0 ? 2 : 1, '#ffffff', Hh[i % 2 ? 1 : 2]);
+          }
+          break;
+        }
+        case 'gale':
+        case 'shock':
+        case 'psy':
+        case 'inferno':
+        case 'prism':
+        case 'laser': {
+          // Shockwave rings rolling out over the field (colours per element), plus a swirl for gale.
+          const RR = b.kind === 'inferno' ? RAMPS.fire : b.kind === 'psy' ? RAMPS.charm : b.kind === 'prism' || b.kind === 'laser' ? RAMPS.laser : V;
+          for (let j = 0; j < 3; j++) {
+            const rr = k * 1.4 - j * 0.22;
+            if (rr <= 0 || rr > 1) continue;
+            const rx = Math.round(12 + rr * 200), ry = Math.round(rx * 0.5);
+            ctx.fillStyle = RR[Math.min(5, Math.floor(rr * 5))];
+            PXD.ellipseRing(ctx, cx, cy + 12, rx, ry);
+            if (rr < 0.5) PXD.ellipseRing(ctx, cx, cy + 12, rx - 1, ry);
+          }
+          if (b.kind === 'gale')
+            for (let arm = 0; arm < 4; arm++)
+              for (let j = 0; j < 20; j++) {
+                const u = j / 20;
+                const a = (arm * TAU) / 4 - st * 0.3 + u * 3;
+                const r = 14 + u * 90 * Math.min(1, k * 3);
+                ctx.fillStyle = V[Math.min(5, 1 + Math.floor(u * 5))];
+                ctx.fillRect(Math.round(cx + Math.cos(a) * r), Math.round(cy + Math.sin(a) * r * 0.5), u < 0.3 ? 2 : 1, 1);
+              }
+          if (b.kind === 'prism' || b.kind === 'laser')
+            for (let i = 0; i < 24; i++) {
+              const p = (st + i * 2) % 8;
+              if (p > 4) continue;
+              star(ctx, Math.round(cx + (hashI(i, 1, b.seed) - 0.5) * 220), Math.round(cy + (hashI(i, 2, b.seed) - 0.5) * 120), [0, 1, 2, 1, 0][p], '#ffffff', RR[1 + (i % 3)]);
+            }
+          break;
+        }
       }
+    }
+    // Cinematic letterbox for the biggest moments (stepped in and out).
+    drawLetterbox(now) {
+      let lv = 0;
+      for (const b of this.big) {
+        if (!b.lb) continue;
+        const t = now - b.t0;
+        lv = Math.max(lv, Math.min(1, t / 160, (b.ms - t) / 240));
+      }
+      if (lv <= 0) return;
+      const h = Math.round(Math.ceil(lv * 6) / 6 * 22);
+      this.ctx.fillStyle = '#0a0612';
+      this.ctx.fillRect(0, 0, this.W, h);
+      this.ctx.fillRect(0, this.H - h, this.W, h);
     }
 
     drawEffects(now) {
       const ctx = this.ctx;
       ctx.save();
-      // Impact rings: expanding 1px pixel circles walking down their ramp.
+      // Impact rings: expanding pixel rings walking down their ramp; `two` adds a trailing
+      // inner ring, `flat` lies on the ground (a shockwave rolling over the tiles).
       this.rings = this.rings.filter((r) => now - r.t0 < r.ms);
       for (const r of this.rings) {
         const k = (now - r.t0) / r.ms;
         const rad = Math.max(1, Math.round(r.r * (0.3 + k * 0.7)));
+        const sq = r.flat ? 0.5 : 0.75;
         ctx.fillStyle = rampAt(r.ramp, k);
-        PXD.ellipseRing(ctx, r.x, r.y, rad, Math.max(1, Math.round(rad * 0.75)));
-        if (k < 0.25) {
+        PXD.ellipseRing(ctx, r.x, r.y, rad, Math.max(1, Math.round(rad * sq)));
+        if (r.two && k < 0.7) {
+          if (k < 0.35) PXD.ellipseRing(ctx, r.x, r.y, rad + 1, Math.max(1, Math.round((rad + 1) * sq)));
+          ctx.fillStyle = rampAt(r.ramp, Math.min(0.99, k + 0.35));
+          const r2 = Math.max(1, Math.round(rad * 0.72));
+          PXD.ellipseRing(ctx, r.x, r.y, r2, Math.max(1, Math.round(r2 * sq)));
+        }
+        if (k < 0.25 && !r.flat) {
           ctx.fillStyle = '#ffffff';
           ctx.fillRect(r.x - 1, r.y - 1, 3, 3);
           ctx.fillRect(r.x - 3, r.y, 7, 1);
@@ -1322,17 +2100,10 @@
         }
       }
 
-      // Lightning: jagged pixel polyline, thick yellow under a white core.
-      this.bolts = this.bolts.filter((b) => now - b.t0 < 320);
-      for (const b of this.bolts) {
-        const pts = [[b.x + 10, 0]];
-        for (let y = 11; y < b.y; y += 11) pts.push([b.x + (hash(Math.floor(now / 50), y, 3) - 0.5) * 14, y]);
-        pts.push([b.x, b.y]);
-        for (const [w, col] of [[3, '#f8bc3c'], [1, '#ffffff']]) {
-          ctx.fillStyle = col;
-          for (let i = 1; i < pts.length; i++) PXD.line(ctx, pts[i - 1][0], pts[i - 1][1], pts[i][0], pts[i][1], w);
-        }
-      }
+      // Lightning from the sky (forked, see drawBolt), impact bits and the front half of casting circles.
+      this.bolts = this.bolts.filter((b) => now - b.t0 < (b.ms || 320));
+      for (const b of this.bolts) this.drawBolt(b, now);
+      this.drawBits(now);
 
       this.rains = this.rains.filter((r) => now - r.t0 < r.ms);
       for (const r of this.rains) {
