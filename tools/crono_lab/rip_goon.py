@@ -22,7 +22,7 @@ BG = (255, 0, 255)
 def deshadow(im, box, bg, fill=(40, 40, 16), edge=(56, 56, 40), rows=8):
     """Erase a drawn ground shadow: flood the shadow colour from the bottom row of the box
     (within the bottom `rows` rows), then drop shadow-rim pixels left dangling beside it."""
-    x0, y0, x1, y1 = box
+    x0, y0, x1, y1 = box[:4]
     top = y1 - rows + 1
     px = im.load()
     st = [(x, y1) for x in range(x0, x1 + 1) if px[x, y1] == fill]

@@ -687,7 +687,7 @@
     const items = [
       { label: 'New Game', value: 'new' },
       { label: 'Continue', value: 'continue', disabled: !has },
-      { label: 'Skirmish (Extra)', value: 'skirmish', hint: 'A free battle on the Zenan riverbank with guests Dave & Mat.' },
+      { label: 'Skirmish (Extra)', value: 'skirmish', hint: 'A free battle on the Zenan riverbank: all seven heroes against echoes of Magus\'s old generals.' },
       { label: 'Options', value: 'options' },
     ];
     if (CT.DEBUG) items.push({ label: 'Debug: jump to…', value: 'debug' });

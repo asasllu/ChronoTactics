@@ -116,7 +116,16 @@ class VSheet(Sheet):
                     for x in range(x0, x0 + ww):
                         cv.px[y][x] = None
         self.define(name, cv, (at[0] + fx, at[1] + fy))
+        self.canv = getattr(self, 'canv', {})
+        self.canv[name] = cv
+        self.feetc = getattr(self, 'feetc', {})
+        self.feetc[name] = (at[0] + fx, at[1] + fy)
         return cv
+
+    def pt(self, name, p):
+        """A canvas point of a composed frame -> game sheet frame coords (unflipped)."""
+        fx, fy = self.feetc[name]
+        return [self.AX + p[0] - fx, self.AY + p[1] - fy]
 
     def dissolve(self, base, steps, flip=False, prefix=None):
         """Ordered-dither fade: frame i keeps the pixels whose 4x4 Bayer rank is at least
@@ -144,6 +153,27 @@ class VSheet(Sheet):
             names.append(name)
         return names
 
+    def grid(self, names, path, S=10):
+        """Canvases of composed frames at S x with a coordinate grid (lines every 10)."""
+        from PIL import Image, ImageDraw
+        cvs = [self.canv[n] for n in names]
+        W = sum(c.w for c in cvs) * S + 8 * len(cvs)
+        H = max(c.h for c in cvs) * S
+        im = Image.new('RGB', (W, H), (0, 110, 0))
+        d = ImageDraw.Draw(im)
+        x0 = 0
+        for c in cvs:
+            for y in range(c.h):
+                for x in range(c.w):
+                    if c.px[y][x]:
+                        d.rectangle([x0 + x * S, y * S, x0 + x * S + S - 1, y * S + S - 1], fill=c.px[y][x])
+            for x in range(0, c.w + 1, 2):
+                d.line([(x0 + x * S, 0), (x0 + x * S, H)], fill=(255, 255, 0) if x % 10 == 0 else (0, 80, 0))
+            for y in range(0, c.h + 1, 2):
+                d.line([(x0, y * S), (x0 + c.w * S, y * S)], fill=(255, 255, 0) if y % 10 == 0 else (0, 80, 0))
+            x0 += c.w * S + 8
+        im.save(path)
+
     def preview(self, names, path, scale=6):
         from PIL import Image
         tiles = [self.virt[n] for n in names]
@@ -162,52 +192,9 @@ class VSheet(Sheet):
 
 
 # ---- Hand-drawn pieces (facing right) --------------------------------------------------
-# Canvas coords: the right-facing side stand (frame 15, 15x32) is pasted at (20, 24), so
-# its face is at x 30-31, y 32-35, its shoulder about (29, 37), its feet on y 55.
-
-SWORD_H = [            # level, pointing right; grip at cols 0-1 (under the hand)
-    '....#.................',
-    '...#g#................',
-    '##.#G#################',
-    'dd##g#wwwwwwwwwwwwwwww#',
-    'dd##G#ssssssssssssss##.',
-    '##.#g#################',
-    '...#G#................',
-    '....#.................',
-]
-SWORD_UP = [           # vertical, point up; grip at the bottom
-    '..#...',
-    '.#w#..',
-    '.#ws#.',
-] + ['.#ws#.'] * 13 + [
-    '######',
-    '#gGgG#',
-    '##dd##',
-    '.#dd#.',
-    '..##..',
-]
-SWORD_UR = [           # 45 degrees up-forward; grip at the bottom-left
-    '.............##',
-    '............#w#',
-    '...........#ws#',
-    '..........#ws#.',
-    '.........#ws#..',
-    '........#ws#...',
-    '.......#ws#....',
-    '......#ws#.....',
-    '.....#ws#......',
-    '....#ws#.......',
-    '..##ws#........',
-    '.#gGs#.........',
-    '#gG##..........',
-    '#dg#...........',
-    '#d#............',
-    '.#.............',
-]
-
-
-def flipv(rows):
-    return rows[::-1]
+# Each piece is (rows, point(s)). Swords: the grip point (under the hand). Arms: the
+# shoulder and the hand. Poses join them: arm shoulder on the body's shoulder, sword grip
+# in the hand. The sword is stamped first and the arm (gauntlet) over its grip.
 
 
 def fliph(rows):
@@ -215,87 +202,203 @@ def fliph(rows):
     return [r.ljust(n, '.')[::-1] for r in rows]
 
 
-SWORD_DR = [r.replace('w', 'S').replace('s', 'w').replace('S', 's') for r in flipv(SWORD_UR)]  # down-forward
-SWORD_UL = fliph(SWORD_UR)       # raised back over the head
+def flipv(rows):
+    return rows[::-1]
 
-SMEAR_CUT = [          # overhead cut: arc from above the head round to the front, low
-    '......kkww.......',
-    '.........wkk.....',
-    '...........wkk...',
-    '.............wk..',
-    '..............wk.',
-    '...............wk',
-    '...............wk',
-    '...............wk',
-    '..............wk.',
-    '.............wk..',
-    '............wk...',
+
+SWORD_H = ([           # level, pointing forward
+    '...#..................',
+    '..#g#.................',
+    '#.#G##################',
+    'd##g#wwwwwwwwwwwwwwwww#',
+    'd##G#sssssssssssssss##.',
+    '#.#g##################',
+    '..#G#.................',
+    '...#..................',
+], (1, 3))
+SWORD_UP = ([          # point up
+    '..#...',
+    '.#w#..',
+    '.#ws#.',
+] + ['.#ws#.'] * 12 + [
+    '######',
+    '#gGgG#',
+    '.#dd#.',
+    '..dd..',
+], (2, 18))
+
+
+def blade_ur(n):
+    """A 45-degree blade pointing up-forward, n steps long above the guard (the same
+    two-tone step every row), with its guard and grip at the bottom-left."""
+    w = n + 7
+    rows = ['.' * (w - 2) + '##', '.' * (w - 3) + '#w#']
+    for x in range(w - 4, 2, -1):
+        rows.append('.' * x + '#ws#')
+    rows += ['..##ws#', '.#gGs#', '#gG##', '#dg#', '#d#', '.#']
+    return [r.ljust(w, '.')[:w] for r in rows]
+
+
+_UR = blade_ur(7)
+_DR = blade_ur(4)
+SWORD_UR = (_UR, (1, len(_UR) - 3))                           # 45 deg up-forward
+SWORD_DR = ([r.replace('w', 'S').replace('s', 'w').replace('S', 's') for r in flipv(_DR)], (1, 2))  # down-forward
+SWORD_UL = (fliph(_UR), (len(_UR[0]) - 2, len(_UR) - 3))      # up-back (wound up over the head)
+
+ARM_FWD = ([           # level reach
+    '..#####..',
+    '.#sssss##',
+    '#dddddgGd#',
+    '.######dd#',
+    '.......##.',
+], (1, 2), (8, 2))
+ARM_UP = ([            # straight up
+    '.##.',
+    '#dd#',
+    '#gG#',
+    '#sd#',
+    '#sd#',
+    '#sd#',
+    '#sd#',
+    '#sd#',
+    '#sd#',
+], (2, 8), (2, 1))
+ARM_UF = ([            # up and forward
+    '.....##.',
+    '....#dd#',
+    '...#gGd#',
+    '..#sd##.',
+    '.#sd#...',
+    '#sd#....',
+    '#d#.....',
+], (1, 6), (6, 1))
+ARM_UB = fliph(ARM_UF[0]), (6, 6), (1, 1)   # up and back (wind-up over the helmet)
+ARM_DOWN = ([          # forward and down
+    '#d#.....',
+    '#sd#....',
+    '.#sd#...',
+    '..#sGg#.',
+    '...#ddd#',
+    '....###.',
+], (1, 0), (5, 4))
+ARM_BACK = ([          # elbow bent, hand at the hip behind
+    '..#d#',
+    '.#ds#',
+    '.#ds#',
+    '#Gg#.',
+    '#dd#.',
+    '.##..',
+], (3, 0), (1, 4))
+ARM_CHEST = ([         # forearm up before the chest
+    '#d##..',
+    '#sdd#.',
+    '.#gGd#',
+    '..###.',
+], (1, 0), (4, 2))
+
+# Motion trails (pale): the overhead cut sweeping from behind the helmet to the front.
+TRAIL_CUT = [
+    '..........kkkkk...........',
+    '.......kkkwwwwwkkk........',
+    '.....kkwww.....wwwkk......',
+    '....kww...........wwkk....',
+    '...kww..............wwk...',
+    '..kw..................wk..',
+    '..kw...................wk.',
+    '.kw.....................wk',
+    '.kw.......................',
+    'kw........................',
+    'kw........................',
+    'k.........................',
 ]
+GLINT = ['.k.', 'kwk', '.k.']
+
+SHOULDER = (31, 38)    # canvas coords of the near shoulder (stand/step frames at (20, 24))
+
+
+def pose(s, name, base, arm=None, sword=None, extra=(), shoulder=SHOULDER, body=()):
+    ops = list(body)
+    if arm:
+        rows, (sx, sy), (hx, hy) = arm
+        ax, ay = shoulder[0] - sx, shoulder[1] - sy
+        hand = (ax + hx, ay + hy)
+        if sword:
+            srows, (gx, gy) = sword
+            ops.append(('stamp', hand[0] - gx, hand[1] - gy, srows))
+        ops.append(('stamp', ax, ay, rows))
+    ops += list(extra)
+    return s.compose(name, base, ops)
 
 
 def build(preview=None):
-    s = VSheet('cyrus', w=80, h=72, ax=34, ay=68,
+    s = VSheet('cyrus', w=76, h=64, ax=28, ay=60,
                credit='"Prototype Cyrus" ripped by the Chrono Compendium')
     ST, STEP, STEP2 = 15, 16, 18
-    # Arms (armoured: outline, dark plate, steel highlight, gold cuff) and gauntlets.
-    ARM_FWD = [            # level, from the shoulder to the hand (hand at x 36..38, y 36..38)
-        '..######',
-        '.#sssdd##',
-        '#ddddgG#d#',
-        '.####gGdd#',
-        '.....####.',
-    ]
-    ARM_UP = [             # raised straight up (hand above the helmet)
-        '.###.',
-        '#dgd#',
-        '#ddd#',
-        '#sdG#',
-        '#sd#.',
-        '#sd#.',
-        '#sd#.',
-        '#sd#.',
-        '.##..',
-    ]
-    ARM_DOWN = [           # reaching forward and down
-        '###....',
-        '#ssd#..',
-        '.#sdd#.',
-        '..#dgG#',
-        '...#ddd#',
-        '....####',
-    ]
-    ARM_BACK = [           # elbow bent, hand at the hip behind
-        '..###.',
-        '.#dsd#',
-        '#ddsd#',
-        '#Ggd#.',
-        '#dd#..',
-        '.##...',
-    ]
-    poses = {
-        # ready: sword angled up-forward from the waist
-        'ready': (ST, [('stamp', 31, 22, SWORD_UR), ('stamp', 28, 38, ARM_DOWN)]),
-        # wind-up for a cut: arm raised, sword back over the helmet
-        'windup': (ST, [('stamp', 17, 8, SWORD_UL), ('stamp', 28, 22, ARM_UP)]),
-        # swing: arm forward-up, blade a smear arc
-        'smear': (STEP, [('stamp', 22, 14, SMEAR_CUT), ('stamp', 28, 22, ARM_UP)]),
-        # cut lands: arm forward and down, blade pointing down-forward
-        'cut': (STEP, [('stamp', 33, 41, SWORD_DR), ('stamp', 29, 37, ARM_DOWN)]),
-        # thrust drawn back: sword level at the waist, hand behind
-        'draw': (ST, [('stamp', 24, 39, SWORD_H), ('stamp', 23, 37, ARM_BACK)]),
-        # thrust: arm and sword level, full reach
-        'thrust': (STEP, [('stamp', 37, 34, SWORD_H), ('stamp', 29, 35, ARM_FWD)]),
-        # point: the same reach without the lunge (stand frame)
-        'point': (ST, [('stamp', 37, 34, SWORD_H), ('stamp', 29, 35, ARM_FWD)]),
-        # sword raised straight up (cast release, victory)
-        'raise': (ST, [('stamp', 29, 0, SWORD_UP), ('stamp', 29, 20, ARM_UP)]),
-        # salute: sword upright before the visor (cast charge)
-        'salute': (ST, [('stamp', 32, 18, SWORD_UP), ('stamp', 29, 37, ARM_DOWN)]),
-    }
-    for name, (base, ops) in poses.items():
-        s.compose(name, base, ops)
+    LEAN_F = [('shift', 0, 14, 1, 0)]          # head and shoulders lean 1 px forward
+    LEAN_B = [('shift', 0, 14, -1, 0)]
+    CROUCH = [('shift', 0, 22, 0, 2)]          # upper body sinks 2 px (squash)
+    RECOIL = [('shift', 0, 14, -1, 0), ('shift', 0, 9, -1, 0)]   # head snaps back
+    BREATH = [('shift', 0, 13, 0, 1)]          # shoulders and helmet settle 1 px
+    pose(s, 'ready', ST, ARM_DOWN, SWORD_UR)
+    pose(s, 'windup', ST, ARM_UB, SWORD_UL, body=LEAN_B, shoulder=(30, 38))
+    pose(s, 'raise', ST, ARM_UP, SWORD_UP, shoulder=(33, 38))
+    pose(s, 'raise2', ST, ARM_UP, SWORD_UP, shoulder=(33, 38), extra=[('stamp', 32, 12, GLINT)])
+    pose(s, 'swing', STEP, ARM_UF, SWORD_UR, body=LEAN_F, shoulder=(32, 38),
+         extra=[('stamp', 22, 10, TRAIL_CUT)])
+    pose(s, 'cut', STEP, ARM_DOWN, SWORD_DR, body=LEAN_F, shoulder=(32, 38))
+    pose(s, 'draw', ST, ARM_BACK, SWORD_H, body=CROUCH, shoulder=(30, 40))
+    pose(s, 'thrust', STEP, ARM_FWD, SWORD_H, body=LEAN_F, shoulder=(32, 38))
+    pose(s, 'point', ST, ARM_FWD, SWORD_H)
+    pose(s, 'salute', ST, ARM_CHEST, SWORD_UP)
+    pose(s, 'salute2', ST, ARM_CHEST, SWORD_UP, extra=[('stamp', 33, 21, GLINT)])
+    pose(s, 'crouch', ST, body=CROUCH)
+    pose(s, 'recoil', ST, body=RECOIL)
+    s.compose('breath', 0, BREATH)
+    s.compose('breath_b', 5, BREATH)
+    dis_f = s.dissolve(0, 6)
+    dis_b = s.dissolve(5, 6)
+    names = ['ready', 'windup', 'raise', 'swing', 'cut', 'draw', 'thrust', 'point', 'salute']
     if preview:
-        s.preview(list(poses), os.path.join(preview, 'cyrus_poses.png'))
+        s.grid(names[:5], os.path.join(preview, 'cyrus_grid1.png'), S=8)
+        s.grid(names[5:], os.path.join(preview, 'cyrus_grid2.png'), S=8)
+        s.preview(dis_f + dis_b, os.path.join(preview, 'cyrus_dis.png'))
+
+    F = False
+    tip_salute, tip_raise = s.pt('salute', (34, 22)), s.pt('raise', (33, 13))
+    # Front view (se): standing, walking and story poses; battle moves in profile.
+    s.add('se', 'idle', [(0, 520), ('breath', 300), (0, 420), ('breath', 300)], loop=True)
+    s.add('se', 'walk', [(1, 120), (2, 120), (3, 120), (4, 120)], loop=True)
+    s.add('se', 'kneel', [(21, 1000)], loop=True)
+    s.add('se', 'ko', [(21, 180), (22, 1000)])
+    s.add('se', 'dissolve', [(0, 200)] + [(n, 140) for n in dis_f])
+    s.add('ne', 'idle', [(5, 520), ('breath_b', 300), (5, 420), ('breath_b', 300)], loop=True)
+    s.add('ne', 'walk', [(6, 120), (7, 120), (8, 120), (9, 120)], loop=True)
+    s.add('ne', 'kneel', [(20, 1000)], loop=True)
+    s.add('ne', 'ko', [(20, 180), (22, 1000)])
+    s.add('ne', 'dissolve', [(5, 200)] + [(n, 140) for n in dis_b])
+    battle = {
+        # basic attack: ready, wind up over the helmet, sweep, cut lands low, recover
+        'attack': ([(ST, 110), ('ready', 120), ('windup', 160), ('swing', 60, F, 3), ('cut', 170, F, 6),
+                    ('cut', 110, F, 5), ('ready', 120, F, 2), (ST, 140)], {'hit': 4}),
+        # Ledger Strike: sink and draw the blade back, then a long lunging thrust
+        'tech_ledger_strike': ([('draw', 240), ('draw', 60, F, 4), ('thrust', 70, F, 12), ('thrust', 220, F, 18),
+                                ('thrust', 120, F, 16), ('ready', 130, F, 8), (STEP2, 110, F, 3), (ST, 150)],
+                               {'hit': 3}),
+        # Sever: blade raised overhead (rising onto the toes), one hard cut down
+        'tech_sever': ([('ready', 110), ('raise', 200, F, 0, -1), ('windup', 120, F, 1, -1), ('swing', 50, F, 6),
+                        ('cut', 190, F, 9), ('cut', 140, F, 8), ('ready', 140, F, 3), (ST, 150)], {'hit': 4}),
+        'cast': ([('salute', 180), ('salute2', 180), ('raise2', 240, F, 0, -1), ('raise', 160), (ST, 170)],
+                 {'charge': [0, 1], 'release': 2, 'rim': '#e0d0ff',
+                  'glow': [tip_salute, tip_salute, tip_raise, tip_raise]}),
+        'hurt': ([('recoil', 160, F, -3), (ST, 220, F, -1)], {}),
+        'victory': ([('raise', 600), ('raise2', 140), ('raise', 300), ('raise2', 140)], {'loop': True}),
+        'jump': ([('crouch', 120), (STEP, 80, F, 0, -5), (STEP2, 220, F, 0, -12), ('crouch', 140)], {}),
+        'point': ([(ST, 140), ('ready', 90), ('point', 700)], {}),
+    }
+    for name, (frames, extra) in battle.items():
+        s.add('se', name, frames, **extra)
+        s.add('ne', name, frames, **extra)
+    s.build(head=[28, 34])
     return s
 
 

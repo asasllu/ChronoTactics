@@ -58,6 +58,7 @@ GM.update({104: 'lute', 105: 'lute', 106: 'lute', 107: 'harp', 108: 'kalimba', 1
 GM.update({112: 'glock', 113: 'kalimba', 114: 'kalimba', 115: 'log', 116: 'timp', 117: 'timp', 118: 'timp', 119: 'wind'})
 GM.update({120: None, 121: 'wind', 122: 'wind', 123: 'glass', 124: None, 125: 'wind', 126: None, 127: None})
 BASSLIKE = {'bass', 'sbass', 'tuba', 'sub', 'obass', 'timp'}
+PLUCKY = {'harp', 'lute', 'lead', 'organ', 'kalimba', 'glass', 'glock', 'mbox', 'sq12', 'synth', 'accordion'}
 
 # GM percussion key -> kit letter (see parseDrums in audio.js)
 DRUM = {35: 'k', 36: 'k', 37: 'r', 38: 's', 39: 'x', 40: 's', 41: 't', 43: 't', 45: 'm', 47: 'm', 48: 'u', 50: 'u',
@@ -91,7 +92,7 @@ def at_time(lst, tick, default):
     if not lst:
         return default
     v = lst[0][1]
-    for t, x in lst:
+    for t, x, *_r in lst:
         if t <= tick:
             v = x
         else:
@@ -130,19 +131,34 @@ def load(path, cfg):
     instov = {k - 1: v for k, v in cfg.get('inst', {}).items()}
     tr = {k - 1: v for k, v in cfg.get('transpose', {}).items()}
     drumch = set(c - 1 for c in cfg.get('drumch', [10]))
+    chofs = defaultdict(float)
+    if rb:  # free-timed recording: re-align each channel's average timing offset to the grid first
+        g = grids[0]
+        bych = defaultdict(list)
+        for n in s.notes:
+            bych[n.ch].append(f(n.tick))
+        for ch, xs in bych.items():
+            errs = []
+            for k in range(-45, 46):
+                dlt = k / 100 * g
+                errs.append((sum(((x + dlt) / g - round((x + dlt) / g)) ** 2 for x in xs), dlt))
+            chofs[ch] = min(errs)[1]
     for n in s.notes:
         if n.ch in drop or (cfg.get('droptrk') and n.track in cfg['droptrk']):
             continue
-        st = f(n.tick)
+        st = f(n.tick) + chofs[n.ch]
         if st < -1:
             continue
         st = max(0, snap(st, grids))
+        if n.ch + 1 in cfg.get('tokit', {}):
+            drums.append(N(st, st + 6, n.pitch, n.vel, n.ch, cfg['tokit'][n.ch + 1], n.track))
+            continue
         if n.ch in drumch:
             letter = cfg.get('drummap', {}).get(n.pitch, DRUM.get(n.pitch))
             if letter:
                 drums.append(N(st, st + 6, n.pitch, n.vel, n.ch, letter, n.track))
             continue
-        en = snap(f(n.tick + n.dur), grids)
+        en = snap(f(n.tick + n.dur) + chofs[n.ch], grids)
         if en <= st:
             en = st + min(grids)
         prog = at_time(s.programs.get(n.ch, []), n.tick, 0)
@@ -291,7 +307,7 @@ def bar_eq(a, b):
     return u and len(a & b) / u >= 0.8
 
 
-def detect_loop(fp, tail=4, minP=4):
+def detect_loop(fp, tail=4, minP=8):
     nb = len(fp)
     best = None
     for P in range(minP, nb):
@@ -301,7 +317,7 @@ def detect_loop(fp, tail=4, minP=4):
             m = 0
             while S + P + m < nb and bar_eq(fp[S + m], fp[S + P + m]):
                 m += 1
-            if S + P + m >= nb - tail and m >= min(P, max(4, P // 2)) and any(fp[S:S + P]):
+            if S + P + m >= nb - tail and m >= max(4, 0.75 * P) and any(fp[S:S + P]):
                 cand = (S + P, S, P, m)
                 if best is None or cand < best:
                     best = cand
@@ -410,7 +426,7 @@ def convert(src_dir, cfg):
     mk = d['markers']
     loop_bar, end_t = None, None
     if 'loopstart' in mk and 'loopend' in mk and not cfg.get('nomarkers'):
-        ls, le = mk['loopstart'] + shift, mk['loopend'] + shift
+        ls, le = mk['loopstart'] + shift, mk['loopend'] + shift  # noqa
         pad = (-ls) % barT
         if pad:
             log.append(f'pickup: padded {pad} ticks so the loop starts on a bar line')
@@ -460,9 +476,13 @@ def convert(src_dir, cfg):
     for n in notes:
         bych[n.ch].append(n)
     lanes = []
+    mono = cfg.get('mono', [])
     for ch, ns in sorted(bych.items()):
-        for L in make_lanes(ns, cfg.get('maxchord', 4)):
-            lanes.append(L)
+        ls_ = make_lanes(ns, cfg.get('maxchord', 4))
+        if mono is True or ch + 1 in mono:  # one line per channel: overlaps cut, simultaneous notes -> chords
+            while len(ls_) > 1:
+                ls_[0] = chordify(ls_[0], ls_.pop(1), cfg.get('maxchord', 4))
+        lanes.extend(ls_)
     # lanes of the same instrument with identical rhythm -> one chord lane (lossless)
     i = 0
     while i < len(lanes):
@@ -500,8 +520,12 @@ def convert(src_dir, cfg):
         if nkit is None:
             steps = Counter(x.s for x in drums)
             clash = sum(c - 1 for c in steps.values()) / len(drums)
-            nkit = 2 if (len(lanes) <= MAX_VOICES - 2 and clash > 0.1) else 1
+            nchan = len(set(lane_stats(L)['ch'] for L in lanes))
+            nkit = 2 if (nchan <= MAX_VOICES - 2 and clash > 0.1) else 1
     kit_groups = cfg.get('kit_groups') or (KIT_SPLIT if nkit == 2 else [DRUM_PRIO])
+    kit_tracks = cfg.get('kit_tracks')  # one kit voice per list of MIDI track numbers
+    if kit_tracks:
+        kit_groups = [DRUM_PRIO] * len(kit_tracks)
     nkit = len(kit_groups) if drums else 0
     budget = MAX_VOICES - nkit
     prio = {k - 1: v for k, v in cfg.get('prio', {}).items()}
@@ -517,11 +541,19 @@ def convert(src_dir, cfg):
     alive = {i: lanes[i] for i in order}
     merged_into = {}
     while len(alive) > budget:
-        victim = min(alive, key=lambda i: score(lane_stats(alive[i])))
+        # 1) fold a channel's secondary lane back into it, 2) merge same-instrument lanes, 3) drop
+        main_of = {}
+        for i in sorted(alive):
+            main_of.setdefault(lane_stats(alive[i])['ch'], i)
+        secondary = [i for i in alive if main_of[lane_stats(alive[i])['ch']] != i]
+        if secondary:
+            victim = min(secondary, key=lambda i: score(lane_stats(alive[i])))
+        else:
+            victim = min(alive, key=lambda i: score(lane_stats(alive[i])))
         vs = lane_stats(alive[victim])
         cands = [i for i in alive if i != victim and lane_stats(alive[i])['inst'] == vs['inst']]
-        same_ch = [i for i in cands if lane_stats(alive[i])['ch'] == vs['ch']]
-        pool = same_ch or [i for i in cands if abs(lane_stats(alive[i])['pitch'] - vs['pitch']) <= 14]
+        same_ch = [i for i in alive if i != victim and lane_stats(alive[i])['ch'] == vs['ch']]
+        pool = same_ch or cands
         if pool:
             tgt = min(pool, key=lambda i: abs(lane_stats(alive[i])['pitch'] - vs['pitch']))
             alive[tgt] = chordify(alive[tgt], alive[victim], cfg.get('maxchord', 4))
@@ -544,7 +576,7 @@ def convert(src_dir, cfg):
         s = lane_stats(L)
         ch = s['ch']
         inst0 = L[0]['n'][0].inst
-        if s['pitch'] < 45 and inst0 not in BASSLIKE and not cfg.get('nobassfix'):
+        if s['pitch'] < 45 and inst0 in PLUCKY and not cfg.get('nobassfix'):
             for g in L:
                 for n in g['n']:
                     if n.inst not in BASSLIKE:
@@ -583,7 +615,7 @@ def convert(src_dir, cfg):
         dv = [x.v for x in drums]
         mean = sum(dv) / max(1, len(dv))
         for x in sorted(drums, key=lambda x: x.s):
-            if x.inst not in letters:
+            if x.inst not in letters or (kit_tracks and x.trk not in kit_tracks[gi]):
                 continue
             acc = x.v >= max(mean + 12, 96)
             cur = hits.get(x.s)
@@ -600,7 +632,7 @@ def convert(src_dir, cfg):
             kv = kv[gi]
         v[name] = ['kit', compress(toks, maxk=16), {'vol': kv}]
         vinfo.append({'name': name, 'inst': 'kit', 'ch': 10, 'notes': len(hits), 'ticks': endT})
-    used_hits = sum(1 for x in drums if any(x.inst in g for g in kit_groups[:nkit]))
+    used_hits = len(drums)
     if lost:
         log.append(f'drums: {lost} simultaneous hits collapsed (of {used_hits})')
     unmapped = len(d['song'].notes) - len(notes) - len(drums)
@@ -684,8 +716,43 @@ FIELD = [0.75, 0.35, 0.3]
 BATTLE = [0.5, 0.25, 0.2]
 AMBIENT = [1, 0.5, 0.45]
 TRACKS = [
-    dict(id='mus_title', title='Chrono Trigger', file='ct_chrono1.mid', seq='Quietust', slow=0.7, echo=[0.75, 0.4, 0.35]),
-    dict(id='mus_battle', title='Battle', file='chrono_trigger_battle1.mid', seq='', slow=0.85, echo=BATTLE),
+    dict(id='mus_title', title='Chrono Trigger', file='ct_chrono1.mid', seq='Quietust', slow=0.7,
+         inst={1: {48: 'strings', 66: 'brass'}, 7: {46: 'harp', 66: 'horn'}}, kitvol=0.5, echo=[0.75, 0.4, 0.35]),
+    dict(id='mus_fair_night', title='Leene Square', file='millenialfair.mid', seq='Alex Jarvis', slow=0.85,
+         drumch=[4], drummap={83: 'h'}, kit_groups=['xg', 'h'], inst={1: 'harp', 2: 'harp', 3: 'tuba', 5: 'accordion', 6: 'accordion', 7: 'flute'},
+         kitvol=0.6, echo=FIELD),
+    dict(id='mus_rift', title="Lavos's Theme", file='lavos.mid', seq='Valius (Chris Hatfield)', slow=0.85, echo=AMBIENT),
+    dict(id='mus_battle', title='Battle', file='chrono_trigger_battle1.mid', seq='', slow=0.85, inst={1: 'sbass'},
+         kitvol=0.7, echo=BATTLE),
+    dict(id='mus_battle_boss', title='Boss Battle 1', file='CB_CTBoss1.mid', seq='', slow=0.85, scale=4 / 3, meter=[4, 4],
+         drop=[9, 11, 12, 13], kitvol=0.7, echo=BATTLE),
+    dict(id='mus_victory', title='Fanfare 2 (victory)', file='ct-winner.mid', seq='', slow=1.0, rebeat=(640, 416.5), grid=[16], inst={5: 'tuba'}, mono=True,
+         oneShot=True, kitvol=0.45, echo=[0.5, 0.3, 0.25]),
+    dict(id='mus_end_of_time', title='End of Time', file='EndOfTime.mid', seq='', slow=0.85, echo=AMBIENT),
+    dict(id='mus_guardia_600', title='Guardia Castle', file='guardia.mid', seq='Valius, modified by Noah Sp.', slow=0.85,
+         kitvol=0.6, echo=FIELD),
+    dict(id='mus_frog_theme', title="Frog's Theme", file='FROGct.mid', seq='Magnius', slow=0.85, kitvol=0.6, echo=FIELD),
+    dict(id='mus_denadoro', title='Middle Ages: World Map ("Wind Scene")', file='ctwndscene.mid', seq='Jaroban', slow=0.85,
+         tokit={6: 'q'}, kitvol=0.6, echo=FIELD),
+    dict(id='mus_ioka', title='Prehistoric World Map ("Rhythm of Earth, Wind and Sky")',
+         file='Chrono_Trigger_-_20_-_Rhythm_of_Earth_Wind_and_Sky.mid', seq='Wotan', slow=0.85,
+         kit_tracks=[[3], [4], [5], [2], [6]], kitvol=[0.8, 0.7, 0.6, 0.5, 0.5], echo=FIELD),
+    dict(id='mus_ayla_theme', title="Ayla's Theme", file='cavegirl_song.mid', seq='', slow=0.85, kits=2, kitvol=0.65, echo=FIELD),
+    dict(id='mus_tyrano', title='Tyrano Lair', file='cttyrano.mid', seq='Mark Jansen', slow=0.85, kits=2, kitvol=0.6, echo=FIELD),
+    dict(id='mus_last_village', title='Silent Light', file='CT-SilentLight.mid', seq='Powerlord', slow=0.85, echo=FIELD),
+    dict(id='mus_zeal_wreck', title='Zeal ("Corridors of Time")', file='ctzeal.mid', seq='', slow=0.85, kitvol=0.55, echo=FIELD),
+    dict(id='mus_magus_theme', title="Magus's Theme", file='Magus1.mid', seq='', slow=0.85, kitvol=0.6, echo=FIELD),
+    dict(id='mus_hollow', title='Future: World Map ("Ruined World")', file='ct2300ad.mid', seq='KDS', slow=0.9,
+         inst={2: 'wind', 3: 'wind', 9: 'wind', 4: 'wind', 5: 'wind'}, transpose={2: 48, 3: 48, 9: 48, 4: 24, 5: 24},
+         keep=[7, 8], echo=AMBIENT),
+    dict(id='mus_curator', title='Boss Battle 2', file='ct_bossbattle2.mid', seq='Quietust', slow=0.85, meter=[6, 8],
+         kitvol=0.65, echo=BATTLE),
+    dict(id='mus_curator_core', title='Lavos ("World Revolution")', file='CB_WorldRevolution.mid', seq='', slow=0.85,
+         meter=[4, 4], drop=[12, 13, 14, 15, 16], inst={5: 'sbass'}, kitvol=0.65, echo=BATTLE),
+    dict(id='mus_ending', title='Epilogue ("To Good Friends")', file='ctmarle1.mid', seq='Masashi Ito', slow=0.9,
+         drop=[3, 4, 5, 6, 14, 15], oneShot=True, echo=FIELD),
+    dict(id='mus_credits', title='To Far Away Times', file='ct_tofarawaytimes.mid', seq='Quietust', slow=0.85,
+         oneShot=True, kitvol=0.5, echo=FIELD),
 ]
 
 if __name__ == '__main__':

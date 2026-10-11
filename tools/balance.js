@@ -57,7 +57,16 @@ async function runOne(browser, id, tune) {
   const browser = await chromium.launch();
   const verbose = process.env.VERBOSE;
   for (const id of ids) {
-    const jobs = Array.from({ length: runs }, () => () => runOne(browser, id, tune));
+    const safe = async () => {
+      for (let i = 0; i < 3; i++) {
+        try {
+          return await runOne(browser, id, tune);
+        } catch (e) {
+          if (i === 2) return { r: 'error', errs: [String(e.message).slice(0, 120)] };
+        }
+      }
+    };
+    const jobs = Array.from({ length: runs }, () => safe);
     const out = [];
     while (jobs.length) out.push(...(await Promise.all(jobs.splice(0, par).map((f) => f()))));
     const wins = out.filter((o) => o.r === 'victory').length;

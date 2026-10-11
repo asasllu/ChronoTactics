@@ -35,18 +35,25 @@
     },
   };
 
-  // Guest heroes for the Skirmish extra mode (PixelLab divers).
-  CT.HEROES.dave = {
-    name: 'Dave', weapon: 'Harpoon Gun', elem: 'water', extra: true, swim: true, range: [1, 3],
-    base: { hp: 110, mp: 16, atk: 11, def: 8, mag: 7, mdef: 7, spd: 8, move: 4, jump: 2 },
-    growth: { hp: 16.2, mp: 1.6, atk: 1.2, def: 0.9, mag: 0.6, mdef: 0.7, spd: 0.1 },
-    techs: [['spear_gun', 1], ['sushi', 1]],
+  // Marle, Lucca and Robo: playable guests in the Prologue battle and the Skirmish.
+  // All three fight from range with their normal attack.
+  CT.HEROES.marle = {
+    name: 'Marle', weapon: 'Crossbow', elem: 'ice', extra: true, range: [1, 4],
+    base: { hp: 105, mp: 24, atk: 10, def: 7, mag: 11, mdef: 10, spd: 9, move: 4, jump: 2 },
+    growth: { hp: 14.9, mp: 2.4, atk: 1.05, def: 0.8, mag: 1.15, mdef: 1.0, spd: 0.1 },
+    techs: [['marle_aura', 1], ['marle_ice', 1]],
   };
-  CT.HEROES.mat = {
-    name: 'Mat', weapon: 'Harpoon', elem: 'water', extra: true, swim: true, range: [1, 3],
-    base: { hp: 105, mp: 22, atk: 10, def: 7, mag: 11, mdef: 9, spd: 9, move: 4, jump: 2 },
-    growth: { hp: 14.9, mp: 2.2, atk: 1.0, def: 0.8, mag: 1.1, mdef: 0.9, spd: 0.1 },
-    techs: [['bubble_jet', 1], ['depth_charge', 1]],
+  CT.HEROES.lucca = {
+    name: 'Lucca', weapon: 'Air Gun', elem: 'fire', extra: true, range: [1, 3],
+    base: { hp: 100, mp: 24, atk: 10, def: 7, mag: 12, mdef: 9, spd: 8, move: 4, jump: 2 },
+    growth: { hp: 14.5, mp: 2.4, atk: 1.0, def: 0.75, mag: 1.2, mdef: 0.95, spd: 0.1 },
+    techs: [['lucca_flame', 1], ['lucca_napalm', 1]],
+  };
+  CT.HEROES.robo = {
+    name: 'Robo', weapon: 'Arm Cannon', elem: 'lightning', extra: true, range: [1, 3],
+    base: { hp: 150, mp: 16, atk: 13, def: 12, mag: 7, mdef: 8, spd: 6, move: 3, jump: 1 },
+    growth: { hp: 20.5, mp: 1.6, atk: 1.3, def: 1.2, mag: 0.7, mdef: 0.85, spd: 0.08 },
+    techs: [['robo_laser', 1], ['robo_cure', 1]],
   };
 
   // XP needed to go from level L to L+1.
@@ -119,29 +126,31 @@
     ice_water: T({ name: 'Ice Water', dual: ['frog', 'magus'], mp: 7, unlock: true, range: [1, 1], shape: 'line', r: 3, kind: 'mag', stat: 'pair_mag', mult: 1.1, elem: 'ice', status: ['slow', 1, 3], vfx: 'ice', sfx: 'sfx_ice_crack', desc: 'Freezes a 3-tile line; Slows all caught.' }),
     eclipse_blade: T({ name: 'Eclipse Blade', dual: ['crono', 'frog', 'magus'], mp: 15, unlock: true, range: [0, 0], shape: 'map', stat: 'triple', mult: 1.2, elem: 'shadow', vfx: 'shadow', big: 'eclipse', sfx: 'sfx_black_hole', desc: 'Magus opens a rift; Crono & Frog strike through it. Hits every foe.' }),
 
-    // Skirmish guests
-    spear_gun: T({ name: 'Spear Gun', mp: 3, range: [2, 5], mult: 1.3, vfx: 'slash', sfx: 'sfx_sword_swing', desc: 'Long-range harpoon shot.' }),
-    sushi: T({ name: 'Sushi', mp: 3, range: [0, 1], kind: 'heal', stat: 'atk', mult: 1.1, target: 'ally', vfx: 'heal', sfx: 'sfx_heal_chime', desc: 'Fresh from the bar. Heals an adjacent ally.' }),
-    bubble_jet: T({ name: 'Bubble Jet', mp: 5, range: [2, 4], shape: 'square', r: 1, kind: 'mag', stat: 'mag', mult: 1.2, elem: 'water', vfx: 'water', sfx: 'sfx_water_splash', desc: '3×3 burst of bubbles.' }),
-    depth_charge: T({ name: 'Depth Charge', mp: 8, range: [1, 3], shape: 'square', r: 1, mult: 0.9, elem: 'fire', vfx: 'fire', sfx: 'sfx_dark_bomb', desc: '3×3 explosive charge.' }),
-    dark_staff: T({ name: 'Dark Staff', mp: 0, range: [1, 3], shape: 'square', r: 1, kind: 'mag', stat: 'mag', mult: 1.3, elem: 'shadow', vfx: 'shadow', sfx: 'sfx_dark_bomb' }),
+    // Marle, Lucca, Robo (Prologue guests and Skirmish)
+    marle_ice: T({ name: 'Ice', mp: 4, range: [1, 4], kind: 'mag', stat: 'mag', mult: 1.5, elem: 'ice', status: ['slow', 0.3, 2], vfx: 'ice', sfx: 'sfx_ice_crack', desc: 'Ice magic on one foe; may Slow.' }),
+    marle_aura: T({ name: 'Aura', mp: 3, range: [0, 4], kind: 'heal', stat: 'mag', mult: 1.3, target: 'ally', vfx: 'heal', sfx: 'sfx_heal_chime', desc: 'Heals one ally within 4 tiles.' }),
+    lucca_flame: T({ name: 'Flame Toss', mp: 3, range: [1, 1], shape: 'line', r: 3, kind: 'mag', stat: 'mag', mult: 1.2, elem: 'fire', status: ['burn', 0.3, 3], vfx: 'fire', sfx: 'sfx_fire', desc: 'A 3-tile line of fire; may Burn.' }),
+    lucca_napalm: T({ name: 'Napalm', mp: 7, range: [2, 4], shape: 'square', r: 1, kind: 'mag', stat: 'mag', mult: 1.2, elem: 'fire', vfx: 'fire', sfx: 'sfx_dark_bomb', desc: 'Lobs a fire bomb: 3×3 blast, range 4.' }),
+    robo_laser: T({ name: 'Laser Spin', mp: 5, range: [1, 1], shape: 'line', r: 4, kind: 'mag', stat: 'mag', mult: 1.3, elem: 'lightning', vfx: 'lightning', sfx: 'sfx_lightning', desc: 'A 4-tile lightning beam.' }),
+    robo_cure: T({ name: 'Cure Beam', mp: 3, range: [0, 3], kind: 'heal', stat: 'atkmag', mult: 0.8, target: 'ally', vfx: 'heal', sfx: 'sfx_heal_chime', desc: 'Repair beam: heals one ally within 3 tiles.' }),
+    dark_staff: T({ name: 'Slash Wave', mp: 0, range: [1, 3], shape: 'square', r: 1, kind: 'mag', stat: 'mag', mult: 1.3, elem: 'shadow', vfx: 'shadow', sfx: 'sfx_dark_bomb' }),
 
     // ---- Enemy techs ----
     claw: T({ name: 'Claw', mp: 0, mult: 1.0, vfx: 'hit', sfx: 'sfx_sword_hit' }),
     imp_jab: T({ name: 'Echo Jab', mp: 0, range: [1, 2], mult: 1.1, vfx: 'hit', sfx: 'sfx_kick' }),
-    hench_axe: T({ name: 'Hollow Axe', mp: 0, mult: 1.3, vfx: 'slash', sfx: 'sfx_sword_hit' }),
+    hench_axe: T({ name: 'Mud Slam', mp: 0, mult: 1.3, vfx: 'slash', sfx: 'sfx_sword_hit' }),
     re_file: T({ name: 'Re-file', mp: 0, range: [1, 3], noSelf: true, kind: 'heal', stat: 'mag', mult: 0.45, target: 'ally', vfx: 'heal', sfx: 'sfx_heal_chime', desc: 'Restores an archived ally.' }),
     rock_toss: T({ name: 'Rock Toss', mp: 0, range: [2, 3], mult: 0.9, vfx: 'hit', sfx: 'sfx_kick' }),
-    roll: T({ name: 'Roll', mp: 0, range: [1, 1], mult: 1.3, vfx: 'hit', sfx: 'sfx_kick' }),
+    roll: T({ name: 'Dive', mp: 0, range: [1, 1], mult: 1.3, vfx: 'hit', sfx: 'sfx_kick' }),
     fire_breath: T({ name: 'Fire Breath', mp: 0, range: [1, 1], shape: 'cone', r: 3, kind: 'mag', stat: 'mag', mult: 1.5, elem: 'fire', status: ['burn', 0.4, 3], vfx: 'fire', sfx: 'sfx_fire' }),
-    porcelain_strike: T({ name: 'Porcelain Strike', mp: 0, mult: 1.1, vfx: 'porcelain', sfx: 'sfx_glass_shatter' }),
+    porcelain_strike: T({ name: 'Stone Fist', mp: 0, mult: 1.1, vfx: 'porcelain', sfx: 'sfx_glass_shatter' }),
     destruction_rain: T({ name: 'Destruction Rain', mp: 0, range: [1, 4], shape: 'square', r: 1, kind: 'mag', stat: 'mag', mult: 1.2, elem: 'shadow', vfx: 'lavos', special: 'rain', sfx: 'sfx_seed_hatch' }),
     destruction_rain_l: T({ name: 'Destruction Rain', mp: 0, range: [1, 5], shape: 'square', r: 2, kind: 'mag', stat: 'mag', mult: 1.1, elem: 'shadow', vfx: 'lavos', special: 'rain', sfx: 'sfx_seed_hatch' }),
-    glass_bash: T({ name: 'Glass Bash', mp: 0, mult: 1.4, vfx: 'glass', sfx: 'sfx_glass_shatter' }),
-    ledger_strike: T({ name: 'Ledger Strike', mp: 0, range: [1, 1], shape: 'line', r: 2, mult: 1.3, vfx: 'porcelain', sfx: 'sfx_sword_swing' }),
+    glass_bash: T({ name: 'Gilded Bash', mp: 0, mult: 1.4, vfx: 'glass', sfx: 'sfx_glass_shatter' }),
+    ledger_strike: T({ name: 'Hero\'s Ledger', mp: 0, range: [1, 1], shape: 'line', r: 2, mult: 1.3, vfx: 'porcelain', sfx: 'sfx_sword_swing' }),
     preserve: T({ name: 'Preserve', mp: 0, range: [0, 3], kind: 'status', target: 'ally', status: ['stasis', 1, 1], vfx: 'glass', sfx: 'sfx_ice_crack' }),
     catalogue: T({ name: 'Catalogue', mp: 0, range: [1, 3], kind: 'status', status: ['catalogued', 1, 2], vfx: 'porcelain', sfx: 'sfx_scanline' }),
-    sever: T({ name: 'Sever', mp: 0, range: [1, 2], mult: 1.4, special: 'dispel', vfx: 'porcelain', sfx: 'sfx_glass_shatter' }),
+    sever: T({ name: 'Severing Cut', mp: 0, range: [1, 2], mult: 1.4, special: 'dispel', vfx: 'porcelain', sfx: 'sfx_glass_shatter' }),
     rearrange: T({ name: 'Rearrange', mp: 0, range: [1, 12], kind: 'special', special: 'rearrange', vfx: 'porcelain', sfx: 'sfx_scanline' }),
     catalogue_all: T({ name: 'Catalogue All', mp: 0, range: [1, 6], shape: 'square', r: 1, kind: 'status', status: ['catalogued', 1, 2], vfx: 'porcelain', sfx: 'sfx_scanline' }),
     deaccession: T({ name: 'Deaccession', mp: 0, range: [1, 8], kind: 'mag', stat: 'mag', mult: 2.4, elem: 'shadow', special: 'needs_catalogued', vfx: 'shadow', sfx: 'sfx_dark_bomb' }),
@@ -149,6 +158,8 @@
     core_rain: T({ name: 'Destruction Rain', mp: 0, range: [0, 0], kind: 'special', special: 'core_rain', vfx: 'lavos', sfx: 'sfx_seed_hatch' }),
     consume: T({ name: 'Consume', mp: 0, mult: 2.2, special: 'drain', vfx: 'lavos', sfx: 'sfx_core_scream' }),
     erase_era: T({ name: 'Erase Era', mp: 0, range: [0, 0], kind: 'special', special: 'erase', vfx: 'porcelain', sfx: 'sfx_hollow_gate' }),
+    azala_psy: T({ name: 'Psychic Wave', mp: 0, range: [1, 4], shape: 'square', r: 1, kind: 'mag', stat: 'mag', mult: 1.2, elem: 'shadow', status: ['stun', 0.2, 1], vfx: 'shadow', sfx: 'sfx_dark_mist', desc: 'A burst of psychic force, 3×3; may Stun.' }),
+    flea_prism: T({ name: 'Prism Beam', mp: 0, range: [1, 1], shape: 'line', r: 4, kind: 'mag', stat: 'mag', mult: 1.3, elem: 'shadow', vfx: 'shadow', sfx: 'sfx_scanline', desc: 'A 4-tile beam of prismatic light.' }),
     spekkio_magic: T({ name: 'Spekkio\'s Lesson', mp: 0, range: [1, 4], shape: 'square', r: 1, kind: 'mag', stat: 'mag', mult: 1.2, elem: 'fire', vfx: 'fire', sfx: 'sfx_fire' }),
   };
   for (const [id, t] of Object.entries(CT.TECHS)) t.id = id;
@@ -158,21 +169,23 @@
   const E = (o) => ({ mp: 0, move: 4, jump: 2, range: [1, 1], techs: [], xp: 10, gold: 10, affinity: {}, ...o });
   CT.ENEMIES = {
     echo_imp: E({ name: 'Echo Imp', sprite: 'echo_imp', hp: 40, atk: 9, def: 3, mag: 4, mdef: 3, spd: 8, move: 4, techs: ['imp_jab'], affinity: { lightning: 1.5 }, xp: 18, gold: 12, flicker: true, steal: 'tonic' }),
-    echo_hench: E({ name: 'Echo Hench', sprite: 'echo_hench', hp: 90, atk: 12, def: 6, mag: 5, mdef: 4, spd: 6, move: 3, techs: ['hench_axe'], affinity: { water: 1.5 }, xp: 30, gold: 20, flicker: true, steal: 'tonic' }),
-    echo_nu: E({ name: 'Echo Nu', sprite: 'echo_nu', hp: 200, atk: 14, def: 16, mag: 20, mdef: 14, spd: 7, move: 3, techs: ['re_file'], ai: 'healer', xp: 80, gold: 60, flicker: true, steal: 'ether' }),
-    echo_kilwala: E({ name: 'Echo Kilwala', sprite: 'echo_kilwala', hp: 60, atk: 14, def: 6, mag: 6, mdef: 5, spd: 12, move: 5, jump: 3, techs: ['rock_toss'], affinity: { fire: 1.5 }, xp: 30, gold: 18, flicker: true, steal: 'tonic' }),
-    echo_roundillo: E({ name: 'Echo Roundillo', sprite: 'echo_roundillo', hp: 130, atk: 24, def: 14, mag: 8, mdef: 8, spd: 10, move: 5, jump: 9, techs: ['roll'], affinity: { ice: 1.5 }, xp: 60, gold: 40, flicker: true, steal: 'mid_tonic' }),
-    echo_tyrano: E({ name: 'Echo Tyrano', sprite: 'echo_tyrano', hp: 900, atk: 46, def: 22, mag: 38, mdef: 16, spd: 8, move: 3, jump: 2, techs: ['fire_breath'], affinity: { ice: 1.5, fire: 0.5 }, xp: 600, gold: 400, big: true, boss: true, flicker: true }),
-    seedbearer: E({ name: 'Seedbearer', sprite: 'seedbearer', hp: 120, atk: 15, def: 8, mag: 10, mdef: 10, spd: 8, move: 3, techs: ['porcelain_strike'], affinity: { lightning: 1.5, shadow: 0.5 }, xp: 45, gold: 30, steal: 'ether' }),
+    echo_hench: E({ name: 'Echo Mud Imp', sprite: 'echo_mud_imp', hp: 90, atk: 12, def: 6, mag: 5, mdef: 4, spd: 6, move: 3, techs: ['hench_axe'], affinity: { water: 1.5 }, xp: 30, gold: 20, flicker: true, steal: 'tonic' }),
+    echo_nu: E({ name: 'Echo Ozzie', sprite: 'echo_ozzie', hp: 200, atk: 14, def: 16, mag: 20, mdef: 14, spd: 7, move: 3, techs: ['re_file'], ai: 'healer', xp: 80, gold: 60, flicker: true, steal: 'ether' }),
+    echo_kilwala: E({ name: 'Echo Green Imp', sprite: 'echo_green_imp', hp: 60, atk: 14, def: 6, mag: 6, mdef: 5, spd: 12, move: 5, jump: 3, techs: ['rock_toss'], affinity: { fire: 1.5 }, xp: 30, gold: 18, flicker: true, steal: 'tonic' }),
+    echo_roundillo: E({ name: 'Echo Lizardactyl', sprite: 'echo_lizardactyl', hp: 130, atk: 24, def: 14, mag: 8, mdef: 8, spd: 10, move: 5, jump: 9, techs: ['roll'], affinity: { ice: 1.5 }, xp: 60, gold: 40, flicker: true, steal: 'mid_tonic' }),
+    echo_tyrano: E({ name: 'Echo Avian Rex', sprite: 'echo_avian_rex', hp: 900, atk: 46, def: 22, mag: 38, mdef: 16, spd: 8, move: 3, jump: 2, techs: ['fire_breath'], affinity: { ice: 1.5, fire: 0.5 }, xp: 600, gold: 400, big: true, boss: true, flicker: true }),
+    seedbearer: E({ name: 'Seedbearer', sprite: 'stone_imp', hp: 120, atk: 15, def: 8, mag: 10, mdef: 10, spd: 8, move: 3, techs: ['porcelain_strike'], affinity: { lightning: 1.5, shadow: 0.5 }, xp: 45, gold: 30, steal: 'ether' }),
     lavos_sprout: E({ name: 'Lavos Sprout', sprite: 'lavos_sprout', hp: 300, atk: 16, def: 12, mag: 22, mdef: 12, spd: 7, move: 0, jump: 0, techs: ['destruction_rain'], ai: 'sprout', affinity: { shadow: 0.5, ice: 1.5 }, xp: 150, gold: 80 }),
     lavos_sprout_large: E({ name: 'Lavos Sprout', sprite: 'lavos_sprout_large', hp: 600, atk: 26, def: 16, mag: 30, mdef: 16, spd: 8, move: 0, jump: 0, techs: ['destruction_rain_l'], ai: 'sprout', affinity: { shadow: 0.5, ice: 1.5 }, xp: 320, gold: 160, big: true }),
-    vitrine_sentinel: E({ name: 'Vitrine Sentinel', sprite: 'vitrine', hp: 250, atk: 30, def: 30, mag: 10, mdef: 12, spd: 5, move: 2, jump: 1, techs: ['glass_bash'], ai: 'sentinel', shatter: 200, xp: 120, gold: 70, steal: 'mid_tonic' }),
-    iselle: E({ name: 'Iselle', sprite: 'iselle', hp: 400, atk: 20, def: 14, mag: 18, mdef: 12, spd: 10, move: 4, jump: 3, range: [1, 2], techs: ['ledger_strike', 'catalogue', 'preserve'], xp: 200, gold: 150, boss: true, steal: 'ether' }),
-    iselle_ally: E({ fixed: true, name: 'Iselle', sprite: 'iselle', hp: 420, atk: 36, def: 22, mag: 26, mdef: 20, spd: 11, move: 4, jump: 3, range: [1, 2], techs: ['ledger_strike', 'preserve', 'sever'], ai: 'protect', guest: true }),
-    curator: E({ fixed: true, name: 'The Curator', sprite: 'curator_p1', hp: 2000, atk: 34, def: 20, mag: 40, mdef: 22, spd: 9, move: 0, jump: 0, range: [1, 1], techs: ['rearrange', 'catalogue_all', 'deaccession', 'reconstruct'], ai: 'curator', affinity: { shadow: 0.5 }, boss: true, big: true, xp: 0 }),
+    vitrine_sentinel: E({ name: 'Gallery Goon', sprite: 'goon', hp: 250, atk: 30, def: 30, mag: 10, mdef: 12, spd: 5, move: 2, jump: 1, techs: ['glass_bash'], ai: 'sentinel', shatter: 200, xp: 120, gold: 70, steal: 'mid_tonic' }),
+    iselle: E({ name: 'Cyrus', sprite: 'cyrus', hp: 400, atk: 20, def: 14, mag: 18, mdef: 12, spd: 10, move: 4, jump: 3, range: [1, 2], techs: ['ledger_strike', 'catalogue', 'preserve'], xp: 200, gold: 150, boss: true, steal: 'ether' }),
+    iselle_ally: E({ fixed: true, name: 'Cyrus', sprite: 'cyrus', hp: 420, atk: 36, def: 22, mag: 26, mdef: 20, spd: 11, move: 4, jump: 3, range: [1, 2], techs: ['ledger_strike', 'preserve', 'sever'], ai: 'protect', guest: true }),
+    curator: E({ fixed: true, name: 'The Curator', sprite: 'prophet', hp: 2000, atk: 34, def: 20, mag: 40, mdef: 22, spd: 9, move: 0, jump: 0, range: [1, 1], techs: ['rearrange', 'catalogue_all', 'deaccession', 'reconstruct'], ai: 'curator', affinity: { shadow: 0.5 }, boss: true, big: true, xp: 0 }),
     curator_core: E({ fixed: true, name: 'The Core Exhibit', sprite: 'curator_p2', hp: 2500, atk: 52, def: 14, mag: 44, mdef: 30, spd: 12, move: 2, jump: 9, techs: ['core_rain', 'consume', 'erase_era'], ai: 'curator_core', affinity: { fire: 0.5, ice: 0.5, lightning: 0.5, water: 0.5, shadow: 0.5 }, boss: true, big: true, xp: 3000, gold: 2000 }),
-    knight: E({ name: 'Mystic Knight', sprite: 'knight', hp: 260, atk: 30, def: 18, mag: 22, mdef: 14, spd: 9, move: 3, techs: ['dark_staff'], xp: 120, gold: 80, steal: 'ether' }),
-    spekkio: E({ name: 'Spekkio', sprite: 'spekkio', hp: 500, atk: 18, def: 12, mag: 22, mdef: 16, spd: 10, move: 3, techs: ['spekkio_magic'], xp: 150, gold: 100, scales: true }),
+    echo_azala: E({ name: 'Echo Azala', sprite: 'echo_azala', hp: 240, atk: 16, def: 10, mag: 20, mdef: 14, spd: 9, move: 3, jump: 2, range: [1, 2], techs: ['azala_psy'], affinity: { shadow: 0.5, lightning: 1.5 }, xp: 90, gold: 60, flicker: true, steal: 'ether' }),
+    echo_flea: E({ name: 'Echo Flea', sprite: 'echo_flea', hp: 220, atk: 14, def: 10, mag: 26, mdef: 18, spd: 11, move: 4, range: [1, 2], techs: ['flea_prism'], affinity: { shadow: 0.5 }, xp: 110, gold: 80, flicker: true, steal: 'ether' }),
+    knight: E({ name: 'Slash', sprite: 'slash', hp: 260, atk: 30, def: 18, mag: 22, mdef: 14, spd: 9, move: 3, techs: ['dark_staff'], xp: 120, gold: 80, steal: 'ether' }),
+    spekkio: E({ name: 'Spekkio', sprite: 'frog_king', hp: 500, atk: 18, def: 12, mag: 22, mdef: 16, spd: 10, move: 3, techs: ['spekkio_magic'], xp: 150, gold: 100, scales: true }),
   };
   // Level scaling for types without fixed story stats: stat * (1 + 0.09*(lv-1)).
   // HP grows fastest so higher-level fights stay tactical rather than lethal.
@@ -197,7 +210,7 @@
     denadoro_seed: 'Denadoro Seed (inert)',
     tyrano_seed: 'Tyrano Seed (inert)',
     zeal_seed: 'Zeal Seed (inert)',
-    corin_tablet: 'Corin\'s Tablet',
+    corin_tablet: 'Schala\'s Record',
   };
   // Equipment auto-equips to its owner when bought if it's an upgrade.
   const EQ = (who, slot, name, stats, price) => ({ who, slot, name, stats, price });
@@ -234,20 +247,20 @@
   CT.SPEAKERS = {
     crono: 'Crono', frog: 'Frog', ayla: 'Ayla', magus: 'Magus', marle: 'Marle', lucca: 'Lucca', robo: 'Robo',
     king: 'King Guardia', leene: 'Queen Leene', kino: 'Kino', elder: 'Elder', gaspar: 'Gaspar', spekkio: 'Spekkio',
-    iselle: 'Iselle', curator: 'The Curator', nu: 'Nu', corin: 'Corin', narrator: '', guard: 'Guard',
+    iselle: 'Cyrus', curator: 'The Curator', nu: 'Nu', corin: 'Corin', narrator: '', guard: 'Guard',
     villager: 'Villager', fairgoer: 'Fairgoer',
   };
 
   // ---- Extra mode: the original Zenan skirmish ------------------------------------
   CT.SKIRMISH = {
     name: 'Zenan Skirmish', map: 'zenan', music: 'mus_battle', level: 6,
-    partyOverride: ['crono', 'frog', 'ayla', 'magus', 'dave', 'mat'],
-    party: { crono: [2, 5], frog: [3, 7], ayla: [3, 2], magus: [1, 3], dave: [3, 9], mat: [0, 4] },
+    partyOverride: ['crono', 'frog', 'ayla', 'magus', 'marle', 'lucca', 'robo'],
+    party: { crono: [2, 5], frog: [3, 7], ayla: [3, 2], magus: [1, 3], marle: [3, 9], lucca: [0, 4], robo: [2, 8] },
     partyFace: 'E',
     units: [
       { type: 'iselle', at: [11, 1], hp: 520, face: 'W' },
       { type: 'knight', at: [10, 6], face: 'W' },
-      { type: 'knight', at: [11, 4], face: 'W' },
+      { type: 'echo_flea', at: [11, 4], face: 'W' },
       { type: 'seedbearer', at: [9, 5], face: 'W' },
       { type: 'echo_nu', at: [10, 0], face: 'W' },
       { type: 'echo_hench', at: [9, 8], face: 'W' },
