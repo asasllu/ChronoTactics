@@ -239,11 +239,12 @@
       if (!d[i + 3]) continue;
       const y = Math.floor(i / 4 / cv.width);
       const l = d[i] * 0.3 + d[i + 1] * 0.55 + d[i + 2] * 0.15;
-      const k = y % 3 === 0 ? 0.72 : 1;
-      d[i] = Math.min(255, (l * 0.62 + 30) * k);
-      d[i + 1] = Math.min(255, (l * 0.78 + 44) * k);
-      d[i + 2] = Math.min(255, (l * 0.95 + 70) * k);
-      d[i + 3] = Math.round(d[i + 3] * 0.86);
+      // Half the original colours under a cold blue cast, so echoes read as "archive copies"
+      // but keep their detail and contrast on the battlefield.
+      const k = y % 3 === 0 ? 0.86 : 1;
+      d[i] = Math.min(255, (d[i] * 0.45 + (l * 0.5 + 20) * 0.55) * k);
+      d[i + 1] = Math.min(255, (d[i + 1] * 0.45 + (l * 0.7 + 34) * 0.55) * k);
+      d[i + 2] = Math.min(255, (d[i + 2] * 0.45 + (l * 0.95 + 70) * 0.55) * k);
     }
     g.putImageData(img, 0, 0);
     return cv;

@@ -26,7 +26,8 @@
     night: {
       sky: [[0, '#05071a'], [0.5, '#101a40'], [1, '#243060']], stars: 180, moon: [180, 90],
       mountains: ['#1c2448', '#151c3c', '#0e1430'], forest: '#080c1c', particles: 'fireflies',
-      tint: '#8090d0', dark: 0.35,
+      // Kept light: units must stay readable at night (lamps and the fair still glow).
+      tint: '#c4ccf0', dark: 0.1, vignette: 0.25,
     },
     dawn: {
       sky: [[0, '#2c3470'], [0.4, '#8c6ca8'], [0.65, '#f4a0a0'], [0.85, '#fcd49c'], [1, '#fff0c0']],
@@ -1055,7 +1056,7 @@
       const img = f.img;
       const dx = Math.round(sx - f.cx);
       const dy = Math.round(sy - f.footY + 2);
-      if (u.flicker && Math.floor(now / 70 + u.id * 3) % 7 === 0) ctx.globalAlpha = u.alpha * 0.5;
+      if (u.flicker && Math.floor(now / 70 + u.id * 3) % 9 === 0) ctx.globalAlpha = u.alpha * 0.75;
       if (u.status && u.status.stasis) ctx.globalAlpha *= 0.85;
       const spr = CT.getSprite(u.sprite || u.key);
       if (u.koPose && spr.koRotate !== false) {
