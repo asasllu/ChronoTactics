@@ -70,6 +70,7 @@
         }
       }
       for (const spec of def.units || []) b.addEnemy(spec);
+      if (CT.Interact) CT.Interact.setup(b, def);
       for (const u of b.units) {
         u.ct = Math.floor(Math.random() * 30);
         if (u.hero) u.ct += 20;
@@ -128,6 +129,7 @@
       const b = this.b;
       const list = (b.active ? [b.active] : []).concat(b.predictOrder(b.active ? 7 : 8));
       UI.turnBar(list);
+      if (CT.Interact && b.spots) this.ui.spotAt = CT.Interact.sync(b);
       if (b.active && b.active.team === 0) UI.unitPanel('active', b.active, b);
       else if (b.active) UI.unitPanel('active', b.active, b);
       this.updateObjective();
@@ -147,12 +149,17 @@
           const p = b.preview(u, from, tech, v);
           if (p.kind === 'heal') extra = `<div class="preview heal">Heal +${p.amount}</div>`;
           else if (p.kind === 'dmg')
-            extra = `<div class="preview">${p.immune ? 'IMMUNE' : `Dmg ${p.amount}`} · Hit ${p.hit}%${p.side && p.side !== 'front' ? ' · ' + p.side.toUpperCase() : ''}${p.elemMult > 1 ? ' · WEAK' : p.elemMult != null && p.elemMult < 1 ? ' · RESIST' : ''}</div>`;
+            extra = `<div class="preview">${p.immune ? 'IMMUNE' : `Dmg ${p.amount}`} · Hit ${p.hit}%${p.elemMult > 1 ? ' · WEAK' : p.elemMult != null && p.elemMult < 1 ? ' · RESIST' : ''}</div>`;
           else extra = `<div class="preview">${tech.name}</div>`;
         }
       }
-      if (v) UI.unitPanel('target', v, b, extra);
-      else UI.tilePanel(t);
+      const spot = CT.Interact ? CT.Interact.panelHtml(b, t.x, t.y) : '';
+      if (v) UI.unitPanel('target', v, b, extra + spot);
+      else {
+        UI.tilePanel(t);
+        const info = spot && document.querySelector('#target .info');
+        if (info) info.insertAdjacentHTML('beforeend', spot);
+      }
     }
 
     // ---- Main loop ---------------------------------------------------------------------
@@ -160,6 +167,7 @@
       this.setup();
       await this.transition();
       await this.triggers();
+      if (CT.Interact) await CT.Interact.intro(this);
       this.phase = 'battle';
       for (let guard = 0; guard < 2000; guard++) {
         const res = await this.checkEnd();
@@ -304,9 +312,8 @@
       this.ui.highlights = null;
       this.ui.path = null;
       this.targeting = null;
-      this.ui.facingFor = null;
       this.refresh();
-      if (b.moved && b.acted1) return this.chooseFacing(u);
+      if (b.moved && b.acted1) return this.finishTurn();
       const canUndo = b.moved && !b.acted1 && !this.noUndo;
       const items = [
         { label: 'Move', value: 'move', disabled: b.moved },
@@ -315,6 +322,8 @@
         { label: 'Item', value: 'item', disabled: b.acted1 || !Object.entries(this.game.inventory).some(([k, n]) => n > 0 && CT.ITEMS[k].battle) },
         { label: 'Wait', value: 'wait' },
       ];
+      const spots = CT.Interact ? CT.Interact.usableHere(b, u) : [];
+      if (spots.length && !b.acted1) items.splice(items.length - 1, 0, { label: spots.length === 1 ? spots[0].verb || 'Interact' : 'Interact', value: 'interact', cls: 'dual', hint: spots.map((s) => s.name).join(', ') });
       if (canUndo) items.splice(1, 0, { label: 'Undo Move', value: 'undo' });
       this.menuP = UI.menu(items, { cls: 'battle-menu', title: u.name, noCancel: !canUndo });
       const v = await this.menuP;
@@ -325,7 +334,27 @@
       if (v === 'attack') return this.startTarget(u, b.attackOf(u));
       if (v === 'tech') return this.techMenu(u);
       if (v === 'item') return this.itemMenu(u);
-      if (v === 'wait') return this.chooseFacing(u);
+      if (v === 'interact') return this.interactMenu(u, spots);
+      if (v === 'wait') return this.finishTurn();
+    }
+
+    // Interactive spots usable from here (levers, kegs, shrines…). Costs the action.
+    async interactMenu(u, spots) {
+      let s = spots[0];
+      if (spots.length > 1) {
+        this.menuP = UI.menu(spots.map((sp) => ({ label: sp.verb || sp.name, value: sp, hint: sp.desc })), { cls: 'battle-menu', title: 'INTERACT' });
+        s = await this.menuP;
+        this.menuP = null;
+        if (!s) return this.showMain(u);
+      }
+      this.busy = true;
+      this.mode = 'busy';
+      this.noUndo = true;
+      await CT.Interact.use(this, s, u);
+      await this.triggers();
+      this.busy = false;
+      if (await this.midCheck()) return;
+      return this.showMain(u);
     }
 
     undoMove(u) {
@@ -413,15 +442,8 @@
       }
     }
 
-    async chooseFacing(u) {
-      this.mode = 'facing';
-      this.ui.highlights = null;
-      this.ui.facingFor = u;
-      UI.prompt('Choose facing — click an arrow / arrow keys, Enter to confirm');
-      if (CT.AUTOFACE) return this.finishTurn();
-    }
+    // The turn simply ends; units keep facing where they last moved or struck.
     finishTurn() {
-      this.ui.facingFor = null;
       UI.prompt('');
       this.mode = 'busy';
       const r = this.endPlayerTurn;
@@ -441,13 +463,6 @@
       const b = this.b;
       const u = b.active;
       if (!u || this.busy) return;
-      if (this.mode === 'facing') {
-        const [sx, sy] = this.r.unitScreenPos(u);
-        const f = this.r.faceForScreen(mx - sx, my - sy);
-        if (u.face === f) return this.finishTurn();
-        u.face = f;
-        return;
-      }
       if (!t) return;
       if (this.mode === 'move') {
         const n = this.reach.get(key(t.x, t.y));
@@ -460,6 +475,10 @@
         b.moved = n.d > 0 || b.moved;
         this.noUndo = false;
         await this.triggers();
+        if (n.d > 0 && CT.Interact && (await CT.Interact.onArrive(this, u))) {
+          this.noUndo = true;
+          await this.triggers();
+        }
         this.busy = false;
         if (await this.midCheck()) return;
         return this.showMain(u);
@@ -488,25 +507,6 @@
       const b = this.b;
       const u = b.active;
       if (!u || this.busy) return false;
-      if (this.mode === 'facing') {
-        const map = { ArrowUp: [0, -1], ArrowRight: [1, 0], ArrowDown: [0, 1], ArrowLeft: [-1, 0] };
-        if (map[e.key]) {
-          const [vx, vy] = map[e.key];
-          const [dx, dy] = this.r.vecToWorld(vx, vy);
-          u.face = CT.dirTo(0, 0, dx, dy);
-          return true;
-        }
-        if (e.key === 'Enter' || e.key === ' ') {
-          this.finishTurn();
-          return true;
-        }
-        if (e.key === 'Escape') {
-          this.ui.facingFor = null;
-          UI.prompt('');
-          this.showMain(u);
-          return true;
-        }
-      }
       if ((this.mode === 'move' || this.mode === 'target') && (e.key === 'Escape' || e.key === 'x')) {
         this.cancel();
         return true;
@@ -573,6 +573,7 @@
     async aiTurn(u) {
       const b = this.b;
       await wait(CT.FAST ? 5 : 350);
+      if (CT.AI_INTERACT && CT.Interact && u.hero && u.team === 0 && (await this.aiInteract(u))) return;
       const plan = b.planAI(u);
       if (plan.dest && (plan.dest.x !== u.x || plan.dest.y !== u.y)) {
         const reach = b.reachable(u);
@@ -583,6 +584,7 @@
         b.moved = true;
         this.refresh();
         await this.triggers();
+        if (CT.Interact && (await CT.Interact.onArrive(this, u))) await this.triggers();
         if (this.forcedEnd || b.outcome() || !u.alive) return;
       }
       if (plan.tech) {
@@ -603,6 +605,30 @@
         }
         await wait(CT.FAST ? 5 : 200);
       }
+    }
+
+    // Autoplay / ?interact: a hero detours to a worthwhile spot, uses it, then acts from there.
+    async aiInteract(u) {
+      const b = this.b;
+      const ip = CT.Interact.aiPlan(this, u);
+      if (!ip) return false;
+      if (ip.dest.x !== u.x || ip.dest.y !== u.y) {
+        await this.animateMove(u, b.pathTo(ip.dest));
+        b.moved = true;
+        this.refresh();
+        await this.triggers();
+        if (CT.Interact.at(b, u.x, u.y) === ip.spot && ip.spot.mode === 'step') await CT.Interact.onArrive(this, u);
+        await this.triggers();
+        if (this.forcedEnd || b.outcome() || !u.alive) return true;
+      }
+      if (ip.spot.mode === 'use' && !ip.spot.spent) {
+        await CT.Interact.use(this, ip.spot, u);
+        await this.triggers();
+        return true;
+      }
+      const act = b.bestActionFrom(u, { x: u.x, y: u.y, d: 0, prev: null });
+      if (act && !b.acted1) await this.perform(u, act.tech, act.target);
+      return true;
     }
 
     async eraseEra(u) {

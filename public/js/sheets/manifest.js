@@ -18,5 +18,5 @@ CT.SHEET_FILES = [
   // dialogue portraits: the original game's, and the recast cast's
   'portraits_ct', 'portraits_recast',
   // effects
-  'fx_crono', 'fx_frog', 'fx_ayla', 'fx_magus', 'fx_allies', 'fx_enemies', 'fx_duals',
+  'fx_crono', 'fx_frog', 'fx_ayla', 'fx_magus', 'fx_allies', 'fx_enemies', 'fx_duals', 'fx_interactive',
 ];

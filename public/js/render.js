@@ -717,8 +717,8 @@
       this.shakeT = performance.now() + ms;
       this.shakeMs = ms;
     }
-    flashScreen(color = '255,255,255', ms = 200) {
-      this.screenFlash = { color, t0: performance.now(), ms };
+    flashScreen(color = '255,255,255', ms = 200, peak = 1) {
+      this.screenFlash = { color, t0: performance.now(), ms, peak };
     }
 
     // Quantise the composed frame onto the master palette and show it.
@@ -900,7 +900,7 @@
         const k = (now - this.screenFlash.t0) / this.screenFlash.ms;
         if (k >= 1) this.screenFlash = null;
         else {
-          ctx.fillStyle = `rgba(${this.screenFlash.color},${Math.round((1 - k) * 4) / 4})`;
+          ctx.fillStyle = `rgba(${this.screenFlash.color},${(Math.round((1 - k) * 4) / 4) * (this.screenFlash.peak || 1)})`;
           ctx.fillRect(0, 0, this.W, this.H);
         }
       }
@@ -950,8 +950,12 @@
         if (ui.grid) PXD.text(ctx, String(t.h), sx, sy - 3, '#ffffff', { align: 'center' });
       }
 
+      // Interactive spots (js/interactives.js): glow on the tile, icon above any decor.
+      const spot = ui.spotAt && CT.Interact && ui.spotAt.get(key);
+      if (spot) CT.Interact.drawMarker(this, ctx, spot, sx, sy, now, lights, 'base');
       const d = this.map.decorAt.get(key);
       if (d && !d.hidden) this.drawDecor(d, sx, sy, now, lights);
+      if (spot) CT.Interact.drawMarker(this, ctx, spot, sx, sy, now, lights, 'icon');
     }
 
     drawDecor(d, sx, sy, now, lights) {
@@ -1568,7 +1572,7 @@
       this.sheetFx.push(e);
       const d = fx.def;
       if (d.shake && !opts.noShake) setTimeout(() => this.shake(d.shake), (opts.delay || 0) + (d.shakeAt != null ? fx.frames.slice(0, d.shakeAt).reduce((a, f) => a + f.ms, 0) : 0));
-      if (d.flash && !opts.noShake) setTimeout(() => this.flashScreen(CT.PAL.hex(d.flash).join(','), 120), (opts.delay || 0) + (d.flashAt != null ? fx.frames.slice(0, d.flashAt).reduce((a, f) => a + f.ms, 0) : 0));
+      if (d.flash && !opts.noShake) setTimeout(() => this.flashScreen(CT.PAL.hex(d.flash).join(','), 140, 0.6), (opts.delay || 0) + (d.flashAt != null ? fx.frames.slice(0, d.flashAt).reduce((a, f) => a + f.ms, 0) : 0));
       const st = CT.FX_STAGE && CT.FX_STAGE[key];
       if (st && !e.travel) this.stageFx(key, st, fx, x, y, h, opts);
       else if (st && e.travel && st.trail) e.trail = st;

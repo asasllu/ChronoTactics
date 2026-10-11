@@ -401,7 +401,7 @@
     const hp = (u.hp / u.maxHp) * 100;
     const mp = u.maxMp && u.maxMp < 999 ? (u.mp / u.maxMp) * 100 : 0;
     const st = Object.keys(u.status || {}).map((s) => `<span class="st st-${s}">${STATUS_NAMES[s] || s}</span>`).join('');
-    const img = CT.getPortrait && (u.hero || ['iselle', 'curator', 'curator_core', 'spekkio', 'echo_nu'].includes(u.key)) ? UI.faceURL(u.hero ? u.id : u.key === 'curator_core' ? 'curator' : u.key === 'echo_nu' ? 'nu' : u.key) : CT.portrait(u.sprite || u.key);
+    const img = CT.getPortrait && (u.hero || ['iselle', 'iselle_ally', 'curator', 'curator_core', 'spekkio'].includes(u.key)) ? UI.faceURL(u.hero ? u.id : u.key === 'curator_core' ? 'curator' : u.key === 'iselle_ally' ? 'iselle' : u.key) : CT.portrait(u.sprite || u.key);
     e.innerHTML = `
       <img class="portrait" src="${img}">
       <div class="info">
@@ -683,7 +683,7 @@
     t.innerHTML = `
       <div class="logo" role="img" aria-label="Chrono Trigger: The Hollow Future. A fan-made tactics sequel."><canvas class="logo-art" width="${LW}" height="${LH}" style="width:${LW * 2}px;height:${LH * 2}px"></canvas></div>
       <div id="title-menu"></div>
-      <div class="legal">Non-commercial fan project. Chrono Trigger © Square Enix. Original art, music & code.</div>`;
+      <div class="legal">Non-commercial fan project. Chrono Trigger © Square Enix; sprites and portraits from the original game. New art, arrangements &amp; code by fans.</div>`;
     const items = [
       { label: 'New Game', value: 'new' },
       { label: 'Continue', value: 'continue', disabled: !has },

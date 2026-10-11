@@ -743,7 +743,7 @@ TRACKS = [
     dict(id='mus_frog_theme', mvol=0.56, title="Frog's Theme", file='FROGct.mid', seq='Magnius', slow=0.85, kitvol=0.6, echo=FIELD),
     dict(id='mus_denadoro', mvol=1.92, title='Middle Ages: World Map ("Wind Scene")', file='ctwndscene.mid', seq='Jaroban', slow=0.85,
          tokit={6: 'q'}, kitvol=0.6, echo=FIELD),
-    dict(id='mus_ioka', mvol=3.01, title='Prehistoric World Map ("Rhythm of Earth, Wind and Sky")',
+    dict(id='mus_ioka', mvol=2.6, title='Prehistoric World Map ("Rhythm of Earth, Wind and Sky")',
          file='Chrono_Trigger_-_20_-_Rhythm_of_Earth_Wind_and_Sky.mid', seq='Wotan', slow=0.85,
          kit_tracks=[[3], [4], [5], [2], [6]], kitvol=[0.8, 0.7, 0.6, 0.5, 0.5], echo=FIELD),
     dict(id='mus_ayla_theme', mvol=1.45, title="Ayla's Theme", file='cavegirl_song.mid', seq='', slow=0.85, transpose={5: 12}, kits=2, kitvol=0.65, echo=FIELD),

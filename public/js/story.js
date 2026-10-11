@@ -1409,11 +1409,17 @@
 
   B.B0 = {
     name: 'Echoes at the Fair', map: 'leene_square', music: 'mus_battle',
-    party: { crono: [4, 8], frog: [5, 8] },
+    // Marle, Lucca and Robo fight here too (ranged normal attacks); they leave after.
+    partyOverride: ['crono', 'frog', 'marle', 'lucca', 'robo'],
+    party: { crono: [4, 8], frog: [5, 8], marle: [6, 10], lucca: [3, 10], robo: [7, 9] },
     units: [
       { id: 'imp1', type: 'echo_imp', at: [4, 2], face: 'S', hp: 40 },
       { id: 'imp2', type: 'echo_imp', at: [6, 2], face: 'S', hp: 40 },
       { id: 'hench', type: 'echo_hench', at: [5, 3], face: 'S', hp: 90 },
+      { id: 'imp3', type: 'echo_imp', at: [10, 3], face: 'S', hp: 40 },
+      { id: 'imp4', type: 'echo_imp', at: [2, 3], face: 'S', hp: 40 },
+      { id: 'imp5', type: 'echo_imp', at: [11, 7], face: 'W', hp: 40 },
+      { id: 'hench2', type: 'echo_hench', at: [9, 2], face: 'S', hp: 90 },
     ],
     objective: { type: 'DEFEAT_ALL', text: 'Defeat the Echoes!' },
     triggers: [

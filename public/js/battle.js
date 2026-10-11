@@ -5,7 +5,7 @@
   const DIRS = CT.DIRS;
   const key = (x, y) => `${x},${y}`;
   const MELEE_REACH = 2; // vertical reach for range-1 physical attacks
-  const FACE_MULT = { front: 1, side: 1.25, back: 1.5 };
+  // Facing has no effect on combat: units simply turn toward where they moved or struck.
 
   // ---- Units ---------------------------------------------------------------------
   let nextUid = 1;
@@ -33,7 +33,12 @@
     for (const [k, v] of Object.entries(member.bonus || {})) s[k] = (s[k] || 0) + v;
     return s;
   };
-  CT.heroTechs = (member) => CT.HEROES[member.id].techs.filter(([, lv]) => member.level >= lv).map(([t]) => t);
+  // Level techs plus techs learned in battle (interactive spots), kept in member.learned.
+  CT.heroTechs = (member) => {
+    const out = CT.HEROES[member.id].techs.filter(([, lv]) => member.level >= lv).map(([t]) => t);
+    for (const t of member.learned || []) if (CT.TECHS[t] && !out.includes(t)) out.push(t);
+    return out;
+  };
 
   class Battle {
     constructor(def, game) {
@@ -280,6 +285,7 @@
         if (u.status.haste) v *= 1.4;
       }
       if (s === 'mag' && u.status.magdown) v *= 0.5;
+      if (s === 'atk' && u.status.might) v *= 1.3;
       return v;
     }
     addStatus(u, name, turns) {
@@ -504,17 +510,6 @@
       return best;
     }
 
-    flank(attackerPos, target) {
-      const dx = attackerPos.x - target.x;
-      const dy = attackerPos.y - target.y;
-      const [fx, fy] = DIRS[target.face];
-      const along = dx * fx + dy * fy;
-      const across = Math.abs(dx * fy - dy * fx);
-      if (along > across) return 'front';
-      if (-along > across) return 'back';
-      return 'side';
-    }
-
     // Attacking power and defence for a tech.
     power(u, tech, v) {
       const members = tech.dual ? [u, ...this.partnersFor(u, tech)].filter(Boolean) : [u];
@@ -550,19 +545,16 @@
       let k = 1;
       if (ft.h > vt.h) k *= 1.1;
       else if (ft.h < vt.h) k *= 0.9;
-      let side = null;
       let hit = 100;
-      if (physical) {
-        side = from.x === v.x && from.y === v.y ? 'front' : this.flank(from, v);
-        k *= FACE_MULT[side];
-        if (side === 'front') hit = 100 - Math.max(0, Math.min(30, (this.stat(v, 'spd') - this.stat(u, 'spd')) * 2));
-      }
+      // Faster foes can sidestep blows (up to 30%); magic always lands.
+      if (physical) hit = 100 - Math.max(0, Math.min(30, (this.stat(v, 'spd') - this.stat(u, 'spd')) * 2));
+      if (!physical && v.status.barrier) k *= 0.5;
       const aff = v.affinity[tech.elem];
       if (aff != null) k *= aff;
       if (v.status.catalogued) k *= 1.5;
       const hits = tech.hits || 1;
       const amount = aff != null && aff < 0 ? -Math.round(dmg * Math.abs(aff)) : Math.max(1, Math.round(dmg * k)) * hits;
-      return { kind: 'dmg', amount, hit, side, elemMult: aff, crit: physical ? 8 : 0 };
+      return { kind: 'dmg', amount, hit, elemMult: aff, crit: physical ? 8 : 0 };
     }
 
     // ---- Resolution ------------------------------------------------------------------
@@ -640,7 +632,7 @@
         }
         const crit = p.crit && Math.random() * 100 < p.crit;
         let dmg = Math.max(1, Math.round(p.amount * (0.95 + Math.random() * 0.1) * (crit ? 1.5 : 1)));
-        this.damage(v, dmg, out, { crit, side: p.side, weak: p.elemMult > 1, resist: p.elemMult != null && p.elemMult < 1 });
+        this.damage(v, dmg, out, { crit, weak: p.elemMult > 1, resist: p.elemMult != null && p.elemMult < 1 });
         if (tech.special === 'drain') {
           u.hp = Math.min(u.maxHp, u.hp + dmg);
           out.results.push({ target: u, heal: dmg });
@@ -978,7 +970,7 @@
         const act = this.bestActionFrom(u, node, false, techs);
         if (!act) continue;
         let score = act.score - node.d * 0.004;
-        if (ai === 'ranged' || ai === 'healer') score += this.safety(u, node) * 0.05;
+        if (ai === 'ranged' || ai === 'healer' || (u.hero && u.range && u.range[1] > 1)) score += this.safety(u, node) * 0.05;
         if (!best || score > best.score) best = { score, dest: node, tech: act.tech, target: act.target };
       }
       if (best && best.score > 0.02) return best;
@@ -1042,6 +1034,8 @@
           if (v.status[st]) continue;
           if (st === 'stasis') {
             if (v.hp < v.maxHp * 0.45) score += 0.5;
+          } else if (st === 'barrier') {
+            if (this.foesOf(u).some((f) => f.mag > f.atk)) score += 0.12;
           } else score += 0.28;
         } else if (tech.kind === 'special') {
           if (tech.special === 'steal') continue;

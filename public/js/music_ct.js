@@ -214,11 +214,11 @@
     loop: 0,
     echo: [0.75, 0.35, 0.3],
     v: {
-      kit: ["kit", "l8 .....t.. [.....t..]11 [..t..... .t..t...]4 [........]4", {"vol": 2.41}],
-      kit2: ["kit", "l16 ..Ii.Ii.IjIi.Ii. ..Ii.Ii.IjIi.Ii. ..Ii.Ii.Ijii.Ii. ..ii.ii.Ijii.ii. I.I.I.Iiiii.j.i. I.I.IiiiI.I.j.ii I..I..iiI.iijii. iii.iii.I.iIjii. I.I.I.iiiii.j.I. I.I.IiiiI.I.j.ii I..I..iiI.IIjii. iii.iii.I.IIjii. j.jjj.....jjj... [..jjjI....jjj... ..jjj.....jjj...]3 ..jjjI....jjj... [j.j..j.ji.j.jj.j]4", {"vol": 2.11}],
-      kit3: ["kit", "l8 Q...R... [Q...R...]3 [Q.......]8 l16 Q.rrrrrrrrrrRrrr [QrrrrrrrrrRrrrRr QrrrrrrrrrrrRrrr]3 QrrrrrrrrrRrrrRr l8 Q....... [Q.......]3", {"vol": 1.81}],
-      kit4: ["kit", "[l16 g.g..gg.G.g.g.g. l8 GgggGggg] l16 G.ggG.ggG.ggG.gg [G.ggG.ggG.ggG.gg]7 l8 g.g.g.g. [g.g.g.gg g.g.g.g.]3 g.g.g.gg l16 G.gg....G.gg.... [G.gg....G.gg....]3", {"vol": 1.5}],
-      kit5: ["kit", "l8 ..G..... ..g..... ..G..... ..g..... .G.ggggg .G.g.ggg .G.ggg.g .Ggg.G.g .G.g.G.g .Ggg.ggg .G.gggg. l16 g.g.g.g.g.gg.ggg l8 ........ [........]7 [gg.ggg.g]3 l16 g.g.g.ggg.g...gg", {"vol": 1.5}],
+      kit: ["kit", "l8 .....t.. [.....t..]11 [..t..... .t..t...]4 [........]4", {"vol": 2.08}],
+      kit2: ["kit", "l16 ..Ii.Ii.IjIi.Ii. ..Ii.Ii.IjIi.Ii. ..Ii.Ii.Ijii.Ii. ..ii.ii.Ijii.ii. I.I.I.Iiiii.j.i. I.I.IiiiI.I.j.ii I..I..iiI.iijii. iii.iii.I.iIjii. I.I.I.iiiii.j.I. I.I.IiiiI.I.j.ii I..I..iiI.IIjii. iii.iii.I.IIjii. j.jjj.....jjj... [..jjjI....jjj... ..jjj.....jjj...]3 ..jjjI....jjj... [j.j..j.ji.j.jj.j]4", {"vol": 1.82}],
+      kit3: ["kit", "l8 Q...R... [Q...R...]3 [Q.......]8 l16 Q.rrrrrrrrrrRrrr [QrrrrrrrrrRrrrRr QrrrrrrrrrrrRrrr]3 QrrrrrrrrrRrrrRr l8 Q....... [Q.......]3", {"vol": 1.56}],
+      kit4: ["kit", "[l16 g.g..gg.G.g.g.g. l8 GgggGggg] l16 G.ggG.ggG.ggG.gg [G.ggG.ggG.ggG.gg]7 l8 g.g.g.g. [g.g.g.gg g.g.g.g.]3 g.g.g.gg l16 G.gg....G.gg.... [G.gg....G.gg....]3", {"vol": 1.3}],
+      kit5: ["kit", "l8 ..G..... ..g..... ..G..... ..g..... .G.ggggg .G.g.ggg .G.ggg.g .Ggg.G.g .G.g.G.g .Ggg.ggg .G.gggg. l16 g.g.g.g.g.gg.ggg l8 ........ [........]7 [gg.ggg.g]3 l16 g.g.g.ggg.g...gg", {"vol": 1.3}],
     },
   });
   // Ayla's Theme (cavegirl_song.mid)
