@@ -651,7 +651,11 @@
       const partners = tech.dual ? b.partnersFor(u, tech) : [];
       // Hand-pixelled staging for this tech (or this unit's basic attack), if authored.
       const skey = (m) => (m.sprite || m.key || '').replace(/^echo_/, '');
-      const sprOf = (m) => CT.getSprite(m.sprite || m.key);
+      const sprOf = (m) => {
+        // Sheets still being authored may lack anims: stage them as plain casters.
+        const s = CT.getSprite(m.sprite || m.key);
+        return s && s.anims ? s : { ...(s || {}), anims: {} };
+      };
       const tf = (CT.TECH_FX || {})[tech.isAttack ? 'attack_' + skey(u) : tech.id] || null;
       const west = (m) => this.r.screenDir(m.face).endsWith('west');
       const magicLike = tech.kind === 'mag' || tech.kind === 'heal' || tech.kind === 'status' || tech.kind === 'special';
@@ -677,7 +681,7 @@
         for (const m of chargers) {
           const name = casterAnim(m);
           const spr = sprOf(m);
-          this.r.anim(m, spr.anims[name] && spr.anims[name].charge ? name : 'cast', { charge: true });
+          this.r.anim(m, spr.anims && spr.anims[name] && spr.anims[name].charge ? name : 'cast', { charge: true });
           this.r.charge(m, elem, CT.FAST ? 5 : 520);
         }
         if (chargers.length) {

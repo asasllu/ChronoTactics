@@ -66,10 +66,11 @@ class Canvas:
 class VSheet(Sheet):
     """Sheet with virtual frames: composed pixel grids with a fixed foot point."""
 
-    def __init__(self, *a, shadow=None, **k):
+    def __init__(self, *a, shadow=None, shadow_rows=5, shadow_passes=2, **k):
         super().__init__(*a, **k)
         self.virt = {}
         self.shadow = shadow    # ground-shadow colour to strip from sheet frames (or None)
+        self.shadow_rows, self.shadow_passes = shadow_rows, shadow_passes
 
     def strip_shadow(self, px):
         """Remove a ground shadow drawn in the outline colour: detached flat blobs at the
@@ -99,8 +100,8 @@ class VSheet(Sheet):
         def other(x, y):
             return any(0 <= x + a < w and 0 <= y + b < h and px[y + b][x + a] and px[y + b][x + a] != S
                        for a in (-1, 0, 1) for b in (-1, 0, 1))
-        for _ in range(2):
-            gone = [(x, y) for y in range(max(0, h - 5), h) for x in range(w) if px[y][x] == S and not other(x, y)]
+        for _ in range(self.shadow_passes):
+            gone = [(x, y) for y in range(max(0, h - self.shadow_rows), h) for x in range(w) if px[y][x] == S and not other(x, y)]
             for x, y in gone:
                 px[y][x] = None
         while px and not any(px[-1]):
