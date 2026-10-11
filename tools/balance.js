@@ -11,14 +11,18 @@ LEARNED.B4B = { ...LEARNED.B4A, frog: ['masamune_gale'] };
 LEARNED.B5 = LEARNED.B4B;
 const INTERACT = !!process.env.INTERACT;
 const url = 'file://' + path.resolve(__dirname, '../public/index.html') + '?sim&test&autoplay';
+// Gear a player can actually afford: the story's gold buys roughly one piece per shop
+// (Guardia before B1, Ioka before B2, Last Village before B3; no gear shop after that).
+// Each listed piece is bought once (for its best candidate).
+const G3 = ['steel_saber', 'bone_guard', 'beret'];
 const SETUP = {
   B0: { level: 1, party: ['crono', 'frog', 'marle', 'lucca', 'robo'], gear: [] },
-  B1: { level: 3, party: ['crono', 'frog'], gear: [] },
-  B2: { level: 6, party: ['crono', 'frog', 'ayla'], gear: ['steel_saber', 'iron_sword'] },
-  B3: { level: 8, party: ['crono', 'frog', 'ayla', 'magus'], gear: ['steel_saber', 'iron_sword', 'bone_guard', 'fist_2'] },
-  B4A: { level: 10, party: ['crono', 'frog', 'ayla', 'magus'], gear: ['rainbow', 'brave_sword', 'giants_hand', 'dark_scythe', 'lumin_robe', 'beret'], guests: ['iselle'] },
-  B4B: { level: 11, party: ['crono', 'frog', 'ayla', 'magus'], gear: ['steel_saber', 'iron_sword', 'bone_guard', 'fist_2', 'rainbow', 'lumin_robe', 'brave_sword'], guests: ['iselle'] },
-  B5: { level: 12, party: ['crono', 'frog', 'ayla', 'magus'], gear: ['steel_saber', 'iron_sword', 'bone_guard', 'fist_2', 'rainbow', 'lumin_robe', 'brave_sword', 'dark_scythe'] },
+  B1: { level: 3, party: ['crono', 'frog'], gear: ['steel_saber'] },
+  B2: { level: 6, party: ['crono', 'frog', 'ayla'], gear: ['steel_saber', 'bone_guard'] },
+  B3: { level: 8, party: ['crono', 'frog', 'ayla', 'magus'], gear: G3 },
+  B4A: { level: 10, party: ['crono', 'frog', 'ayla', 'magus'], gear: G3, guests: ['iselle'] },
+  B4B: { level: 11, party: ['crono', 'frog', 'ayla', 'magus'], gear: G3, guests: ['iselle'] },
+  B5: { level: 12, party: ['crono', 'frog', 'ayla', 'magus'], gear: G3 },
   OPT1: { level: 5, party: ['crono', 'frog', 'ayla', 'magus'], gear: [] },
 };
 async function runOne(browser, id, tune) {
@@ -34,7 +38,7 @@ async function runOne(browser, id, tune) {
     if (interact) for (const [m, ts] of Object.entries(learned || {})) g.members[m].learned = ts.slice();
     g.setParty(S.party);
     g.gold = 1e6;
-    for (const gear of S.gear) for (let i = 0; i < 4; i++) g.buyGear(gear);
+    for (const gear of S.gear) g.buyGear(gear);
     g.inventory = { tonic: 4, mid_tonic: S.level > 3 ? 3 : 0, ether: 2, revive: 1 };
     g.unlock('x_strike');
     if (S.level >= 7) { g.unlock('shadow_cyclone'); g.unlock('ice_water'); }
