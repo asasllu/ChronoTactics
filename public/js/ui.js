@@ -392,7 +392,7 @@
   UI.objective = (text, hatch, secondary) => {
     $('objective').innerHTML = `<div class="obj-label">OBJECTIVE</div><div>${esc(text || 'Defeat all enemies')}</div>${secondary ? `<div class="obj-sec">${esc(secondary)}</div>` : ''}${hatch != null ? `<div class="hatch">Hatch in: <b>${hatch}</b></div>` : ''}`;
   };
-  const STATUS_NAMES = { burn: 'Burn', slow: 'Slow', haste: 'Haste', stun: 'Stun', catalogued: 'Catalogued', stasis: 'Stasis', magdown: 'MAG↓' };
+  const STATUS_NAMES = { burn: 'Burn', slow: 'Slow', haste: 'Haste', stun: 'Stun', catalogued: 'Catalogued', stasis: 'Stasis', magdown: 'MAG↓', might: 'Might', barrier: 'Wall' };
   UI.unitPanel = (which, u, battle, extra = '') => {
     const e = $(which);
     if (!u) return e.classList.add('hidden');

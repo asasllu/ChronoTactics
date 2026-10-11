@@ -97,18 +97,18 @@
     ],
     // Chapter 4 — the Atrium: exhibits that are better used than looked at.
     B4A: [
-      { id: 'b4a_medal', at: [8, 12], kind: 'shrine', mode: 'use', range: 1, who: ['frog'], verb: 'Take the Medal',
+      { id: 'b4a_medal', at: [4, 4], kind: 'shrine', mode: 'use', range: 1, who: ['frog'], verb: 'Take the Medal',
         name: 'Exhibit: The Hero Medal', desc: "Glenn's medal, catalogued and glassed. FROG ONLY, from an adjacent tile: the Masamune answers it — learn the tech Masamune Gale.",
         effect: { learn: 'masamune_gale' },
         lines: [
           ['frog', 'surprised', `My medal. Mine and Cyrus's. They put it behind glass…`],
           ['frog', 'determined', `Masa! Mune! If ye still hear me — RISE!`],
         ] },
-      { id: 'b4a_shutter', at: [3, 13], kind: 'lever', mode: 'use', range: 0, verb: 'Pull lockdown lever',
-        name: 'Gallery Lockdown Lever', desc: 'Stand on it and pull: the security shutter slams down on the Echo Tyrano (15% of its HP, Slowed for 3 turns).',
+      { id: 'b4a_shutter', at: [13, 3], kind: 'lever', mode: 'use', range: 0, verb: 'Pull lockdown lever',
+        name: 'Gallery Lockdown Lever', desc: 'Right beside the exhibit floor. Stand on it and pull: the security shutter slams down on the Echo Avian Rex (15% of its HP, Slowed for 3 turns).',
         effect: { damage: { unit: 'tyrano', pct: 0.15, status: ['slow', 1, 3] } },
         lines: [['crono', 'neutral', `!`]] },
-      { id: 'b4a_till', at: [13, 4], kind: 'chest', mode: 'step',
+      { id: 'b4a_till', at: [2, 13], kind: 'chest', mode: 'step',
         name: 'Gift Shop Till', desc: "The museum's gift shop, long closed. Any hero who steps here: Mid Tonic ×2.",
         effect: { item: { mid_tonic: 2 } },
         lines: [['ayla', 'happy', `Shiny box! Ayla take. Museum not need.`]] },
@@ -534,7 +534,14 @@
       if (s.bonus && s.bonus.who === u.id && s.bonus.effect && s.bonus.effect.learn && !u.techs.includes(s.bonus.effect.learn)) v += 3;
       if (ef.buff) v += 1.5;
       if (ef.item) v += 0.8;
-      if (ef.fill) v += 0.9;
+      if (ef.fill) {
+        // A bridge is worth an action once the party is split and one side is struggling.
+        const allies = b.living().filter((w) => w.team === 0 && w !== u);
+        const df = b.distanceField(u, [{ x: u.x, y: u.y }]);
+        const cut = allies.filter((w) => !df.has(key(w.x, w.y)));
+        const near = allies.length - cut.length;
+        if (cut.length && (near === 0 || cut.some((w) => w.hp < w.maxHp * 0.5) || cut.length === allies.length)) v += 1.2;
+      }
       if (ef.damage) {
         const t = b.unitById(ef.damage.unit);
         if (t && t.alive) v += 1.2;
@@ -567,6 +574,8 @@
         }
         v += n >= 1 ? n * 0.8 : -1;
       }
+      // ?interact=all (test runs): visit every spot at least once.
+      if (CT.AI_INTERACT_ALL) v = Math.max(v, 1);
       return v;
     },
     aiPlan(ctl, u) {
@@ -582,7 +591,22 @@
         for (const n of reach.values()) if ((s.mode === 'step' ? n.x === s.x && n.y === s.y : Interact.inReach(s, n.x, n.y)) && (!node || n.d < node.d)) node = n;
         if (node && (!best || val > best.val)) best = { spot: s, dest: node, val };
       }
-      return best;
+      if (best || b.moved) return best;
+      // Nothing in reach: a hero still walks toward a tech it could learn (multi-turn detour).
+      for (const s of b.spots) {
+        if (s.spent || s.gone || !Interact.allowed(s, u)) continue;
+        const learn = (s.effect && s.effect.learn) || (s.bonus && s.bonus.who === u.id && s.bonus.effect && s.bonus.effect.learn);
+        if (!learn || u.techs.includes(learn)) continue;
+        const goal = s.mode === 'step' ? [{ x: s.x, y: s.y }] : CT.DIRS.map(([dx, dy]) => ({ x: s.x + dx, y: s.y + dy })).filter((p) => b.tile(p.x, p.y));
+        const df = b.distanceField(u, goal);
+        let node = null, dd = 99;
+        for (const n of reach.values()) {
+          const d = df.get(key(n.x, n.y)) ?? 99;
+          if (d < dd || (d === dd && node && n.d < node.d)) (node = n), (dd = d);
+        }
+        if (node && dd < 99) return { spot: s, dest: node, val: 2, approach: true };
+      }
+      return null;
     },
 
     // ---- Drawing (called from Renderer.drawTile) --------------------------------------------
@@ -687,5 +711,6 @@
   };
 
   CT.AI_INTERACT = CT.AI_INTERACT || /[?&]interact\b/.test(location.search);
+  CT.AI_INTERACT_ALL = /[?&]interact=all\b/.test(location.search);
   CT.Interact = Interact;
 })();

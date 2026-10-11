@@ -1710,7 +1710,7 @@
       { id: 'sen2', type: 'vitrine_sentinel', at: '@sentinel2', ai: 'sentinel', hp: 300 },
       { id: 'sen3', type: 'vitrine_sentinel', at: '@sentinel3', ai: 'sentinel', hp: 300 },
       { id: 'sen4', type: 'vitrine_sentinel', at: '@sentinel4', ai: 'sentinel', hp: 300 },
-      { id: 'tyrano', type: 'echo_tyrano', at: '@tyrano', face: 'S', hp: 1300 },
+      { id: 'tyrano', type: 'echo_tyrano', at: '@tyrano', face: 'S', hp: 1000 },
       { id: 'imp1', type: 'echo_imp', near: '@imp1' },
       { id: 'imp2', type: 'echo_imp', near: '@imp2' },
       { id: 'imp3', type: 'echo_imp', near: '@imp3' },

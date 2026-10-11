@@ -1099,7 +1099,7 @@
           ctx.fillStyle = fr > 0.5 ? '#a8d45c' : fr > 0.25 ? '#fce068' : '#f06c4c';
           ctx.fillRect(bx, by, w, 1);
           if (u.status) {
-            const S = { burn: ['B', '#f06c4c'], slow: ['S', '#8cc0f0'], haste: ['H', '#a8d45c'], stun: ['*', '#fce068'], catalogued: ['C', '#e0709c'], stasis: ['∎', '#c4e4ff'], magdown: ['M', '#bc84e4'] };
+            const S = { burn: ['B', '#f06c4c'], slow: ['S', '#8cc0f0'], haste: ['H', '#a8d45c'], stun: ['*', '#fce068'], catalogued: ['C', '#e0709c'], stasis: ['∎', '#c4e4ff'], magdown: ['M', '#bc84e4'], might: ['A', '#f06c4c'], barrier: ['W', '#d0b8f8'] };
             let i = 0;
             for (const k in u.status) {
               if (!u.status[k] || !S[k]) continue;

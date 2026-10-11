@@ -72,11 +72,11 @@
   CT.BATTLE_TUNE = {
     B0: { atk: 1.5, hp: 1.7 },
     B1: { atk: 0.72, def: 0.55, hp: 0.9 },
-    B4A: { hp: 1.35, atk: 0.68 },
+    B4A: { hp: 1.35, atk: 0.64 },
     B2: { atk: 0.72 },
-    B3: { atk: 1.15 },
-    B5: { atk: 0.78, hp: 0.76 },
-    B4B: { atk: 2.15, hp: 1.3 },
+    B3: { atk: 1.22 },
+    B5: { atk: 0.7, hp: 0.68 },
+    B4B: { atk: 2.5, hp: 1.0 },
   };
   CT.LEVEL_CAP = 15;
 

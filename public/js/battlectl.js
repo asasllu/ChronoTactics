@@ -621,7 +621,7 @@
         await this.triggers();
         if (this.forcedEnd || b.outcome() || !u.alive) return true;
       }
-      if (ip.spot.mode === 'use' && !ip.spot.spent) {
+      if (ip.spot.mode === 'use' && !ip.spot.spent && CT.Interact.inReach(ip.spot, u.x, u.y)) {
         await CT.Interact.use(this, ip.spot, u);
         await this.triggers();
         return true;
