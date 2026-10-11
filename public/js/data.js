@@ -70,12 +70,13 @@
   CT.BATTLE_LEVEL = { B0: 1, B1: 5, B2: 9, B3: 14, B4A: 20, B4B: 22, B5: 23 };
   // Per-battle difficulty knobs, tuned with batch simulations (tools/balance).
   CT.BATTLE_TUNE = {
-    B0: { atk: 0.75 },
+    B0: { atk: 1.0, hp: 1.3 },
     B1: { atk: 0.72, def: 0.55, hp: 0.9 },
     B4A: { hp: 1.35, atk: 0.68 },
     B2: { atk: 0.72 },
+    B3: { atk: 1.15 },
     B5: { atk: 0.8, hp: 0.85 },
-    B4B: { atk: 1.7, hp: 1.3 },
+    B4B: { atk: 2.0, hp: 1.3 },
   };
   CT.LEVEL_CAP = 15;
 

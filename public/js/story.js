@@ -1469,7 +1469,7 @@
       { id: 'kil1', type: 'echo_kilwala', near: '@kilwala1', hp: 60 },
       { id: 'kil2', type: 'echo_kilwala', near: '@kilwala2', hp: 60 },
       { id: 'kil3', type: 'echo_kilwala', near: '@kilwala3', hp: 60 },
-      { id: 'iselle', type: 'iselle', at: '@iselle', face: 'S', ai: 'hold', hp: 400, immortal: true },
+      { id: 'iselle', type: 'iselle', at: '@iselle', face: 'S', ai: 'hold', hp: 300, immortal: true },
     ],
     objective: { type: 'DEFEAT_UNIT', unit: 'seedA', text: 'Stop the Seedbearer before it reaches the shrine!' },
     hatch: {
@@ -1535,7 +1535,7 @@
     ],
     objective: { type: 'DEFEAT_TYPE', enemyType: 'seedbearer', text: 'Defeat the three Seedbearers before the seed hatches!' },
     hatch: {
-      mode: 'feeders', feeders: ['sb1', 'sb2', 'sb3'], max: 4, minFeeders: 2,
+      mode: 'feeders', feeders: ['sb1', 'sb2', 'sb3'], max: 5, minFeeders: 2,
       spawn: { type: 'lavos_sprout_large', id: 'sprout', at: [8, 8], hp: 600 },
       objective: { type: 'DEFEAT_ALL', text: 'The seed has hatched! Defeat everything!' },
     },
@@ -1710,7 +1710,7 @@
       { id: 'sen2', type: 'vitrine_sentinel', at: '@sentinel2', ai: 'sentinel', hp: 300 },
       { id: 'sen3', type: 'vitrine_sentinel', at: '@sentinel3', ai: 'sentinel', hp: 300 },
       { id: 'sen4', type: 'vitrine_sentinel', at: '@sentinel4', ai: 'sentinel', hp: 300 },
-      { id: 'tyrano', type: 'echo_tyrano', at: '@tyrano', face: 'S', hp: 900 },
+      { id: 'tyrano', type: 'echo_tyrano', at: '@tyrano', face: 'S', hp: 1300 },
       { id: 'imp1', type: 'echo_imp', near: '@imp1' },
       { id: 'imp2', type: 'echo_imp', near: '@imp2' },
       { id: 'imp3', type: 'echo_imp', near: '@imp3' },

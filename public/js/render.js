@@ -192,9 +192,9 @@
   // shake/flash: [amount|colour, ms, at (fraction of the moment)].
   const BIG = {
     luminaire: { dim: ['#4a2a16', 0.55, 900], lb: 1, flash: ['255,250,220', 160, 0.33], shake: [6, 420, 0.36] },
-    blackhole: { dim: ['#0a0612', 0.72, 1300], lb: 1 },
-    singularity: { dim: ['#0a0612', 0.6, 300], shake: [5, 500, 0.15], flash: ['224,192,252', 140, 0.9] },
-    darkmatter: { dim: ['#2a1040', 0.8, 1300], lb: 1, shake: [4, 900, 0.1] },
+    blackhole: { dim: ['#0a0612', 0.72, 600], lb: 1 },
+    singularity: { dim: ['#0a0612', 0.6, 300], shake: [5, 500, 0.15], flash: ['255,255,255', 120, 0.9] },
+    darkmatter: { dim: ['#2a1040', 0.8, 600], lb: 1, shake: [4, 900, 0.1] },
     dm_burst: { dim: ['#0a0612', 0.6, 300], shake: [10, 700, 0.5], flash: ['240,220,255', 180, 0.5] },
     eclipse: { dim: ['#0a0612', 0.72, 900], lb: 1, flash: ['255,255,255', 160, 0.48], shake: [6, 500, 0.5] },
     erase: { dim: ['#3a3a52', 0.45, 300], lb: 1, flash: ['255,255,255', 260, 0.55], shake: [8, 600, 0.55] },
@@ -1684,7 +1684,7 @@
       if (P.dim) this.dimField(P.dim[0], P.dim[1], ms + (P.dim[2] || 600), 160, 420);
       if (P.lb) b.lb = 1;
       if (P.shake) setTimeout(() => this.shake(P.shake[0], P.shake[1]), P.shake[2] * ms);
-      if (P.flash) setTimeout(() => this.flashScreen(P.flash[0], P.flash[1]), P.flash[2] * ms);
+      if (P.flash) setTimeout(() => this.flashScreen(P.flash[0], P.flash[1], 0.8), P.flash[2] * ms);
     }
     bigCentre(b) {
       const a = b.at;

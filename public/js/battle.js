@@ -970,6 +970,8 @@
         const act = this.bestActionFrom(u, node, false, techs);
         if (!act) continue;
         let score = act.score - node.d * 0.004;
+        // Heroes know the Core's rule: a tech from an intact placard pedestal breaks it.
+        if (u.team === 0 && this.placards && act.tech && !act.tech.isAttack && this.placards.zones.some((z) => !this.placards.broken.has(z) && this.inZone(z, node.x, node.y))) score += 0.8;
         if (ai === 'ranged' || ai === 'healer' || (u.hero && u.range && u.range[1] > 1)) score += this.safety(u, node) * 0.05;
         if (!best || score > best.score) best = { score, dest: node, tech: act.tech, target: act.target };
       }
