@@ -382,11 +382,11 @@ def curator(e):
             Y = int(math.floor(ay + (by2 - ay) * t))
             edge = i in (0, n)
             p.put(X, Y, GLOW[6] if edge else GLOW[7])
-    if c.get('spikes'):      # anger: hard shards of light knit into a frown above the slit
+    if c.get('spikes'):      # anger: two hard shards of light slant down at the slit, a scowl
         cx = int(ax)
         cy = int(ay)
-        for (dx_, dy_, col) in ((-4, -2, GLOW[5]), (-3, -1, GLOW[6]), (-2, 0, GLOW[5]),
-                                (4, -2, GLOW[5]), (3, -1, GLOW[6]), (2, 0, GLOW[5])):
+        for (dx_, dy_, col) in ((-5, -4, GLOW[5]), (-4, -3, GLOW[6]), (-3, -2, GLOW[5]),
+                                (5, -4, GLOW[5]), (4, -3, GLOW[6]), (3, -2, GLOW[5])):
             p.put(cx + dx_, cy + dy_, col)
     if c.get('flare'):       # surprise: a cross-flare
         cy = int((ay + by2) / 2)
@@ -891,7 +891,10 @@ def kino(e):
         p.material(nm, KHAIR, 3, z=10 + i, edge=True, edgecol=KHAIR[0])
         p.fill(nm, m('lock', ra, rb, tip, bend))
         mid = ((ra[0] + rb[0]) / 2, (ra[1] + rb[1]) / 2)
-        p.shade(-1, m('lock', mid, rb, tip, bend), on=[nm])
+        if i < 9:
+            p.shade(-1, m('lock', mid, rb, tip, bend), on=[nm])
+        else:      # the bangs catch the light
+            p.shade(+1, m('lock', ra, mid, tip, bend), on=[nm])
     lk = ['klock%d' % i for i in range(len(locks))]
     p.shade(+1, m('stroke', [(5, 16), (10, 7.6), (18, 3.6), (27, 2.6)], 2.2), on=lk)
     p.shade(-1, m('blob', [(32, 0), (48, 0), (48, 32), (38, 30), (36, 12)]), on=lk)

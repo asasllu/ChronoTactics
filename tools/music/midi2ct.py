@@ -587,7 +587,7 @@ def convert(src_dir, cfg):
         if s['pitch'] < 45 and inst0 in PLUCKY and not cfg.get('nobassfix'):
             for g in L:
                 for n in g['n']:
-                    if n.inst not in BASSLIKE:
+                    if n.inst in PLUCKY and n.p < 55:
                         n.inst = 'bass'
             inst0 = L[0]['n'][0].inst
             log.append(f'ch{ch + 1}: low register lane -> bass instrument')
@@ -649,7 +649,8 @@ def convert(src_dir, cfg):
     if cfg.get('oneShot'):
         df['oneShot'] = True
     df['v'] = v
-    rep = {'id': cfg['id'], 'file': cfg['file'], 'title': cfg['title'], 'seq': cfg.get('seq', ''),
+    expect = {'mel': sorted([n.s, n.p] for n in notes), 'drum': sorted([x.s, x.inst] for x in drums)}
+    rep = {'expect': expect, 'id': cfg['id'], 'file': cfg['file'], 'title': cfg['title'], 'seq': cfg.get('seq', ''),
            'bpm_src': round(d['bpm0'], 1), 'bpm': bpm, 'meter': meter, 'bars': bars, 'loop': loop_bar,
            'sec': round(bars * barT / PPQ * 60 / bpm, 1), 'voices': vinfo, 'log': log,
            'midi_notes': len(d['song'].notes), 'kept_notes': len(notes), 'drum_hits': len(drums),
@@ -729,7 +730,7 @@ TRACKS = [
     dict(id='mus_fair_night', mvol=0.55, title='Leene Square', file='millenialfair.mid', seq='Alex Jarvis', slow=0.85,
          drumch=[4], drummap={83: 'h'}, kit_groups=['xg', 'h'], inst={1: 'harp', 2: 'harp', 3: 'tuba', 5: 'accordion', 6: 'accordion', 7: 'flute'},
          kitvol=0.6, echo=FIELD),
-    dict(id='mus_rift', mvol=1.17, title="Lavos's Theme", file='lavos.mid', seq='Valius (Chris Hatfield)', slow=0.85, echo=AMBIENT),
+    dict(id='mus_rift', mvol=1.17, title="Lavos's Theme", file='lavos.mid', seq='Valius (Chris Hatfield)', slow=0.85, maxchord=6, echo=AMBIENT),
     dict(id='mus_battle', mvol=1.26, title='Battle', file='chrono_trigger_battle1.mid', seq='', pickup='trim', slow=0.85, inst={1: 'sbass'},
          kitvol=0.7, echo=BATTLE),
     dict(id='mus_battle_boss', mvol=0.74, title='Boss Battle 1', file='CB_CTBoss1.mid', seq='', slow=0.85, scale=4 / 3, meter=[4, 4],
@@ -745,11 +746,11 @@ TRACKS = [
     dict(id='mus_ioka', mvol=3.01, title='Prehistoric World Map ("Rhythm of Earth, Wind and Sky")',
          file='Chrono_Trigger_-_20_-_Rhythm_of_Earth_Wind_and_Sky.mid', seq='Wotan', slow=0.85,
          kit_tracks=[[3], [4], [5], [2], [6]], kitvol=[0.8, 0.7, 0.6, 0.5, 0.5], echo=FIELD),
-    dict(id='mus_ayla_theme', mvol=1.45, title="Ayla's Theme", file='cavegirl_song.mid', seq='', slow=0.85, kits=2, kitvol=0.65, echo=FIELD),
+    dict(id='mus_ayla_theme', mvol=1.45, title="Ayla's Theme", file='cavegirl_song.mid', seq='', slow=0.85, transpose={5: 12}, kits=2, kitvol=0.65, echo=FIELD),
     dict(id='mus_tyrano', mvol=1.77, title='Tyrano Lair', file='cttyrano.mid', seq='Mark Jansen', slow=0.85, kits=2, kitvol=0.6, echo=FIELD),
     dict(id='mus_last_village', mvol=1.16, title='Silent Light', file='CT-SilentLight.mid', seq='Powerlord', slow=0.85, echo=FIELD),
     dict(id='mus_zeal_wreck', mvol=0.66, title='Zeal ("Corridors of Time")', file='ctzeal.mid', seq='', slow=0.85, kitvol=0.55, echo=FIELD),
-    dict(id='mus_magus_theme', mvol=0.56, title="Magus's Theme", file='Magus1.mid', seq='', slow=0.85, kitvol=0.6, echo=FIELD),
+    dict(id='mus_magus_theme', mvol=0.56, title="Magus's Theme", file='Magus1.mid', seq='', slow=0.85, vol={1: 2.5, 3: 2.0}, kitvol=0.6, echo=FIELD),
     dict(id='mus_hollow', mvol=0.79, title='Future: World Map ("Ruined World")', file='ct2300ad.mid', seq='KDS', slow=0.9,
          inst={2: 'wind', 3: 'wind', 9: 'wind', 4: 'wind', 5: 'wind'}, transpose={2: 48, 3: 48, 9: 48, 4: 24, 5: 24},
          keep=[7, 8], echo=AMBIENT),
