@@ -277,12 +277,12 @@ HOOD = ['#0a0716', '#18123a', '#282060', '#3a3088', '#5246ac', '#7466cc', '#a49a
 GLOW = ['#06050e', '#0e1430', '#16285c', '#1e4690', '#2c70c0', '#5ca4e8', '#a4d8ff', '#e8f8ff']
 # angle (deg, + leans right), dy (px, + lower), slit (x, y0, y1, width), peak, sigma, extra
 CUR = {
-    'neutral': dict(rot=0, dy=0, slit=(24.5, 20, 33, 1), peak=6.6, sig=2.2),
-    'happy': dict(rot=7, dy=0, slit=(24.5, 19, 33, 1), peak=7.2, sig=3.4, motes=True),
-    'angry': dict(rot=-3, dy=2.2, slit=(24.5, 23, 31, 1), peak=7.6, sig=1.4, spikes=True),
-    'sad': dict(rot=-9, dy=2.4, slit=(24.5, 24, 33, 1), peak=4.4, sig=1.6, drip=True),
-    'surprised': dict(rot=0, dy=-1.2, slit=(24.5, 17, 35, 2), peak=7.8, sig=4.0, flare=True),
-    'determined': dict(rot=0, dy=0.4, slit=(24.5, 18, 34, 1), peak=7.4, sig=1.8, gleam=True),
+    'neutral': dict(rot=0, dy=0, slit=(24.5, 20, 32, 1), peak=6.4, sig=1.25),
+    'happy': dict(rot=7, dy=0, slit=(24.5, 19, 32, 1), peak=7.0, sig=1.9, motes=True),
+    'angry': dict(rot=-3, dy=2.2, slit=(24.5, 23, 30, 1), peak=7.6, sig=1.0, spikes=True),
+    'sad': dict(rot=-9, dy=2.4, slit=(24.5, 24, 32, 1), peak=4.6, sig=0.9, drip=True),
+    'surprised': dict(rot=0, dy=-1.2, slit=(24.5, 17, 34, 2), peak=7.8, sig=1.9, flare=True),
+    'determined': dict(rot=0, dy=0.4, slit=(24.5, 18, 33, 1), peak=7.2, sig=1.1, gleam=True),
 }
 
 
@@ -314,7 +314,7 @@ def curator(e):
     p.fill('cloak', m('blob', [(-3, 50), (-1, 40), (5, 33), (14, 29), (35, 29), (44, 33), (50, 40), (51, 50)]))
     p.shade(-1, m('blob', [(30, 33), (44, 34), (50, 42), (50, 50), (32, 50)]), on=['cloak'])
     p.shade(+1, m('blob', [(1, 41), (6, 35), (12, 32), (8, 40), (3, 46)]), on=['cloak'])
-    for fold in ([(9, 48), (11, 40), (14, 34)], [(38, 48), (37, 40), (34, 34)], [(44, 48), (43, 42)]):
+    for fold in ([(6, 48), (8, 41)], [(41, 48), (40, 43)], [(46, 48), (45.6, 44)]):
         p.shade(-1, m('stroke', fold, 1.1), on=['cloak'])
     # The hood: tall, pointed, its tip leaning right like the Prophet's.
     hood = [(31, 0.4), (34.2, 4.4), (37, 10.6), (39.6, 18), (41.2, 26), (42, 33), (40, 40.4), (33, 43),
@@ -325,6 +325,8 @@ def curator(e):
     p.shade(-1, m('blob', T([(31, 3), (36, 9), (40, 18), (42, 30), (40, 40), (35, 41), (37, 30), (36, 18), (33, 9)])), on=['hood'])
     p.shade(-1, m('stroke', T([(29.4, 2.4), (28.4, 7), (27, 10)]), 1.0), on=['hood'])
     p.shade(-1, m('stroke', T([(11, 38), (12.4, 31), (14.4, 25)]), 1.0), on=['hood'])
+    p.shade(-1, m('stroke', T([(38.6, 38), (38.4, 28), (36.4, 19)]), 1.0), on=['hood'])
+    p.shade(+1, m('stroke', T([(9.6, 37), (9.8, 30), (11.6, 23)]), 0.9), on=['hood'])
     # Lining (the inside of the hood) and the face void.
     p.fill('lining', m('blob', T([(24.5, 9.4), (31, 13), (34.6, 21), (35, 30), (32, 37.4), (24.5, 40.4),
                                   (17, 37.4), (14, 30), (14.6, 21), (18.2, 13)])))
@@ -337,19 +339,19 @@ def curator(e):
             (13.8, 30), (14.2, 21), (18, 12.8)]
     p.fill('gold', m('stroke', T(band + band[:2]), 1.5))
     p.fill('gold', m('poly', T([(24.5, 5.4), (27, 8.6), (24.5, 11.6), (22, 8.6)])))
-    p.fill('gold', m('stroke', [(18, 41), (15.6, 48.6)], 1.8))
-    p.fill('gold', m('stroke', [(31, 41), (33.4, 48.6)], 1.8))
+    p.fill('gold', m('stroke', [(10, 41.6), (17, 44.6), (24.5, 45.6), (32, 44.6), (39, 41.6)], 1.5))
     p.shade(-1, m('blob', T([(28, 11), (36, 18), (36, 34), (30, 41), (33, 30), (33, 19)])), on=['gold'])
     p.shade(+1, m('blob', T([(13, 26), (15, 16), (20, 11), (17, 18)])), on=['gold'])
     p.shade(-1, m('blob', [(30, 40), (36, 40), (36, 50), (30, 50)]), on=['gold'])
     # Beads (the orange baubles along the Prophet's trim).
-    for (bx, by) in [(24.5, 8.6), (14.2, 26), (34.8, 26), (17.1, 44.4), (32, 44.4)]:
+    for (bx, by) in [(24.5, 8.6), (14.2, 26), (34.8, 26), (16, 44.2), (24.5, 45.6), (33, 44.2)]:
         q = T([(bx, by)])[0] if by < 40 else (bx, by)
         p.fill('bead', m('ell', q[0], q[1], 1.3, 1.3))
     p.reduce()
     # The slit and its light: intensity falls off from the slit's centre line.
     sx, y0, y1, sw = c['slit']
     (ax, ay), (bx2, by2) = T([(sx, y0), (sx, y1)])
+    ax = bx2 = (ax + bx2) / 2        # the slit stays vertical however the hood leans
     vid = p.mats['void']['id']
     gid, lid = p.mats['gold']['id'], p.mats['lining']['id']
     peak, sig = c['peak'], c['sig']
@@ -363,7 +365,7 @@ def curator(e):
             t = max(0, min(1, ((px_ - ax) * vx + (py_ - ay) * vy) / (vx * vx + vy * vy)))
             dxl = px_ - (ax + vx * t)
             dyl = py_ - (ay + vy * t)
-            d = math.hypot(dxl * 1.0, dyl * 1.6)
+            d = math.hypot(dxl * 1.0, dyl * 2.2)
             I = peak * math.exp(-(max(0, d - (sw - 1) * 0.5) ** 2) / (2 * sig * sig))
             if mid == vid:
                 p.t1[y][x] = I
@@ -380,13 +382,12 @@ def curator(e):
             Y = int(math.floor(ay + (by2 - ay) * t))
             edge = i in (0, n)
             p.put(X, Y, GLOW[6] if edge else GLOW[7])
-    if c.get('spikes'):      # anger: the light flares sideways in hard shards
-        cy = int((ay + by2) / 2)
-        cx = int((ax + bx2) / 2)
-        for dx_ in (-3, -2, -1, 1, 2, 3):
-            p.put(cx + dx_, cy, GLOW[6] if abs(dx_) < 3 else GLOW[5])
-        for (dx_, dy_) in ((-2, -2), (2, -2), (-2, 2), (2, 2)):
-            p.put(cx + dx_, cy + dy_, GLOW[5])
+    if c.get('spikes'):      # anger: hard shards of light knit into a frown above the slit
+        cx = int(ax)
+        cy = int(ay)
+        for (dx_, dy_, col) in ((-3, -3, GLOW[5]), (-2, -2, GLOW[6]), (-1, -1, GLOW[7]),
+                                (3, -3, GLOW[5]), (2, -2, GLOW[6]), (1, -1, GLOW[7])):
+            p.put(cx + dx_, cy + dy_, col)
     if c.get('flare'):       # surprise: a cross-flare
         cy = int((ay + by2) / 2)
         cx = int((ax + bx2) / 2)

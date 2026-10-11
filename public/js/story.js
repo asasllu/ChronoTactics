@@ -617,8 +617,8 @@
       { id: 'kino', at: '@kino', face: 'S' },
       { id: 'vill1', sprite: 'villager_ioka', at: '@vill1', face: 'S' },
       { id: 'vill2', sprite: 'villager_ioka_b', at: '@vill2', face: 'E' },
-      { id: 'vill3', sprite: 'villager_ioka_c', at: '@vill3', face: 'W' },
-      { id: 'trader', sprite: 'villager_ioka', at: '@shop', face: 'S' },
+      { id: 'vill3', sprite: 'villager_ioka_b', at: '@vill3', face: 'W' },
+      { id: 'trader', sprite: 'villager_ioka_c', at: '@shop', face: 'S' },
     ],
     script: [
       ['chapter', 'II. STRONG, THEN KIND', '65,000,000 B.C.'],
@@ -1957,9 +1957,9 @@
       { map: 'last_village', theme: 'snow',
         actors: [{ id: 'magus', at: '@magus', face: 'N' }],
         vfx: [['sparkle', '@magus']],
-        caption: 'A tablet, in a pocket. Still lit.',
+        caption: 'Schala, in a pocket. Still lit.',
         variants: [
-          { if: 'seed_hatched', vfx: [], caption: 'A tablet, in a pocket. Dark, but kept.' },
+          { if: 'seed_hatched', vfx: [], caption: 'Schala, in a pocket. Dark, but carried.' },
         ] },
       { map: 'guardia_throne', theme: 'castle',
         actors: [
@@ -1985,13 +1985,14 @@
       ['CHRONO TACTICS: THE HOLLOW FUTURE', ['A non-commercial fan sequel to Chrono Trigger']],
       ['Story & Design', ['"The Hollow Future" — original fan script and game bible']],
       ['Game Engine & Tactics Rules', ['The Chrono Tactics fan project']],
-      ['Maps, Pixel Art & Portraits', ['The Chrono Tactics fan project', 'PixelLab-assisted sprites, hand-built pixel toolkit']],
-      ['Music & Sound', ['Original synthesized chiptune, composed in the spirit of the SNES era']],
-      ['Cast', ['Crono', 'Frog (Glenn)', 'Ayla', 'Magus (Janus)', 'Iselle, the Warden', 'The Curator (VESPER)',
-        'Marle', 'Lucca', 'Robo', 'King Guardia XXI', 'Queen Leene', 'Kino', 'The Elder', 'Gaspar', 'Spekkio', 'Corin']],
+      ['Maps, Pixel Art & Portraits', ['Character, enemy and portrait sprites from the original Chrono Trigger sprite sheets supplied by the player', 'Maps, effects and props: the Chrono Tactics fan project']],
+      ['Music & Sound', ['Chrono Trigger music by Yasunori Mitsuda, with Nobuo Uematsu and Noriko Matsueda', 'Arranged for this game from fan MIDI sequences (VGMusic); credits in js/music_ct.js', 'Sound effects synthesized for this project']],
+      ['Cast', ['Crono', 'Frog (Glenn)', 'Ayla', 'Magus (Janus)', 'Sir Cyrus, the Warden', 'The Curator (VESPER)',
+        'Marle', 'Lucca', 'Robo', 'King Guardia XXI', 'Queen Leene', 'Kino', 'The Elder', 'Gaspar', 'Spekkio',
+        'and the echoes of Azala, Ozzie, Flea and Slash']],
       ['Special Thanks', ['Everyone who ever rang the bell in Leene Square', 'You, for playing']],
       ['Legal', ['Chrono Trigger © Square Enix. This is a non-commercial fan work.',
-        'All art, music and code in this project are original.']],
+        'Character sprites, portraits and music come from Chrono Trigger; maps, effects and code are original to this project.']],
     ],
   };
 

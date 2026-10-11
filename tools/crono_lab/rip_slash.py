@@ -9,7 +9,8 @@ rip/slash_frames.json (see rip/slash_labels*.png). What the sheet holds, by id:
   4 front wind-up (sword cocked behind), 5 front lunge (sword level, right), 6 the same with a
   low sweeping arc; 11/12/13 the same three from behind (sword to the left)
   18/19/20 profile slash facing right (wind-up, crescent arc, follow-through); 25-27 mirrored
-  7-10 / 14-17 unarmed stands (front, back, 3/4); 72-74 front walk (arms crossed), 75 front scared
+  7 front stand, 9/10 front steps (the front walk), 8 back stand, 14-17 more unarmed stands
+  72-74 front stands with the arms crossed, 75 front scared
   63-65 back walk, 66-71 side walk (facing left), 52-55 hovering (with detached shadows)
   21/22 front fighting crouches, 29/30 back crouches, 31/32 wide stances
   23/28 airborne arms flung out (front/back), 36/44 airborne profile, 56 sword raised overhead,
@@ -18,7 +19,7 @@ rip/slash_frames.json (see rip/slash_labels*.png). What the sheet holds, by id:
   the hands), 87/88 casting a blast to the right (front), 89/90 the same from behind.
 Ground shadows are drawn in the outline colour and are stripped (the game draws its own).
 There is no lying frame: the ko frame is the scared front pose (75) laid on its side.
-There is no kneel either: the winded front crouch (21) / back crouch (29) stand in.
+There is no kneel either: the front / back stand (7 / 8) is sunk over its boots.
 """
 import os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -41,16 +42,19 @@ def lie(s, name, base):
 
 
 def build():
-    s = VSheet('slash', w=88, h=72, ax=40, ay=66, weapon=BLADE, shadow=OUTLINE,
+    s = VSheet('slash', w=88, h=72, ax=40, ay=66, weapon=BLADE, shadow=OUTLINE, shadow_rows=8, shadow_passes=3,
                credit='ripped by Tonberry2k')
     F, T = False, True
     s.compose('breath72', 72, [('shift', 0, 17, 0, 1)], canvas=(60, 70), at=(20, 10))
     s.compose('breath63', 63, [('shift', 0, 17, 0, 1)], canvas=(60, 70), at=(20, 10))
     lie(s, 'lying', 75)
+    # Kneel: no such frame; the front / back stand (7 / 8) sinks 6 px over its boots.
+    s.compose('kneel', 7, [('shift', 0, 30, 0, 6)], canvas=(60, 70), at=(20, 10))
+    s.compose('kneel_b', 8, [('shift', 0, 30, 0, 6)], canvas=(60, 70), at=(20, 10))
 
     # ---- se: front for standing/walking, front and profile battle sprites (face right)
     s.add('se', 'idle', [(72, 600), ('breath72', 320), (72, 500), ('breath72', 320)], loop=True)
-    s.add('se', 'walk', [(72, 120), (73, 120), (72, 120), (74, 120)], loop=True)
+    s.add('se', 'walk', [(9, 120), (7, 120), (10, 120), (7, 120)], loop=True)
     # Sword lunge: stance, wind-up, lunge, low sweeping arc (hit), lunge held, stance.
     s.add('se', 'attack', [(0, 120), (4, 160), (5, 70, F, 4), (6, 170, F, 6), (5, 110, F, 5),
                            (0, 140, F, 2), (0, 120)], hit=3)
@@ -58,7 +62,7 @@ def build():
           charge=[0, 1], release=2, rim=RIM,
           glow=[s.gpt(84, 18, 8), s.gpt(86, 19, 8), s.gpt(87, 30, 14), s.gpt(88, 30, 14)])
     s.add('se', 'hurt', [(51, 220, F, -3), (21, 180, F, -1)])
-    s.add('se', 'kneel', [(21, 1000)], loop=True)
+    s.add('se', 'kneel', [('kneel', 1000)], loop=True)
     s.add('se', 'ko', [(51, 180, F, -2), ('lying', 1000)])
     s.add('se', 'victory', [(0, 240), (56, 700), (56, 260, F, 0, -1), (56, 500)], loop=True)
     # Extra: the profile slash with its crescent (a second sword move for scenes / techs).
@@ -73,7 +77,7 @@ def build():
           charge=[0, 1], release=2, rim=RIM,
           glow=[s.gpt(30, 26, 12), s.gpt(30, 26, 11), s.gpt(89, 9, 14, T), s.gpt(90, 9, 14, T)])
     s.add('ne', 'hurt', [(51, 220, F, -3), (29, 180, F, -1)])
-    s.add('ne', 'kneel', [(29, 1000)], loop=True)
+    s.add('ne', 'kneel', [('kneel_b', 1000)], loop=True)
     s.add('ne', 'ko', [(51, 180, F, -2), ('lying', 1000)])
     s.add('ne', 'victory', [(1, 240), (56, 700), (56, 260, F, 0, -1), (56, 500)], loop=True)
     s.add('ne', 'slash', [(18, 160), (19, 180, F, 4), (20, 160, F, 4), (20, 120)], hit=1)
