@@ -93,6 +93,7 @@ def cyrus_armour(p, e):
     p.fill('gold', m('stroke', [(31.5, 42), (37, 37), (45, 37), (49, 40)], 1.6))
     p.fill('gold', m('ell', 9, 44, 1.6, 1.6))
     p.fill('gold', m('ell', 40, 44, 1.6, 1.6))
+    p.shade(-1, m('blob', [(31, 41), (40, 36), (50, 39), (50, 48), (30, 48)]), on=['gold'])
     # Purple collar wrapping the neck.
     p.fill('collar', m('blob', [(12, 46), (13, 37), (19, 33), (32, 33), (37, 37), (37, 46), (25, 48)]))
     p.shade(-1, m('blob', [(28, 34), (36, 37), (37, 46), (30, 47)]), on=['collar'])
@@ -134,7 +135,15 @@ def cyrus_helm(p, e):
     p.fill('gold', m('stroke', [(24.2, 4), (24.4, 10), (24.9, 17), (26.2, 24.6), (27.5, 27.4), (28.8, 24.6), (30.3, 17), (30.8, 10), (29.6, 4.5)], 1.0))
     p.fill('gold', m('stroke', [(11.5, 13), (16, 11.6), (21, 11.2)], 1.2))
     p.fill('gold', m('stroke', [(10.6, 31), (13.5, 35.5), (19, 39.4)], 1.2))
-    p.fill('gold', m('ell', 13, 22.5, 1.5, 1.5))
+    # Shade the trim with the helmet: bright on the lit upper left, dull on the far side.
+    p.shade(-1, m('blob', [(30, 14), (38, 13), (39, 30), (33, 39), (30, 38), (35, 30)]), on=['gold'])
+    p.shade(-1, m('blob', [(28.4, 3), (31.4, 9), (31, 20), (28.6, 27.6), (29, 14)]), on=['gold'])
+    p.shade(+1, m('blob', [(10, 12), (16, 10), (22, 10.4), (17, 13), (15, 20), (13, 20)]), on=['gold'])
+    p.shade(-1, m('blob', [(10, 29), (14, 33), (20, 38), (20, 41), (12, 37)]), on=['gold'])
+    # Rim light along the near edge of the dome.
+    p.shade(+2, m('stroke', [(11.4, 26), (10.8, 18), (12.6, 11), (16, 6.5)], 1.1), on=['helm'])
+    # The crest throws a shadow across the far cheek.
+    p.shade(-1, m('blob', [(29, 19), (31.5, 19), (31, 26), (29, 29), (28, 25)]), on=['skin'])
 
 
 def cyrus_beard(p, e):
@@ -170,6 +179,229 @@ def cyrus(e):
     p.reduce()
     p.render()
     cyrus_face(p, e)
+    return p
+
+
+# Helmet off: the man under the armour (the unarmoured Cyrus at the bottom of cyrus.png),
+# brown swept-back hair and beard, tired and redeemed.
+LEATHER = ['#2c1408', '#583014', '#86521e', '#b07c34', '#d8aa58', '#f4d898']
+
+
+@portrait('iselle', ['broken'])
+def cyrus_broken(e):
+    p = Pic('#e8e2ec', INK)
+    m = p.mask
+    p.material('plate', STEEL, 3, z=2, edge=True)
+    p.material('strap', LEATHER, 3, z=3, edge=True)
+    p.material('neck', SKIN, 3, z=4, edge=True)
+    p.material('hair', BROWN, 1, z=5, edge=True)
+    p.material('ear', SKIN, 3, z=6, edge=True)
+    p.material('skin', SKIN, 3, z=7, edge=True)
+    p.material('beard', BROWN, 2, z=8, edge=True)
+    p.material('fringe', BROWN, 3, z=9, edge=True)
+    # Shoulders: dark plate with the leather harness of the sprite.
+    p.fill('plate', m('blob', [(-2, 48), (-1, 40), (6, 36), (16, 36.5), (24, 38), (33, 36.5), (43, 36), (50, 40), (50, 48)]))
+    p.shade(+1, m('blob', [(1, 41), (6, 37.4), (13, 37.6), (8, 41.4)]), on=['plate'])
+    p.shade(+1, m('blob', [(35, 40.5), (40, 37.4), (46, 38), (41, 41.5)]), on=['plate'])
+    p.shade(-1, m('blob', [(26, 44), (36, 41), (50, 43), (50, 48), (26, 48)]), on=['plate'])
+    p.fill('strap', m('stroke', [(8, 48), (16, 41), (24, 38.5)], 3.2))
+    p.fill('strap', m('stroke', [(22, 48), (30, 41.5), (38, 37.5)], 3.0))
+    p.fill('strap', m('blob', [(18, 41), (30, 40), (31, 44), (18, 45)]))
+    p.shade(-1, m('blob', [(27, 40), (40, 37), (40, 48), (25, 48)]), on=['strap'])
+    p.shade(+1, m('stroke', [(9, 46.6), (16, 40.4), (22, 38.6)], 1.0), on=['strap'])
+    # Neck.
+    p.fill('neck', m('blob', [(19, 30), (31, 30), (32, 40), (25, 42), (18.5, 40)]))
+    p.shade(-1, m('blob', [(18, 30), (33, 30), (32, 36), (25, 38), (18, 35)]), on=['neck'])
+    # Hair: a dark mass, then tapered locks swept up and back (the sprite's spiky brown crown),
+    # each its own material so a dark line separates it from the lock behind.
+    p.fill('hair', m('blob', [(8, 32), (6.5, 22), (8, 12), (13, 6), (21, 3.5), (30, 4), (36, 7.5), (39, 13),
+                              (38, 18), (34, 13), (28, 11.2), (21, 12), (17, 15), (15.5, 22), (13, 29), (10.5, 34)]))
+    p.shade(-1, m('blob', [(6, 24), (12, 26), (11, 34), (7, 33)]), on=['hair'])
+    locks = [((13, 20), (15, 30), (7, 34), -1), ((12, 13), (15, 23), (4, 23.5), 0.5),
+             ((14, 8), (17, 17), (4.2, 11.6), 1.5), ((19, 6), (20, 14), (8, 3.4), 1.5),
+             ((24.5, 5), (24, 12.4), (15.4, 0.6), 1.5), ((29.5, 6), (28, 12), (25, 0.2), 1),
+             ((33.5, 7.6), (31, 12.6), (34, 1.2), -1), ((35.4, 10.6), (33.6, 15), (40.4, 6.2), -1),
+             ((36.4, 14.4), (37.4, 19.4), (41.2, 13.6), -0.5)]
+    for i, (ra, rb, tip, bend) in enumerate(locks):
+        nm = 'lock%d' % i
+        p.material(nm, BROWN, 2, z=10 + i, edge=True, edgecol=BROWN[0])
+        p.fill(nm, m('lock', ra, rb, tip, bend))
+        mid = ((ra[0] + rb[0]) / 2, (ra[1] + rb[1]) / 2)
+        p.shade(-1, m('lock', mid, rb, tip, bend), on=[nm])
+    lk = ['lock%d' % i for i in range(len(locks))]
+    # The anime shine band across the crown, and the dark nape.
+    p.shade(+1, m('stroke', [(5, 16), (9, 8.6), (17, 4), (26, 3), (34, 5.4)], 2.6), on=lk)
+    p.shade(+1, m('stroke', [(7.4, 12), (12, 6.6), (18, 4.4)], 1.0), on=lk)
+    p.shade(-1, m('blob', [(4, 26), (12, 25), (14, 33), (6, 36)]), on=lk)
+    # Ear (near side) and face.
+    p.fill('ear', m('ell', 15.2, 24.2, 2.3, 3.4))
+    p.shade(-1, m('ell', 15.6, 24.6, 1.0, 2.0), on=['ear'])
+    face = [(16.4, 15.2), (21.4, 11.8), (29, 11.6), (34.4, 14.6), (36.6, 21), (36, 27.6), (33.6, 33.8),
+            (28.4, 37.8), (23, 37.2), (18.8, 33.2), (17, 27), (16.4, 21)]
+    p.fill('skin', m('blob', face))
+    p.shade(+1, m('blob', [(19, 13.6), (25, 12.2), (23, 15), (19.2, 17.2)]), on=['skin'])
+    p.shade(-1, m('blob', [(30, 14), (35, 15.4), (36.8, 22), (35.6, 29), (32, 31.6), (32.6, 24), (31, 18)]), on=['skin'])
+    p.shade(-1, m('blob', [(16.6, 18.6), (24.6, 18.4), (24.6, 20.4), (17, 20.8)]), on=['skin'])
+    p.shade(-1, m('blob', [(29, 18.2), (35.6, 18.6), (35.6, 20.8), (29, 20.6)]), on=['skin'])
+    p.shade(-1, m('blob', [(26.6, 21), (28.6, 20.6), (29.4, 26.6), (27, 27.2)]), on=['skin'])
+    # Tired: hollows under the eyes.
+    p.shade(-1, m('blob', [(19, 24.2), (24, 24), (23.6, 25.4), (19.6, 25.4)]), on=['skin'])
+    # Beard: short, along the jaw from the sideburn to the chin, with the moustache.
+    beard = [(17, 23), (18.6, 23), (19.6, 29), (22.6, 31.6), (25.4, 30.6), (28.4, 31.6), (33, 29), (35, 26),
+             (36.4, 27), (34.4, 33.8), (29, 38.6), (24.6, 39.4), (20.4, 36.6), (17.6, 31)]
+    p.fill('beard', m('blob', beard), on=['skin', 'ear', 'neck'])
+    p.fill('beard', m('blob', [(21.4, 30), (24.6, 28.6), (27, 29.2), (30.6, 28.4), (33, 29.6), (30, 30.8), (27, 30.4), (24, 31.2)]))
+    p.shade(-1, m('blob', [(27, 34), (35, 29), (33.6, 34.6), (28, 39.4)]), on=['beard'])
+    p.shade(+1, m('blob', [(18.4, 26), (19.6, 29), (21.6, 32), (19.4, 32)]), on=['beard'])
+    p.reduce()
+    p.render()
+    cm = {'k': INK, 'w': '#e8e0e8', 'i': '#6a5038', 'I': '#38241a', 'h': '#fff8f0', 's': SKIN[2], 'm': '#5c1810'}
+    near = {'broken': ['.kkkkk', 'kkkkkk', 'kwhiIk', '.wiII.', '..ss..']}
+    far = {'broken': ['kkkk.', 'kkkkk', 'hiIwk', 'iIIw.', '.ss..']}
+    eyes(p, [(18, 19, near), (29, 19, far)], 'broken', cm)
+    p.line([(18, 17), (21, 17), (24, 16)], BROWN[0])     # brows lifted at the inner ends: weary
+    p.line([(29, 16), (32, 17), (35, 17)], BROWN[0])
+    p.stamp(26, 25, ['.s', 'ss', 'k.'], {'s': SKIN[2], 'k': SKIN[1]})
+    p.stamp(24, 32, ['k....k', '.kkkk.'], {'k': '#2a0c06'})   # a small, spent smile
+    # One tear on the near cheek.
+    p.stamp(19, 24, ['w', 'b', 'b', '.b'], {'w': '#ffffff', 'b': '#a8d0f0'})
+    return p
+
+
+
+# =========================================================================================
+# THE CURATOR (VESPER) in the Prophet's shape: deep purple hood, gold trim, the face a void
+# with one vertical slit of cold-blue light. Emotion = slit glow + hood tilt + intensity.
+# =========================================================================================
+HOOD = ['#0a0716', '#18123a', '#282060', '#3a3088', '#5246ac', '#7466cc', '#a49ae6']
+GLOW = ['#06050e', '#0e1430', '#16285c', '#1e4690', '#2c70c0', '#5ca4e8', '#a4d8ff', '#e8f8ff']
+# angle (deg, + leans right), dy (px, + lower), slit (x, y0, y1, width), peak, sigma, extra
+CUR = {
+    'neutral': dict(rot=0, dy=0, slit=(24.5, 20, 33, 1), peak=6.6, sig=2.2),
+    'happy': dict(rot=7, dy=0, slit=(24.5, 19, 33, 1), peak=7.2, sig=3.4, motes=True),
+    'angry': dict(rot=-3, dy=2.2, slit=(24.5, 23, 31, 1), peak=7.6, sig=1.4, spikes=True),
+    'sad': dict(rot=-9, dy=2.4, slit=(24.5, 24, 33, 1), peak=4.4, sig=1.6, drip=True),
+    'surprised': dict(rot=0, dy=-1.2, slit=(24.5, 17, 35, 2), peak=7.8, sig=4.0, flare=True),
+    'determined': dict(rot=0, dy=0.4, slit=(24.5, 18, 34, 1), peak=7.4, sig=1.8, gleam=True),
+}
+
+
+@portrait('curator', EMO6)
+def curator(e):
+    import math
+    c = CUR[e]
+    p = Pic('#e0dee8', '#0a0614')
+    m = p.mask
+    piv = (24.5, 46)
+    ang = math.radians(c['rot'])
+
+    def T(pts):
+        out = []
+        for x, y in pts:
+            k = min(1.0, max(0.0, (46 - y) / 34))      # the hood tilts; the cloak barely moves
+            dx, dy = x - piv[0], y - piv[1]
+            a = ang * k
+            out.append((piv[0] + dx * math.cos(a) - dy * math.sin(a), piv[1] + dx * math.sin(a) + dy * math.cos(a) + c['dy'] * k))
+        return out
+
+    p.material('cloak', HOOD, 3, z=1, edge=True)
+    p.material('hood', HOOD, 3, z=2, edge=True)
+    p.material('lining', HOOD, 1, z=3, edge=False)
+    p.material('void', GLOW, 0, z=4)
+    p.material('gold', GOLD, 3, z=6, edge=('bg', 'hood', 'cloak'), edgecol=GOLD[0])
+    p.material('bead', ['#401008', '#802010', '#c04018', '#f07030', '#ffb070'], 3, z=7, edge=True, edgecol='#300808')
+    # Cloak over the shoulders.
+    p.fill('cloak', m('blob', [(-3, 50), (-1, 40), (5, 33), (14, 29), (35, 29), (44, 33), (50, 40), (51, 50)]))
+    p.shade(-1, m('blob', [(30, 33), (44, 34), (50, 42), (50, 50), (32, 50)]), on=['cloak'])
+    p.shade(+1, m('blob', [(1, 41), (6, 35), (12, 32), (8, 40), (3, 46)]), on=['cloak'])
+    for fold in ([(9, 48), (11, 40), (14, 34)], [(38, 48), (37, 40), (34, 34)], [(44, 48), (43, 42)]):
+        p.shade(-1, m('stroke', fold, 1.1), on=['cloak'])
+    # The hood: tall, pointed, its tip leaning right like the Prophet's.
+    hood = [(31, 0.4), (34.2, 4.4), (37, 10.6), (39.6, 18), (41.2, 26), (42, 33), (40, 40.4), (33, 43),
+            (16, 43), (9, 40.4), (7.4, 33), (8.4, 25), (11, 17.4), (15.4, 10.4), (21, 5.4), (26.4, 2.6)]
+    p.fill('hood', m('blob', T(hood)))
+    p.shade(+1, m('blob', T([(10, 30), (11, 21), (15, 13), (21, 7), (27, 3.6), (22, 10), (17, 18), (14, 28)])), on=['hood'])
+    p.shade(+1, m('blob', T([(13, 18), (17, 11.6), (22, 7.4), (18.4, 13)])), on=['hood'])
+    p.shade(-1, m('blob', T([(31, 3), (36, 9), (40, 18), (42, 30), (40, 40), (35, 41), (37, 30), (36, 18), (33, 9)])), on=['hood'])
+    p.shade(-1, m('stroke', T([(29.4, 2.4), (28.4, 7), (27, 10)]), 1.0), on=['hood'])
+    p.shade(-1, m('stroke', T([(11, 38), (12.4, 31), (14.4, 25)]), 1.0), on=['hood'])
+    # Lining (the inside of the hood) and the face void.
+    p.fill('lining', m('blob', T([(24.5, 9.4), (31, 13), (34.6, 21), (35, 30), (32, 37.4), (24.5, 40.4),
+                                  (17, 37.4), (14, 30), (14.6, 21), (18.2, 13)])))
+    p.shade(+1, m('blob', T([(15, 29), (15.4, 21), (18.4, 14), (21, 13), (18, 21), (17, 30)])), on=['lining'])
+    void = [(24.5, 12.6), (29.4, 15.6), (32.2, 22), (32.4, 30), (29.8, 36), (24.5, 38.4), (19.2, 36),
+            (16.6, 30), (16.8, 22), (19.6, 15.6)]
+    p.fill('void', m('blob', T(void)))
+    # Gold: the band around the face, the brow ornament, the front edges of the cloak.
+    band = [(24.5, 9.6), (31, 12.8), (34.8, 21), (35.2, 30), (32.4, 37.6), (24.5, 40.8), (16.6, 37.6),
+            (13.8, 30), (14.2, 21), (18, 12.8)]
+    p.fill('gold', m('stroke', T(band + band[:2]), 1.5))
+    p.fill('gold', m('poly', T([(24.5, 5.4), (27, 8.6), (24.5, 11.6), (22, 8.6)])))
+    p.fill('gold', m('stroke', [(18, 41), (15.6, 48.6)], 1.8))
+    p.fill('gold', m('stroke', [(31, 41), (33.4, 48.6)], 1.8))
+    p.shade(-1, m('blob', T([(28, 11), (36, 18), (36, 34), (30, 41), (33, 30), (33, 19)])), on=['gold'])
+    p.shade(+1, m('blob', T([(13, 26), (15, 16), (20, 11), (17, 18)])), on=['gold'])
+    p.shade(-1, m('blob', [(30, 40), (36, 40), (36, 50), (30, 50)]), on=['gold'])
+    # Beads (the orange baubles along the Prophet's trim).
+    for (bx, by) in [(24.5, 8.6), (14.2, 26), (34.8, 26), (17.1, 44.4), (32, 44.4)]:
+        q = T([(bx, by)])[0] if by < 40 else (bx, by)
+        p.fill('bead', m('ell', q[0], q[1], 1.3, 1.3))
+    p.reduce()
+    # The slit and its light: intensity falls off from the slit's centre line.
+    sx, y0, y1, sw = c['slit']
+    (ax, ay), (bx2, by2) = T([(sx, y0), (sx, y1)])
+    vid = p.mats['void']['id']
+    gid, lid = p.mats['gold']['id'], p.mats['lining']['id']
+    peak, sig = c['peak'], c['sig']
+    for y in range(48):
+        for x in range(48):
+            mid = p.m1[y][x]
+            if mid not in (vid, gid, lid):
+                continue
+            px_, py_ = x + 0.5, y + 0.5
+            vx, vy = bx2 - ax, by2 - ay
+            t = max(0, min(1, ((px_ - ax) * vx + (py_ - ay) * vy) / (vx * vx + vy * vy)))
+            dxl = px_ - (ax + vx * t)
+            dyl = py_ - (ay + vy * t)
+            d = math.hypot(dxl * 1.0, dyl * 1.6)
+            I = peak * math.exp(-(max(0, d - (sw - 1) * 0.5) ** 2) / (2 * sig * sig))
+            if mid == vid:
+                p.t1[y][x] = I
+            elif I > 2.2:
+                p.t1[y][x] += 1 if I < 4 else 2   # the light catches the inner rim
+    p.render()
+    # The slit core: crisp, 1-2 px wide.
+    w = [sx] if sw == 1 else [sx - 0.5, sx + 0.5]
+    n = int(abs(by2 - ay)) + 1
+    for i in range(n + 1):
+        t = i / n
+        for xx in w:
+            X = int(math.floor(ax + (bx2 - ax) * t + (xx - sx)))
+            Y = int(math.floor(ay + (by2 - ay) * t))
+            edge = i in (0, n)
+            p.put(X, Y, GLOW[6] if edge else GLOW[7])
+    if c.get('spikes'):      # anger: the light flares sideways in hard shards
+        cy = int((ay + by2) / 2)
+        cx = int((ax + bx2) / 2)
+        for dx_ in (-3, -2, -1, 1, 2, 3):
+            p.put(cx + dx_, cy, GLOW[6] if abs(dx_) < 3 else GLOW[5])
+        for (dx_, dy_) in ((-2, -2), (2, -2), (-2, 2), (2, 2)):
+            p.put(cx + dx_, cy + dy_, GLOW[5])
+    if c.get('flare'):       # surprise: a cross-flare
+        cy = int((ay + by2) / 2)
+        cx = int((ax + bx2) / 2)
+        for dx_ in (-5, -4, -3, -2, 2, 3, 4, 5):
+            p.put(cx + (dx_ if dx_ < 0 else dx_ + 1), cy, GLOW[7] if abs(dx_) < 4 else GLOW[6])
+    if c.get('drip'):        # sorrow: the light leaks down like a tear
+        bxx, byy = int(bx2), int(by2)
+        for k, col in enumerate([GLOW[5], GLOW[4], GLOW[4], GLOW[3]]):
+            p.put(bxx, byy + 2 + k, col)
+    if c.get('motes'):       # pleasure: little motes of light drift up
+        for (dx_, dy_, col) in ((-4, -2, GLOW[6]), (4, -5, GLOW[5]), (-3, -8, GLOW[5]), (3, 2, GLOW[6])):
+            p.put(int(ax) + dx_, int(ay) + dy_ + 4, col)
+    if c.get('gleam'):       # resolve: a glint on the brow ornament
+        gx, gy = T([(24.5, 8.6)])[0]
+        p.stamp(int(gx) - 2, int(gy) - 2, ['..w..', '..w..', 'wwWww', '..w..', '..w..'], {'w': GOLD[4], 'W': '#ffffff'})
     return p
 
 

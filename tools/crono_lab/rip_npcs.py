@@ -43,10 +43,10 @@ NPCS = {
     'villager_600_b': dict(who='maid, blue hair, pink dress and apron', f=[395, 396, 397], b=[425, 426, 427],
                            s=[452, 453, 454], x=[477, 496, 497], neck=11, chest=15, size=(48, 58, 24, 54)),
     'villager_600_c': dict(who='bald old man with a white beard and cane, green coat', f=[505, 506, 507],
-                           b=[535, 536, 537], s=[554, 555, 556], x=[586], neck=11, chest=15, size=(48, 58, 24, 54)),
+                           b=[535, 536, 537], s=[554, 555, 556], neck=11, chest=15, size=(48, 58, 24, 54)),
     # ---- End of Time ------------------------------------------------------------------
     'gaspar': dict(who='bald old man with a white beard and cane, brown coat over a blue robe',
-                   f=[508, 509, 510], b=[538, 539, 540], s=[557, 558, 559], x=[587], neck=11, chest=15,
+                   f=[508, 509, 510], b=[538, 539, 540], s=[557, 558, 559], neck=11, chest=15,
                    size=(48, 60, 24, 57)),
     # ---- 65,000,000 B.C. ----------------------------------------------------------------
     'kino': dict(who='red-haired caveman with a club (Kino)', f=[4, 5, 6, 7], b=[41, 42, 43, 44],
@@ -131,6 +131,13 @@ class NpcSheet(Sheet):
                 print(f'  {key}: frame {gid} re-segmented as {self.fr[best]}, using box {box}')
                 self.extra[f'g{gid}'] = box
                 self.g2l[gid] = f'g{gid}'
+
+    def grab(self, fid, flip):
+        """Feet row as in rip_lib, but x centred on the median of the upper body: CT walk
+        cycles keep the head and torso still while the feet step out to either side."""
+        px, fx, fy = super().grab(fid, flip)
+        xs = sorted(x for y, row in enumerate(px[:max(1, int(len(px) * 0.6))]) for x, p in enumerate(row) if p)
+        return px, (xs[len(xs) // 2] if xs else fx), fy
 
     def build(self):
         out = os.path.join(HERE, '..', '..', 'public', 'js', 'sheets', self.game_key + '.js')
@@ -251,12 +258,11 @@ def build(key):
     elif key == 'guard':           # 495: the soldier's head bowed under the helmet
         s.add('se', 'salute', [(F, 90), (495, 140), (495, 520), (495, 160), (F, 100)])
     elif key == 'kino':            # 114 arms up, 115 crouched, 116 curled up
-        s.add('se', 'talk', [(F, 160), (114, 200), (F, 160)], loop=True)
+        s.add('se', 'talk', [(F, 220), bob('se', 'talk', 0, spec['neck'], 1, 170), (F, 160), (114, 200)], loop=True)
         for view in ('se', 'ne'):
             s.add(view, 'kneel', [(115, 420), bob(view, 'kneel', 0, 10, 1, 360)], loop=True)
     elif key.startswith('villager'):
-        peak = {'villager_ioka': 111, 'villager_ioka_b': 117, 'villager_600_b': 497,
-                'villager_600_c': 586}.get(key)
+        peak = {'villager_ioka': 111, 'villager_ioka_b': 117, 'villager_600_b': 497}.get(key)
         s.add('se', 'jump', jump(spec, peak))
         if key in ('villager_ioka', 'villager_ioka_c'):   # story.js plays 'spin' on them
             s.add('se', 'spin', spin(spec))

@@ -66,9 +66,53 @@ class Canvas:
 class VSheet(Sheet):
     """Sheet with virtual frames: composed pixel grids with a fixed foot point."""
 
-    def __init__(self, *a, **k):
+    def __init__(self, *a, shadow=None, **k):
         super().__init__(*a, **k)
         self.virt = {}
+        self.shadow = shadow    # ground-shadow colour to strip from sheet frames (or None)
+
+    def strip_shadow(self, px):
+        """Remove a ground shadow drawn in the outline colour: detached flat blobs at the
+        bottom, then (twice) shadow pixels in the bottom rows that touch no other colour
+        (the inside of a blob fused to the feet). Same method as rip_ayla.py."""
+        S, h, w = self.shadow, len(px), len(px[0])
+        seen = [[False] * w for _ in range(h)]
+        for y in range(h):
+            for x in range(w):
+                if px[y][x] and not seen[y][x]:
+                    st, pts = [(x, y)], []
+                    seen[y][x] = True
+                    while st:
+                        a, b = st.pop()
+                        pts.append((a, b))
+                        for dx in (-1, 0, 1):
+                            for dy in (-1, 0, 1):
+                                X, Y = a + dx, b + dy
+                                if 0 <= X < w and 0 <= Y < h and px[Y][X] and not seen[Y][X]:
+                                    seen[Y][X] = True
+                                    st.append((X, Y))
+                    ys = [q[1] for q in pts]
+                    if all(px[b][a] == S for a, b in pts) and max(ys) - min(ys) <= 4 and max(ys) >= h - 2:
+                        for a, b in pts:
+                            px[b][a] = None
+
+        def other(x, y):
+            return any(0 <= x + a < w and 0 <= y + b < h and px[y + b][x + a] and px[y + b][x + a] != S
+                       for a in (-1, 0, 1) for b in (-1, 0, 1))
+        for _ in range(2):
+            gone = [(x, y) for y in range(max(0, h - 5), h) for x in range(w) if px[y][x] == S and not other(x, y)]
+            for x, y in gone:
+                px[y][x] = None
+        while px and not any(px[-1]):
+            px.pop()
+        return px
+
+    def gpt(self, fid, x, y, flip=False):
+        """A point given in a sheet frame's box coords -> game sheet frame coords."""
+        px, fx, fy = self.grab(fid, flip)
+        if flip:
+            x = len(px[0]) - 1 - x
+        return [self.AX - fx + x, self.AY - fy + y]
 
     def raw(self, fid):
         """(px, fx, fy) of a sheet frame, unflipped."""
@@ -86,7 +130,17 @@ class VSheet(Sheet):
                 px = [r[::-1] for r in px]
                 fx = len(px[0]) - 1 - fx
             return px, fx, fy
-        return Sheet.grab(self, fid, flip)
+        if not self.shadow:
+            return Sheet.grab(self, fid, flip)
+        x0, y0, x1, y1 = self.box(fid)
+        px = [[self.im.getpixel((x, y)) for x in range(x0, x1 + 1)] for y in range(y0, y1 + 1)]
+        px = self.strip_shadow([[None if p == self.bg else p for p in row] for row in px])
+        if flip:
+            px = [row[::-1] for row in px]
+        body = [(x, y) for y in range(len(px)) for x in range(len(px[0])) if px[y][x] and px[y][x] not in self.weapon]
+        fy = max(y for _, y in body)
+        feet = [x for x, y in body if y >= fy - 3]
+        return px, round((min(feet) + max(feet)) / 2), fy
 
     def compose(self, name, base, ops=(), canvas=(64, 64), at=(20, 24), flip=False):
         """New frame from a sheet frame: paste it at `at`, then apply ops:

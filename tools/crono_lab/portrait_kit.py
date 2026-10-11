@@ -94,6 +94,19 @@ class Pic:
             r = wd / 2
             for x, y in (pts[0], pts[-1]):
                 d.ellipse([x * S - r, y * S - r, x * S + r, y * S + r], fill=255)
+        elif kind == 'lock':
+            # A tapered hair lock: root edge a-b, sharp tip, bowed by `bend` (perpendicular).
+            a, b, tip, bend = a[0], a[1], a[2], (a[3] if len(a) > 3 else 0)
+            pts = []
+            for (r, side) in ((a, 1), (b, -1)):
+                mx, my = (r[0] + tip[0]) / 2, (r[1] + tip[1]) / 2
+                dx, dy = tip[0] - r[0], tip[1] - r[1]
+                L = math.hypot(dx, dy) or 1
+                cx, cy = mx - dy / L * bend, my + dx / L * bend
+                seg = [((1 - t) ** 2 * r[0] + 2 * (1 - t) * t * cx + t * t * tip[0],
+                        (1 - t) ** 2 * r[1] + 2 * (1 - t) * t * cy + t * t * tip[1]) for t in [i / 12 for i in range(13)]]
+                pts += seg if side == 1 else seg[::-1]
+            d.polygon([(x * S, y * S) for x, y in pts], fill=255)
         elif kind == 'rect':
             x0, y0, x1, y1 = a
             d.rectangle([x0 * S, y0 * S, x1 * S - 1, y1 * S - 1], fill=255)
@@ -145,7 +158,12 @@ class Pic:
                         acc[v] = acc.get(v, 0) + T[x * S + dx, y * S + dy]
                 best = max(cnt, key=lambda k: (cnt[k], self.byid[k]['z']))
                 mat[y][x] = best
-                ton[y][x] = (acc[best] / cnt[best] - 128) / 16
+                t = (acc[best] / cnt[best] - 128) / 16
+                # Snap to whole steps, keeping only clear half steps (they become a 2x2
+                # checker dither): avoids speckle where shading shapes overlap a block.
+                f = t - math.floor(t)
+                t = math.floor(t) + (0.5 if 0.3 <= f <= 0.7 else (1 if f > 0.7 else 0))
+                ton[y][x] = t
         self.m1, self.t1 = mat, ton
 
     def autoshade(self):
@@ -256,17 +274,18 @@ BUILDERS = {}
 
 def portrait(pid, emos):
     def deco(fn):
-        BUILDERS[pid] = (fn, emos)
+        BUILDERS.setdefault(pid, []).append((fn, emos))
         return fn
     return deco
 
 
 def build_all():
     out = {}
-    for pid, (fn, emos) in BUILDERS.items():
+    for pid, lst in BUILDERS.items():
         out[pid] = {}
-        for e in emos:
-            out[pid][e] = fn(e)
+        for fn, emos in lst:
+            for e in emos:
+                out[pid][e] = fn(e)
     return out
 
 
