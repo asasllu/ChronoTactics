@@ -756,7 +756,7 @@
   const compiled = {};
   function compile(id) {
     if (compiled[id]) return compiled[id];
-    if (id === 'mus_credits') return (compiled[id] = compileCredits());
+    if (id === 'mus_credits' && !DEFS[id]) return (compiled[id] = compileCredits());
     const def = DEFS[id];
     if (!def) return null;
     const barT = (def.meter[0] * WHOLE) / def.meter[1];
@@ -1587,8 +1587,17 @@
     };
   }
 
+  // Register / replace a track def at load time (e.g. js/music_ct.js). The credits medley is
+  // rebuilt from its segments, so it is invalidated too.
+  function define(id, def) {
+    if (!id || !def || !def.v) return;
+    DEFS[id] = def;
+    delete compiled[id];
+    delete compiled.mus_credits;
+    if (TRACK_IDS.indexOf(id) < 0) TRACK_IDS.push(id);
+  }
   const api = {
-    unlock, playMusic, stopMusic, sfx, setVolume,
+    unlock, playMusic, stopMusic, sfx, setVolume, define,
     tracks: () => TRACK_IDS.slice(),
     sfxList: () => Object.keys(SFX),
     _renderOffline: renderOffline,
