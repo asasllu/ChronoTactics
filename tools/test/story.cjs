@@ -18,7 +18,7 @@ const { chromium } = require(process.env.PW); const path = require('path');
     const s = await p.evaluate(() => JSON.stringify((window.TEST_LOG || []).filter((x) => x.battle).map((x) => x.battle + ':' + x.result + (x.round ? '@' + x.round : ''))));
     if (s !== last) { console.log(Math.round((Date.now() - t0) / 1000) + 's', s); last = s; }
     if (errs.length) break;
-    if (await p.evaluate(() => !!document.querySelector('#title:not(.hidden)') && (window.TEST_LOG || []).length > 5).catch(() => false)) break;
+    if (await p.evaluate(() => !!document.querySelector('#title.show') && (window.TEST_LOG || []).length > 5).catch(() => false)) break;
   }
   console.log('errors:', errs.slice(0, 10)); console.log('warnings:', [...warns].slice(0, 40));
   if (process.argv[4]) await p.screenshot({ path: process.argv[4] });

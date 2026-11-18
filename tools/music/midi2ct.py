@@ -2,24 +2,28 @@
 """midi2ct.py — convert fan-sequenced Chrono Trigger MIDIs into CT.audio track defs.
 
 Usage:
-  python3 -I tools/music/midi2ct.py --src DIR [--out public/js/music_ct.js] [--report report.json] [--only id,id]
+  python3 -I tools/music/midi2ct.py [--src tools/music/midi] [--out public/js/music_ct.js]
+                                    [--report report.json] [--only id,id] [--mix tools/music/mix.json]
 
-Every track in TRACKS (bottom of this file) is converted from DIR/<file> into one
+Every track in TRACKS (bottom of this file) is converted from <src>/<file> into one
 `CT.audio.define(id, def)` call (see public/js/audio.js for the def format):
 
-  * tempo map -> one bpm (the tempo that covers the most ticks) x the track's `slow` factor
+  * tempo map -> bpm (+ `tempo` changes) x the track's `slow` factor
   * notes are quantized to the engine's 48-PPQ grid (nearest 1/32 or 1/16-triplet by default)
-  * each MIDI channel is split into monophonic / chord "lanes"; lanes are ranked and
-    merged (same instrument -> chords) or dropped until <= 8 voices remain
-  * GM program -> nearest engine instrument; GM drums (channel 10) -> 'kit' step strings
-  * loop: loopStart/loopEnd markers if present, else an auto-detected repeat, else bar 0
-  * output MML uses note names, a default length, and [..]n repeats to stay compact
+  * one voice per MIDI channel; a channel's polyphony becomes extra "lanes" (MML strings) of that
+    voice, so no note is dropped or merged away (the report counts what is missing: it must be 0)
+  * dynamics: note velocity -> v, CC7 x CC11 automation -> x/X expression ramps, pitch bend -> y/Y,
+    CC10 -> pan (auto-spread when the sequence has no panning)
+  * GM program -> engine patch (INSTRUMENTS in audio.js); GM percussion -> the 'drums' kit, one
+    note per hit with its own velocity, simultaneous hits as chords
+  * loop: per-track config, loopStart/loopEnd markers, or an auto-detected repeat
+  * the per-voice mix and the track gain come from mix.json (written by automix.cjs from
+    measurements of the rendered audio), on top of the levels in the MIDI
 
 Pure Python 3, no dependencies (reads MIDI with midiparse.py next to this file).
 """
 import argparse
 import json
-import math
 import os
 import sys
 from collections import Counter, defaultdict
@@ -28,51 +32,49 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import midiparse  # noqa: E402
 
 PPQ = 48
-MAX_VOICES = 8
+HERE = os.path.dirname(os.path.abspath(__file__))
 
 # ----------------------------------------------------------------------------------------
-# GM program -> engine instrument (INST keys in audio.js). None = drop the notes.
+# GM program -> engine patch (PATCH keys in audio.js). None = drop the notes.
 # ----------------------------------------------------------------------------------------
 GM = {}
-for p in range(0, 4): GM[p] = 'harp'          # pianos
-for p in (4, 5): GM[p] = 'glass'               # electric pianos
-for p in (6, 7): GM[p] = 'lute'                # harpsichord, clav
-GM.update({8: 'mbox', 9: 'glock', 10: 'mbox', 11: 'glock', 12: 'kalimba', 13: 'kalimba', 14: 'bell', 15: 'lute'})
-for p in (16, 17, 18, 19): GM[p] = 'organ'
-for p in (20, 21, 22, 23): GM[p] = 'accordion'
-for p in (24, 25, 26, 27, 28): GM[p] = 'lute'
-GM.update({29: 'lead', 30: 'lead', 31: 'glass'})
-for p in (32, 33, 34, 35): GM[p] = 'bass'
-for p in (36, 37, 38, 39): GM[p] = 'sbass'
+for p in range(0, 4): GM[p] = 'piano'
+for p in (4, 5): GM[p] = 'epiano'
+for p in (6, 7): GM[p] = 'harpsi'
+GM.update({8: 'celesta', 9: 'glock', 10: 'musicbox', 11: 'vibes', 12: 'marimba', 13: 'xylo', 14: 'bell', 15: 'harp'})
+for p in (16, 17, 18): GM[p] = 'organ'
+GM.update({19: 'pipe', 20: 'pipe', 21: 'accordion', 22: 'accordion', 23: 'accordion'})
+for p in (24, 25, 26, 27, 28): GM[p] = 'guitar'
+GM.update({29: 'odguitar', 30: 'odguitar', 31: 'crystal'})
+GM.update({32: 'bass', 33: 'bass', 34: 'pbass', 35: 'fretless', 36: 'slap', 37: 'slap', 38: 'sbass', 39: 'sbass'})
 for p in (40, 41, 42, 43, 44): GM[p] = 'strings'
-GM.update({45: 'lute', 46: 'harp', 47: 'timp'})
-GM.update({48: 'strings', 49: 'strings', 50: 'strings', 51: 'strings', 52: 'choir', 53: 'vox', 54: 'vox', 55: 'brass'})
-GM.update({56: 'brass', 57: 'horn', 58: 'tuba', 59: 'brass', 60: 'horn', 61: 'brass', 62: 'brass', 63: 'brass'})
-GM.update({64: 'horn', 65: 'horn', 66: 'horn', 67: 'horn', 68: 'lead', 69: 'lead', 70: 'horn', 71: 'ocarina'})
-for p in (72, 73, 74, 75): GM[p] = 'flute'
-for p in (76, 77, 78, 79): GM[p] = 'ocarina'
-GM.update({80: 'lead', 81: 'brass', 82: 'flute', 83: 'flute', 84: 'lead', 85: 'vox', 86: 'lead', 87: 'sbass'})
-GM.update({88: 'pad', 89: 'pad', 90: 'pad', 91: 'choir', 92: 'strings', 93: 'glass', 94: 'choir', 95: 'pad'})
-GM.update({96: 'glass', 97: 'pad', 98: 'glass', 99: 'pad', 100: 'glass', 101: 'detuned', 102: 'detuned', 103: 'cold'})
-GM.update({104: 'lute', 105: 'lute', 106: 'lute', 107: 'harp', 108: 'kalimba', 109: 'accordion', 110: 'strings', 111: 'lead'})
-GM.update({112: 'glock', 113: 'kalimba', 114: 'kalimba', 115: 'log', 116: 'timp', 117: 'timp', 118: 'timp', 119: 'wind'})
-GM.update({120: None, 121: 'wind', 122: 'wind', 123: 'glass', 124: None, 125: 'wind', 126: None, 127: None})
-BASSLIKE = {'bass', 'sbass', 'tuba', 'sub', 'obass', 'timp'}
-PLUCKY = {'harp', 'lute', 'lead', 'organ', 'kalimba', 'glass', 'glock', 'mbox', 'sq12', 'synth', 'accordion'}
-
-# GM percussion key -> kit letter (see parseDrums in audio.js)
-DRUM = {35: 'k', 36: 'k', 37: 'r', 38: 's', 39: 'x', 40: 's', 41: 't', 43: 't', 45: 'm', 47: 'm', 48: 'u', 50: 'u',
-        42: 'h', 44: 'h', 46: 'o', 49: 'c', 52: 'c', 55: 'c', 57: 'c', 51: 'h', 53: 'h', 59: 'h', 54: 'g', 56: 'q',
-        58: 'g', 60: 'i', 61: 'j', 62: 'i', 63: 'i', 64: 'j', 65: 'u', 66: 'm', 67: 'q', 68: 'q', 69: 'g', 70: 'g',
-        73: 'g', 74: 'g', 75: 'r', 76: 'q', 77: 'q', 78: 'j', 79: 'j', 82: 'g', 83: 'g', 85: 'r', 86: 'k', 87: 't', 31: 'r'}
-DRUM_PRIO = 'skcxtmuijoqrhgf'      # who wins a step when one kit lane has two hits at once
-KIT_SPLIT = ['ksxrtmuijf', 'hocgq']  # lane groups when a track gets two kit voices
+GM.update({45: 'pizz', 46: 'harp', 47: 'timp'})
+GM.update({48: 'strings', 49: 'slowstr', 50: 'strings', 51: 'slowstr', 52: 'choir', 53: 'ooh', 54: 'ooh', 55: 'orchhit'})
+GM.update({56: 'trumpet', 57: 'lowbrass', 58: 'tuba', 59: 'trumpet', 60: 'horn', 61: 'brass', 62: 'brass', 63: 'brass'})
+GM.update({64: 'sax', 65: 'sax', 66: 'sax', 67: 'sax', 68: 'oboe', 69: 'oboe', 70: 'clarinet', 71: 'clarinet'})
+GM.update({72: 'flute', 73: 'flute', 74: 'ocarina', 75: 'panflute', 76: 'panflute', 77: 'panflute', 78: 'ocarina', 79: 'ocarina'})
+GM.update({80: 'lead', 81: 'sawlead', 82: 'panflute', 83: 'panflute', 84: 'odguitar', 85: 'ooh', 86: 'sawlead', 87: 'sbass'})
+GM.update({88: 'crystal', 89: 'pad', 90: 'pad', 91: 'choir', 92: 'pad', 93: 'crystal', 94: 'choir', 95: 'pad'})
+GM.update({96: 'crystal', 97: 'pad', 98: 'crystal', 99: 'crystal', 100: 'crystal', 101: 'pad', 102: 'pad', 103: 'pad'})
+GM.update({104: 'sitar', 105: 'guitar', 106: 'guitar', 107: 'harp', 108: 'kalimba', 109: 'accordion', 110: 'strings', 111: 'oboe'})
+GM.update({112: 'glock', 113: 'steeldrum', 114: 'steeldrum', 115: 'log', 116: 'taiko', 117: 'taiko', 118: 'taiko', 119: None})
+GM.update({120: None, 121: 'wind', 122: 'wind', 123: None, 124: None, 125: None, 126: None, 127: None})
+BASSLIKE = {'bass', 'pbass', 'slap', 'fretless', 'sbass', 'tuba', 'sub', 'timp', 'taiko'}
 
 # note value (ticks) -> MML length token
 LENTOK = {192: '1', 288: '1.', 144: '2.', 168: '2..', 96: '2', 72: '4.', 84: '4..', 64: '3', 48: '4', 36: '8.', 32: '6',
           24: '8', 18: '16.', 16: '12', 12: '16', 9: '32.', 8: '24', 6: '32', 4: '48', 3: '64', 2: '96'}
 NAMES = ['c', 'c+', 'd', 'd+', 'e', 'f', 'f+', 'g', 'g+', 'a', 'a+', 'b']
-DRUM_STEPS = [24, 16, 12, 8, 6, 4, 3, 2]   # l8 l12 l16 l24 l32 l48 l64 l96
+
+
+def velc(v):
+    """MIDI velocity -> amplitude"""
+    return (max(1, v) / 127.0) ** 1.3
+
+
+def volc(c):
+    """MIDI volume / expression controller -> amplitude"""
+    return (max(0, c) / 127.0) ** 1.5
 
 
 # ----------------------------------------------------------------------------------------
@@ -116,49 +118,115 @@ class N:
         self.s, self.e, self.p, self.v, self.ch, self.inst, self.trk, self.src = s, e, p, v, ch, inst, trk, src
 
 
+class N:  # noqa: F811  (one note; replaces the minimal class above)
+    __slots__ = ('s', 'e', 'p', 'v', 'ch', 'inst', 'trk', 'amp', 'pan')
+
+    def __init__(self, s, e, p, v, ch, inst, trk):
+        self.s, self.e, self.p, self.v, self.ch, self.inst, self.trk = s, e, p, v, ch, inst, trk
+        self.amp, self.pan = velc(v), None
+
+
+# ----------------------------------------------------------------------------------------
+# controller automation -> a few breakpoints
+# ----------------------------------------------------------------------------------------
+def rdp(pts, eps):
+    """Ramer-Douglas-Peucker on [(t, v)] using the vertical distance."""
+    if len(pts) < 3:
+        return pts[:]
+    keep = [False] * len(pts)
+    keep[0] = keep[-1] = True
+    stack = [(0, len(pts) - 1)]
+    while stack:
+        a, b = stack.pop()
+        (t0, v0), (t1, v1) = pts[a], pts[b]
+        worst, wi = 0, None
+        for i in range(a + 1, b):
+            t, v = pts[i]
+            d = abs(v - (v0 + (v1 - v0) * (t - t0) / max(1e-9, t1 - t0)))
+            if d > worst:
+                worst, wi = d, i
+        if wi is not None and worst > eps:
+            keep[wi] = True
+            stack.append((a, wi))
+            stack.append((wi, b))
+    return [p for p, k in zip(pts, keep) if k]
+
+
+def automation(steps, eps, maxgap, grid=6):
+    """Stepped controller values [(tick, value)] -> [(tick, value, ramp)].
+
+    Steps closer than `maxgap` ticks are read as one continuous sweep (ramp), anything else as a
+    jump. Ticks are snapped to `grid`."""
+    if not steps:
+        return []
+    runs, cur = [], [steps[0]]
+    for (t, v) in steps[1:]:
+        if t - cur[-1][0] > maxgap:
+            runs.append(cur)
+            cur = [(t, v)]
+        elif t == cur[-1][0]:
+            cur[-1] = (t, v)
+        else:
+            cur.append((t, v))
+    runs.append(cur)
+    out = []
+    for run in runs:
+        pts = rdp(run, eps)
+        for i, (t, v) in enumerate(pts):
+            t = int(round(t / grid)) * grid
+            ramp = i > 0
+            if out and out[-1][0] == t:
+                out[-1] = (t, v, out[-1][2])
+            elif out and abs(out[-1][1] - v) < eps * 0.5 and not ramp:
+                continue
+            else:
+                out.append((t, v, ramp))
+    return out
+
+
+def value_at(auto, tick, default):
+    """value of an automation list [(tick, value, ramp)] at `tick`"""
+    v = default
+    for i, (t, x, ramp) in enumerate(auto):
+        if t <= tick:
+            v = x
+        else:
+            if ramp and i > 0:
+                t0, v0 = auto[i - 1][0], auto[i - 1][1]
+                v = v0 + (x - v0) * (tick - t0) / max(1, t - t0)
+            break
+    return v
+
+
 # ----------------------------------------------------------------------------------------
 def load(path, cfg):
     s = midiparse.read(path)
     scale = cfg.get('scale', 1.0)
-    rb = cfg.get('rebeat')  # (t0_src_ticks, src_ticks_per_beat): re-time a free-time recording
-    if rb:
-        f = lambda t: (t - rb[0]) / rb[1] * PPQ  # noqa: E731
-    else:
-        f = lambda t: t * PPQ / s.ppq * scale  # noqa: E731
+    f = lambda t: t * PPQ / s.ppq * scale  # noqa: E731
     grids = cfg.get('grid', [6, 8])
     drop = set(c - 1 for c in cfg.get('drop', []))
     notes, drums = [], []
     instov = {k - 1: v for k, v in cfg.get('inst', {}).items()}
     tr = {k - 1: v for k, v in cfg.get('transpose', {}).items()}
     drumch = set(c - 1 for c in cfg.get('drumch', [10]))
-    chofs = defaultdict(float)
-    if rb:  # free-timed recording: re-align each channel's average timing offset to the grid first
-        g = grids[0]
-        bych = defaultdict(list)
-        for n in s.notes:
-            bych[n.ch].append(f(n.tick))
-        for ch, xs in bych.items():
-            errs = []
-            for k in range(-45, 46):
-                dlt = k / 100 * g
-                errs.append((sum(((x + dlt) / g - round((x + dlt) / g)) ** 2 for x in xs), dlt))
-            chofs[ch] = min(errs)[1]
+    tokit = {k - 1: v for k, v in cfg.get('tokit', {}).items()}
+    dmap = cfg.get('drummap', {})
     for n in s.notes:
         if n.ch in drop or (cfg.get('droptrk') and n.track in cfg['droptrk']):
             continue
-        st = f(n.tick) + chofs[n.ch]
+        st = f(n.tick)
         if st < -1:
             continue
         st = max(0, snap(st, grids))
-        if n.ch + 1 in cfg.get('tokit', {}):
-            drums.append(N(st, st + 6, n.pitch, n.vel, n.ch, cfg['tokit'][n.ch + 1], n.track))
+        if n.ch in tokit:
+            drums.append(N(st, st + 6, tokit[n.ch], n.vel, n.ch, 'drums', n.track))
             continue
         if n.ch in drumch:
-            letter = cfg.get('drummap', {}).get(n.pitch, DRUM.get(n.pitch))
-            if letter:
-                drums.append(N(st, st + 6, n.pitch, n.vel, n.ch, letter, n.track))
+            key = dmap.get(n.pitch, n.pitch)
+            if key:
+                drums.append(N(st, st + 6, key, n.vel, n.ch, 'drums', n.track))
             continue
-        en = snap(f(n.tick + n.dur) + chofs[n.ch], grids)
+        en = snap(f(n.tick + n.dur), grids)
         if en <= st:
             en = st + min(grids)
         prog = at_time(s.programs.get(n.ch, []), n.tick, 0)
@@ -170,19 +238,42 @@ def load(path, cfg):
         if inst is None or inst == 'drop':
             continue
         notes.append(N(st, en, n.pitch + tr.get(n.ch, 0), n.vel, n.ch, inst, n.track))
-    bpm0 = main_tempo(s)
-    if rb:
-        bpm0 = 60e6 / at_time(s.tempos, 0, 500000) * s.ppq / rb[1]
-    bpm0 *= scale
+    # tempo map in output ticks (tempo changes smaller than 2 % are folded away)
+    tempos = []
+    for t, us, *_r in s.tempos:
+        bpm = 60e6 / us * scale
+        ot = int(round(f(t)))
+        if tempos and tempos[-1][0] == ot:
+            tempos[-1] = (ot, bpm)
+        elif not tempos or abs(bpm / tempos[-1][1] - 1) > 0.02:
+            tempos.append((ot, bpm))
     markers = {}
     for t, m in s.markers:
         ml = m.strip().lower()
         if ml in ('loopstart', 'loopend'):
             markers[ml] = round(f(t))
-    vols = {ch: at_time(v, 0, 100) for ch, v in s.volumes.items()}
-    pans = {ch: at_time(v, 0, 64) for ch, v in s.pans.items()}
+    # controller automation per channel
+    vol, bend, pan = {}, {}, {}
+    chans = set(n.ch for n in notes) | set(x.ch for x in drums)
+    for ch in chans:
+        cc = s.cc.get(ch, {})
+        ev = sorted([(t, 7, v) for t, v in cc.get(7, [])] + [(t, 11, v) for t, v in cc.get(11, [])])
+        c7, c11, steps = 100, 127, []
+        for t, k, v in ev:
+            if k == 7:
+                c7 = v
+            else:
+                c11 = v
+            steps.append((f(t), volc(c7) * volc(c11)))
+        vol[ch] = steps or [(0, volc(100))]
+        rng = cfg.get('bendrange', {}).get(ch + 1, s.bend_range.get(ch, 2))
+        b = [(f(t), v / 8192.0 * rng * 100) for t, v in s.bends.get(ch, [])]
+        if any(abs(v) > 4 for _, v in b):
+            bend[ch] = b
+        if cc.get(10):
+            pan[ch] = [(f(t), (v - 64) / 64.0) for t, v in cc[10]]
     ts = (s.timesigs[0][1], s.timesigs[0][2]) if s.timesigs else (4, 4)
-    return dict(song=s, notes=notes, drums=drums, bpm0=bpm0, markers=markers, vols=vols, pans=pans, ts=ts,
+    return dict(song=s, notes=notes, drums=drums, tempos=tempos, markers=markers, vol=vol, bend=bend, pan=pan, ts=ts,
                 texts=s.texts)
 
 
@@ -332,35 +423,56 @@ def len_tok(L, dflt):
     return LENTOK.get(L, '%' + str(L))
 
 
-def lane_tokens(groups, endT, dflt):
+def lane_tokens(groups, endT, dflt, inst0, ctl=()):
+    """One lane (non-overlapping notes / chords) -> MML tokens. `ctl` = [(tick, cmd, value)] channel
+    automation to weave in: notes and rests are split (tied) where a command falls inside them."""
     toks = []
-    pos, oct_, vel, inst = 0, 4, None, None
+    ctl = sorted(ctl)
+    st = {'ci': 0}
+
+    def span(s, e, head):
+        cur, first = s, True
+        while True:
+            while st['ci'] < len(ctl) and ctl[st['ci']][0] <= cur:
+                toks.append(ctl[st['ci']][1] + str(ctl[st['ci']][2]))
+                st['ci'] += 1
+            nxt = e
+            if st['ci'] < len(ctl) and ctl[st['ci']][0] < e:
+                nxt = ctl[st['ci']][0]
+            toks.append((head if first else ('^' if head != 'r' else 'r')) + len_tok(nxt - cur, dflt))
+            first = False
+            cur = nxt
+            if cur >= e:
+                break
+
+    pos, oct_, vel, inst, pan = 0, 4, None, inst0, None
     for g in groups:
         if g['s'] > pos:
-            toks.append('r' + len_tok(g['s'] - pos, dflt))
-        L = g['e'] - g['s']
+            span(pos, g['s'], 'r')
         lead = g['n'][0]
         pre = ''
-        if lead.inst != inst and inst is not None:
+        if lead.inst != inst:
             pre += '@' + lead.inst + ' '
-        inst = lead.inst
-        v = g['v']
-        if v != vel:
-            pre += 'v%d ' % v
-            vel = v
+            inst = lead.inst
+        if g['v'] != vel:
+            pre += 'v%d ' % g['v']
+            vel = g['v']
+        if g.get('pan') is not None and g['pan'] != pan:
+            pre += 'p%d ' % g['pan']
+            pan = g['pan']
         if len(g['n']) == 1:
             p = lead.p
             o = p // 12 - 1
             if o != oct_:
                 pre += ('>' if o == oct_ + 1 else '<' if o == oct_ - 1 else 'o%d' % o)
                 oct_ = o
-            toks.append(pre + NAMES[p % 12] + len_tok(L, dflt))
+            head = pre + NAMES[p % 12]
         else:
-            toks.append(pre + '(' + ''.join('n%d' % n.p for n in sorted(g['n'], key=lambda n: n.p)) + ')' +
-                        len_tok(L, dflt))
+            head = pre + '(' + ''.join('n%d' % n.p for n in sorted(g['n'], key=lambda n: n.p)) + ')'
+        span(g['s'], g['e'], head)
         pos = g['e']
     if endT > pos:
-        toks.append('r' + len_tok(endT - pos, dflt))
+        span(pos, endT, 'r')
     return toks
 
 
@@ -390,27 +502,24 @@ def compress(toks, max_groups=300, maxk=48):
     return ' '.join(out)
 
 
-def drum_tokens(hits, endT, barT):
-    """hits: {tick: (letter, accent)} for one kit lane -> per-bar step strings."""
-    toks, step = [], None
-    nb = endT // barT
-    for b in range(nb):
-        t0 = b * barT
-        offs = [t - t0 for t in hits if t0 <= t < t0 + barT]
-        st = next(s for s in DRUM_STEPS if barT % s == 0 and all(o % s == 0 for o in offs))
-        txt = ''
-        if st != step:
-            txt = 'l%d ' % (192 // st)
-            step = st
-        for k in range(barT // st):
-            h = hits.get(t0 + k * st)
-            txt += '.' if not h else (h[0].upper() if h[1] else h[0])
-        toks.append(txt)
-    return toks
-
-
 # ----------------------------------------------------------------------------------------
-def convert(src_dir, cfg):
+PADLIKE = {'strings', 'slowstr', 'choir', 'ooh', 'pad', 'pipe', 'organ', 'accordion'}
+# drum lanes: hits of one family share a lane (and a velocity when they fall on the same tick)
+FAMILY = [set([35, 36, 37, 38, 39, 40, 41, 43, 45, 47, 48, 50, 86, 87]), set([42, 44, 46, 49, 51, 52, 53, 55, 57, 59])]
+AUTO_PAN = [-0.3, 0.3, -0.5, 0.5, -0.15, 0.15, -0.4, 0.4]
+
+
+def step_at(steps, tick, default):
+    v = steps[0][1] if steps else default
+    for t, x in steps:
+        if t <= tick:
+            v = x
+        else:
+            break
+    return v
+
+
+def convert(src_dir, cfg, mix):
     log = []
     d = load(os.path.join(src_dir, cfg['file']), cfg)
     notes, drums = d['notes'], d['drums']
@@ -468,8 +577,6 @@ def convert(src_dir, cfg):
             else:
                 loop_bar, end_t = 0, nbars * barT
                 log.append(f'no repeat found: whole song loops ({nbars} bars)')
-        if 'end' in cfg and 'loop' not in cfg:
-            end_t = cfg['end'] * barT
     if 'end' in cfg:
         end_t = cfg['end'] * barT
     bars = -(-end_t // barT)
@@ -478,229 +585,285 @@ def convert(src_dir, cfg):
     for n in notes:
         n.e = min(n.e, endT)
     drums = [x for x in drums if x.s < endT]
+    first_sound = min([n.s for n in notes] + [x.s for x in drums])
+    skip = (first_sound // 6) * 6 if first_sound >= 12 and cfg.get('skip', True) else 0
 
-    # ---- lanes -------------------------------------------------------------------------
+    # exact duplicates (same channel, tick and pitch) are one note
+    seen, uniq = set(), []
+    for n in notes:
+        k = (n.ch, n.s, n.p)
+        if k not in seen:
+            seen.add(k)
+            uniq.append(n)
+    notes = uniq
+    seen, uniq = set(), []
+    for x in drums:
+        k = (x.s, x.p)
+        if k not in seen:
+            seen.add(k)
+            uniq.append(x)
+    drums = uniq
+
+    # ---- tempo ---------------------------------------------------------------------------
+    slow = cfg['slow']
+    tp = [(max(0, t + shift), bpm) for t, bpm in d['tempos']]
+    tp = [x for i, x in enumerate(tp) if i + 1 >= len(tp) or tp[i + 1][0] > x[0]]  # last one wins at a tick
+    tp = [x for x in tp if x[0] < endT] or [(0, 120.0)]
+    tp[0] = (0, tp[0][1])
+    if cfg.get('tempo') == 'main':  # one tempo: the one that covers the most ticks
+        acc = Counter()
+        for i, (t, bpm) in enumerate(tp):
+            acc[bpm] += (tp[i + 1][0] if i + 1 < len(tp) else endT) - t
+        tp = [(0, acc.most_common(1)[0][0])]
+    main_bpm = Counter()
+    for i, (t, bpm) in enumerate(tp):
+        main_bpm[bpm] += (tp[i + 1][0] if i + 1 < len(tp) else endT) - max(t, loop_bar * barT)
+    bpm_src = main_bpm.most_common(1)[0][0]
+
+    # ---- voices: one per channel, lanes inside --------------------------------------------
     bych = defaultdict(list)
     for n in notes:
         bych[n.ch].append(n)
-    lanes = []
-    mono = cfg.get('mono', [])
+    lead_ch = cfg.get('lead', 0) - 1
+    roles_cfg = {k - 1: v for k, v in cfg.get('roles', {}).items()}
+    gvol = cfg.get('vol', {})
+    gpan = cfg.get('pan', {})
+    gsend = cfg.get('send', {})
+    has_pan = any(any(abs(p) > 0.02 for _, p in v) for v in d['pan'].values())
+    voices = []
     for ch, ns in sorted(bych.items()):
-        ls_ = make_lanes(ns, cfg.get('maxchord', 4))
-        if mono is True or ch + 1 in mono:  # one line per channel: overlaps cut, simultaneous notes -> chords
-            while len(ls_) > 1:
-                ls_[0] = chordify(ls_[0], ls_.pop(1), cfg.get('maxchord', 4))
-        lanes.extend(ls_)
-    # lanes of the same instrument with identical rhythm -> one chord lane (lossless)
-    i = 0
-    while i < len(lanes):
-        j = i + 1
-        while j < len(lanes):
-            a, b = lanes[i], lanes[j]
-            if (len(a) == len(b) and lane_stats(a)['inst'] == lane_stats(b)['inst'] and
-                    all(x['s'] == y['s'] and x['e'] == y['e'] for x, y in zip(a, b))):
-                lanes[i] = chordify(a, b, cfg.get('maxchord', 4))
-                log.append(f"unison-rhythm lanes ch{lane_stats(b)['ch'] + 1} + ch{lane_stats(a)['ch'] + 1} -> one chord voice")
-                del lanes[j]
+        lanes = make_lanes(ns, cfg.get('maxchord', 8))
+        if ch + 1 in cfg.get('mono', []):
+            while len(lanes) > 1:
+                lanes[0] = chordify(lanes[0], lanes.pop(1), cfg.get('maxchord', 8))
+        inst0 = Counter(n.inst for n in ns).most_common(1)[0][0]
+        pitch = sum(n.p for n in ns) / len(ns)
+        mdur = sum(n.e - n.s for n in ns) / len(ns)
+        role = roles_cfg.get(ch)
+        if role is None:
+            if ch == lead_ch:
+                role = 'lead'
+            elif inst0 in ('timp', 'taiko', 'log'):
+                role = 'perc'
+            elif pitch < 50 and (inst0 in BASSLIKE or len(lanes) == 1):
+                role = 'bass'
+            elif inst0 in PADLIKE and mdur >= 60:
+                role = 'pad'
             else:
-                j += 1
-        i += 1
-    # tiny side lanes (a few overlapping notes) fold into their channel's first lane
-    first = {}
-    keep = []
-    for L in lanes:
-        ch = lane_stats(L)['ch']
-        if ch in first and lane_stats(L)['notes'] < max(6, 0.03 * lane_stats(first[ch])['notes']):
-            idx = keep.index(first[ch])
-            keep[idx] = chordify(first[ch], L, cfg.get('maxchord', 4))
-            first[ch] = keep[idx]
-            continue
-        first.setdefault(ch, L)
-        keep.append(L)
-    lanes = keep
-    for L in lanes:
-        s_ = lane_stats(L)
-        log.append(f"  lane ch{s_['ch'] + 1:<2} {s_['inst']:9s} notes {s_['notes']:4d} groups {len(L):4d} pitch {s_['pitch']:.0f} vel {s_['vel']:.0f}")
-    # drum lanes: two kit voices when the melodic lanes leave room and one would lose hits
-    nkit = 0
+                role = 'acc'
+        # dynamics
+        amps = sorted(n.amp for n in ns)
+        vref = amps[min(len(amps) - 1, int(0.9 * len(amps)))]
+        vs = d['vol'].get(ch, [(0, volc(100))])
+        vs = sorted((t + shift, v) for t, v in vs)
+        on_vols = [step_at(vs, n.s, volc(100)) for n in ns]
+        vol_ref = max(on_vols) or volc(100)
+        # expression automation, only when the channel volume really moves while it plays
+        ctl = []
+        lo_t, hi_t = min(n.s for n in ns) - 48, max(n.e for n in ns) + 48
+        if not cfg.get('noexpr') and (max(on_vols) - min(on_vols) > 0.06 * vol_ref or
+                                      any(lo_t <= t <= hi_t and abs(v - vol_ref) > 0.12 * vol_ref for t, v in vs)):
+            steps = [(t, min(127, 100 * v / vol_ref)) for t, v in vs]
+            auto = automation(steps, 4, 30)
+            # start state, then only what falls inside the track
+            x0 = value_at(auto, 0, steps[0][1])
+            ctl.append((0, 'x', int(round(x0))))
+            for t, v, ramp in auto:
+                if 0 < t < endT:
+                    ctl.append((t, 'X' if ramp else 'x', int(round(v))))
+        if ch in d['bend']:
+            auto = automation(sorted((t + shift, v) for t, v in d['bend'][ch]), 5, 14, 3)
+            for t, v, ramp in auto:
+                if 0 <= t < endT:
+                    ctl.append((t, 'Y' if ramp else 'y', int(round(v))))
+            log.append(f'ch{ch + 1}: pitch bend -> {sum(1 for c in ctl if c[1] in "yY")} points')
+        # pan: explicit config > the sequence's CC10 (per note when it moves) > automatic spread
+        pan = gpan.get(ch + 1)
+        pan_steps = sorted((t + shift, p) for t, p in d['pan'].get(ch, []))
+        moving = False
+        if pan is None and has_pan and pan_steps:
+            pn = [step_at(pan_steps, n.s, 0) for n in ns]
+            moving = max(pn) - min(pn) > 0.25
+            # SNES-style moderate panning; the melody and the bass stay near the middle
+            pan = round((0.25 if role in ('lead', 'bass') else 0.6) * sum(pn) / len(pn), 2)
+        for L in lanes:
+            for g in L:
+                g['v'] = max(1, min(15, int(round(12 * max(n.amp for n in g['n']) / vref))))
+                if moving:
+                    g['pan'] = int(round((2.5 if role in ('lead', 'bass') else 6) * step_at(pan_steps, g['s'], 0)))
+        if cfg.get('dyn') and not any(c[1] in 'xX' for c in ctl):
+            ctl.append((0, 'x', 100))
+            for bar, pc in cfg['dyn']:
+                ctl.append((bar * barT, 'x', pc))
+        voices.append(dict(ch=ch, inst=inst0, lanes=lanes, role=role, pitch=pitch, level=vref * vol_ref, ctl=ctl, pan=pan,
+                           moving=moving, notes=len(ns)))
+        log.append(f"  ch{ch + 1:<2} {inst0:9s} {role:5s} notes {len(ns):4d} lanes {len(lanes)} pitch {pitch:.0f} level {vref * vol_ref:.2f}"
+                   f"{' expr ' + str(len(ctl)) if ctl else ''}{' autopan' if moving else ''}")
+    # automatic stereo spread for sequences without panning: lead, bass and drums stay in the middle
+    if not has_pan:
+        k = 0
+        for v in voices:
+            if v['pan'] is None:
+                if v['role'] in ('lead', 'bass'):
+                    v['pan'] = 0
+                else:
+                    v['pan'] = AUTO_PAN[k % len(AUTO_PAN)]
+                    k += 1
+    # drums
+    kit = None
     if drums:
-        nkit = cfg.get('kits')
-        if nkit is None:
-            steps = Counter(x.s for x in drums)
-            clash = sum(c - 1 for c in steps.values()) / len(drums)
-            nchan = len(set(lane_stats(L)['ch'] for L in lanes))
-            nkit = 2 if (nchan <= MAX_VOICES - 2 and clash > 0.1) else 1
-    kit_groups = cfg.get('kit_groups') or (KIT_SPLIT if nkit == 2 else [DRUM_PRIO])
-    kit_tracks = cfg.get('kit_tracks')  # one kit voice per list of MIDI track numbers
-    if kit_tracks:
-        kit_groups = [DRUM_PRIO] * len(kit_tracks)
-    nkit = len(kit_groups) if drums else 0
-    budget = MAX_VOICES - nkit
-    prio = {k - 1: v for k, v in cfg.get('prio', {}).items()}
-    st = [lane_stats(L) for L in lanes]
-    lo_pitch = min((s['pitch'] for s in st), default=60)
+        fam = [[], [], []]
+        for x in drums:
+            fam[0 if x.p in FAMILY[0] else 1 if x.p in FAMILY[1] else 2].append(x)
+        amps = sorted(x.amp for x in drums)
+        vref = amps[min(len(amps) - 1, int(0.9 * len(amps)))]
+        dch = drums[0].ch
+        vs = sorted((t + shift, v) for t, v in d['vol'].get(dch, [(0, volc(100))]))
+        vol_ref = max(step_at(vs, x.s, volc(100)) for x in drums) or volc(100)
+        ctl = []
+        if cfg.get('dyn'):
+            ctl.append((0, 'x', 100))
+            for bar, pc in cfg['dyn']:
+                ctl.append((bar * barT, 'x', pc))
+        elif cfg.get('drumexpr'):
+            steps = [(t, min(127, 100 * v / vol_ref)) for t, v in vs]
+            auto = automation(steps, 4, 30)
+            ctl.append((0, 'x', int(round(value_at(auto, 0, steps[0][1])))))
+            for t, v, ramp in auto:
+                if 0 < t < endT:
+                    ctl.append((t, 'X' if ramp else 'x', int(round(v))))
+        lanes = []
+        for hits in fam:
+            if not hits:
+                continue
+            by = defaultdict(list)
+            for x in hits:
+                by[x.s].append(x)
+            starts = sorted(by)
+            L = []
+            for i, s_ in enumerate(starts):
+                e_ = starts[i + 1] if i + 1 < len(starts) else min(endT, s_ + 48)
+                g = {'s': s_, 'e': e_, 'n': sorted(by[s_], key=lambda n: -n.p)}
+                g['v'] = max(1, min(15, int(round(12 * max(n.amp for n in g['n']) / vref))))
+                L.append(g)
+            lanes.append(L)
+        kit = dict(ch=dch, inst='drums', lanes=lanes, role='drums', pitch=0, level=vref * vol_ref, ctl=ctl, pan=0, moving=False,
+                   notes=len(drums))
+        voices.append(kit)
+        log.append(f"  drums     notes {len(drums):4d} lanes {len(lanes)} level {vref * vol_ref:.2f}")
 
-    def score(s):
-        w = prio.get(s['ch'], 1.0)
-        bonus = 1.6 if s['pitch'] == lo_pitch else 1.0
-        return s['cov'] * (0.5 + s['vel'] / 127) * w * bonus
-
-    order = sorted(range(len(lanes)), key=lambda i: -score(st[i]))
-    alive = {i: lanes[i] for i in order}
-    merged_into = {}
-    while len(alive) > budget:
-        # 1) fold a channel's secondary lane back into it, 2) merge same-instrument lanes, 3) drop
-        main_of = {}
-        for i in sorted(alive):
-            main_of.setdefault(lane_stats(alive[i])['ch'], i)
-        secondary = [i for i in alive if main_of[lane_stats(alive[i])['ch']] != i]
-        if secondary:
-            victim = min(secondary, key=lambda i: score(lane_stats(alive[i])))
-        else:
-            victim = min(alive, key=lambda i: score(lane_stats(alive[i])))
-        vs = lane_stats(alive[victim])
-        cands = [i for i in alive if i != victim and lane_stats(alive[i])['inst'] == vs['inst']]
-        same_ch = [i for i in alive if i != victim and lane_stats(alive[i])['ch'] == vs['ch']]
-        pool = same_ch or cands
-        if pool:
-            tgt = min(pool, key=lambda i: abs(lane_stats(alive[i])['pitch'] - vs['pitch']))
-            alive[tgt] = chordify(alive[tgt], alive[victim], cfg.get('maxchord', 4))
-            log.append(f"merged lane ch{vs['ch'] + 1}/{vs['inst']} ({vs['notes']} notes) into ch{lane_stats(alive[tgt])['ch'] + 1}")
-            merged_into[victim] = tgt
-        else:
-            log.append(f"DROPPED lane ch{vs['ch'] + 1}/{vs['inst']} ({vs['notes']} notes, pitch {vs['pitch']:.0f})")
-        del alive[victim]
-
-    # ---- emit voices ---------------------------------------------------------------------
+    # ---- emit ---------------------------------------------------------------------------
+    top = max(v['level'] for v in voices)
+    mx = mix.get(cfg['id'], {})
     v = {}
     vinfo = []
     used = Counter()
-    keep_order = sorted(alive, key=lambda i: (lane_stats(alive[i])['ch'], i))
-    loud = max((lane_stats(alive[i])['vel'] * (d['vols'].get(lane_stats(alive[i])['ch'], 100) / 100.0)) for i in alive) if alive else 100
-    gvol = cfg.get('vol', {})
-    gpan = cfg.get('pan', {})
-    for i in keep_order:
-        L = alive[i]
-        s = lane_stats(L)
-        ch = s['ch']
-        inst0 = L[0]['n'][0].inst
-        if s['pitch'] < 45 and inst0 in PLUCKY and not cfg.get('nobassfix'):
-            for g in L:
-                for n in g['n']:
-                    if n.inst in PLUCKY and n.p < 55:
-                        n.inst = 'bass'
-            inst0 = L[0]['n'][0].inst
-            log.append(f'ch{ch + 1}: low register lane -> bass instrument')
-        avgv = s['vel']
-        for g in L:
-            gv = max(n.v for n in g['n'])
-            g['v'] = max(3, min(15, round(12 * gv / max(1, avgv))))
-        lens = Counter(g['e'] - g['s'] for g in L)
-        dflt = next((x for x, _ in lens.most_common() if x in LENTOK), 48)
-        toks = lane_tokens(L, endT, dflt)
-        mml = 'q8 l' + LENTOK[dflt] + ' ' + compress(toks)
-        cc7 = d['vols'].get(ch, 100)
-        vol = (avgv / loud) ** 0.8 * (cc7 / 100.0) ** 0.8
-        vol = max(0.3, min(1.2, vol)) * gvol.get(ch + 1, 1.0) * cfg.get('mvol', 1.0)
-        name = inst0
+    lead_name = None
+    for vc in voices:
+        name = vc['inst']
         used[name] += 1
         if used[name] > 1:
-            name = f'{inst0}{used[name]}'
-        opts = {'vol': round(vol, 2)}
-        pan = gpan.get(ch + 1)
-        if pan is None and ch in d['pans']:
-            pan = round((d['pans'][ch] - 64) / 64 * 0.5, 2)
-        if pan:
-            opts['pan'] = pan
-        v[name] = [inst0, mml, opts]
-        vinfo.append({'name': name, 'inst': inst0, 'ch': ch + 1, 'notes': s['notes'], 'groups': len(L),
-                      'chords': sum(1 for g in L if len(g['n']) > 1), 'ticks': endT,
-                      'sound': sum(g['e'] - g['s'] for g in L), 'pitch': round(s['pitch'], 1)})
-    # drums
-    lost = 0
-    for gi, letters in enumerate(kit_groups[:nkit]):
-        hits = {}
-        dv = [x.v for x in drums]
-        mean = sum(dv) / max(1, len(dv))
-        for x in sorted(drums, key=lambda x: x.s):
-            if x.inst not in letters or (kit_tracks and x.trk not in kit_tracks[gi]):
-                continue
-            acc = x.v >= max(mean + 12, 96)
-            cur = hits.get(x.s)
-            if cur is None or DRUM_PRIO.index(x.inst) < DRUM_PRIO.index(cur[0]):
-                if cur is not None:
-                    lost += 1
-                hits[x.s] = (x.inst, acc)
-            else:
-                lost += 1
-        toks = drum_tokens(hits, endT, barT)
-        name = 'kit' if gi == 0 else f'kit{gi + 1}'
-        kv = cfg.get('kitvol', 0.7)
-        if isinstance(kv, list):
-            kv = kv[gi]
-        v[name] = ['kit', compress(toks, maxk=16), {'vol': round(kv * cfg.get('mvol', 1.0), 2)}]
-        vinfo.append({'name': name, 'inst': 'kit', 'ch': 10, 'notes': len(hits), 'ticks': endT})
-    used_hits = len(drums)
-    if lost:
-        log.append(f'drums: {lost} simultaneous hits collapsed (of {used_hits})')
-    unmapped = len(d['song'].notes) - len(notes) - len(drums)
-    bpm = round(d['bpm0'] * cfg['slow'])
-    df = {'bpm': bpm, 'meter': meter, 'bars': bars, 'loop': loop_bar, 'echo': cfg.get('echo', [0.75, 0.35, 0.3])}
+            name = f"{vc['inst']}{used[name]}"
+        if vc['ch'] == lead_ch and vc['role'] == 'lead':
+            lead_name = name
+        mmls = []
+        for li, L in enumerate(vc['lanes']):
+            lens = Counter(g['e'] - g['s'] for g in L)
+            dflt = next((x for x, _ in lens.most_common() if x in LENTOK), 48)
+            toks = lane_tokens(L, endT, dflt, vc['inst'], vc['ctl'] if li == 0 else ())
+            mmls.append('q8 l' + LENTOK[dflt] + ' ' + compress(toks))
+        vol = max(0.25, (vc['level'] / top) ** 0.75) * gvol.get(vc['ch'] + 1, 1.0) * mx.get('v', {}).get(name, 1.0)
+        opts = {'vol': round(vol, 3)}
+        if vc['pan']:
+            opts['pan'] = vc['pan']
+        if vc['ch'] + 1 in gsend:
+            opts['echo'] = gsend[vc['ch'] + 1]
+        v[name] = [vc['inst'], mmls if len(mmls) > 1 else mmls[0], opts]
+        vinfo.append({'name': name, 'inst': vc['inst'], 'ch': vc['ch'] + 1, 'role': vc['role'], 'notes': vc['notes'], 'lanes': len(vc['lanes']),
+                      'pitch': round(vc['pitch'], 1), 'vol': opts['vol'], 'pan': vc['pan'] or 0, 'expr': len(vc['ctl'])})
+    df = {'bpm': round(tp[0][1] * slow, 2), 'meter': meter, 'bars': bars, 'loop': loop_bar, 'echo': cfg.get('echo', [0.75, 0.35, 0.3])}
+    if len(tp) > 1:
+        df['tempo'] = [[t, round(bpm * slow, 2)] for t, bpm in tp[1:]]
     if cfg.get('oneShot'):
         df['oneShot'] = True
+    if cfg.get('kind'):
+        df['kind'] = cfg['kind']
+    if cfg.get('maxLoops'):
+        df['maxLoops'] = cfg['maxLoops']
+    if skip:
+        df['skip'] = skip
+    if lead_name:
+        df['lead'] = lead_name
+    df['gain'] = round(cfg.get('gain', 1.0) * mx.get('gain', 1.0), 3)
     df['v'] = v
-    expect = {'mel': sorted([n.s, n.p] for n in notes), 'drum': sorted([x.s, x.inst] for x in drums)}
+    expect = {'mel': sorted([n.s, n.p] for n in notes), 'drum': sorted([x.s, x.p] for x in drums)}
+    src_notes = len(d['song'].notes)
+    spb = 60.0 / (bpm_src * slow)
     rep = {'expect': expect, 'id': cfg['id'], 'file': cfg['file'], 'title': cfg['title'], 'seq': cfg.get('seq', ''),
-           'bpm_src': round(d['bpm0'], 1), 'bpm': bpm, 'meter': meter, 'bars': bars, 'loop': loop_bar,
-           'sec': round(bars * barT / PPQ * 60 / bpm, 1), 'voices': vinfo, 'log': log,
-           'midi_notes': len(d['song'].notes), 'kept_notes': len(notes), 'drum_hits': len(drums),
-           'dropped_channels': sorted(c + 1 for c in dropped), 'outside_or_unmapped': unmapped}
+           'bpm_src': round(bpm_src, 1), 'bpm': round(bpm_src * slow, 1), 'slow': slow, 'meter': meter, 'bars': bars, 'loop': loop_bar,
+           'sec': round(endT / PPQ * spb, 1), 'voices': vinfo, 'log': log, 'kind': cfg.get('kind', 'field'),
+           'midi_notes': src_notes, 'kept_notes': len(notes), 'drum_hits': len(drums),
+           'dropped_channels': sorted(c + 1 for c in dropped), 'config_dropped_channels': cfg.get('drop', []),
+           'target': cfg.get('target')}
     return df, rep
 
 
 # ----------------------------------------------------------------------------------------
 def js_def(df):
     lines = ['{']
-    for k in ('bpm', 'meter', 'bars', 'loop', 'echo', 'oneShot'):
+    for k in ('bpm', 'meter', 'bars', 'loop', 'echo', 'tempo', 'oneShot', 'kind', 'maxLoops', 'skip', 'lead', 'gain'):
         if k in df:
             lines.append(f'    {k}: {json.dumps(df[k])},')
     lines.append('    v: {')
     for name, (inst, mml, opts) in df['v'].items():
-        lines.append(f'      {name}: [{json.dumps(inst)}, {json.dumps(mml)}, {json.dumps(opts)}],')
+        if isinstance(mml, list):
+            lines.append(f'      {name}: [{json.dumps(inst)}, [')
+            for m in mml:
+                lines.append(f'        {json.dumps(m)},')
+            lines.append(f'      ], {json.dumps(opts)}],')
+        else:
+            lines.append(f'      {name}: [{json.dumps(inst)}, {json.dumps(mml)}, {json.dumps(opts)}],')
     lines.append('    },')
     lines.append('  }')
     return '\n'.join(lines)
 
 
 HEADER = """// music_ct.js — GENERATED by tools/music/midi2ct.py from fan-made MIDI sequences. Do not edit by hand;
-// change TRACKS in the converter and re-run it.
+// change TRACKS in the converter (or tools/music/mix.json) and re-run it.
 //
-// Chrono Trigger music by Yasunori Mitsuda (Square) (Boss Battle 1: Noriko Matsueda; others: Mitsuda/Uematsu).
-// MIDI sequences from VGMusic (vgmusic.com) by their sequencers, credited per track below.
-// Arranged for ChronoTactics: slower tempos for turn-based play, voices reduced to the engine's 8 channels.
+// Chrono Trigger music by Yasunori Mitsuda (Square) (Boss Battle 1: Noriko Matsueda; some pieces with Nobuo Uematsu).
+// MIDI sequences from VGMusic (vgmusic.com) by their sequencers, credited per track below; the files are in tools/music/midi/.
+// Arranged for ChronoTactics: slower tempos for turn-based play, SNES-style patches, per-track echo and mix.
 //
 """
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('--src', required=True)
+    ap.add_argument('--src', default=os.path.join(HERE, 'midi'))
     ap.add_argument('--out', default=None)
     ap.add_argument('--report', default=None)
     ap.add_argument('--only', default='')
+    ap.add_argument('--mix', default=os.path.join(HERE, 'mix.json'))
+    ap.add_argument('--quiet', action='store_true')
     a = ap.parse_args()
     only = set(x for x in a.only.split(',') if x)
+    mix = {}
+    if a.mix and os.path.exists(a.mix):
+        with open(a.mix) as fh:
+            mix = json.load(fh)
     defs, reps = [], []
     for cfg in TRACKS:
         if only and cfg['id'] not in only:
             continue
-        df, rep = convert(a.src, cfg)
+        df, rep = convert(a.src, cfg, mix)
         defs.append((cfg, df))
         reps.append(rep)
-        print(f"{cfg['id']:18s} {cfg['file']:28s} bpm {rep['bpm_src']:>6} -> {rep['bpm']:>3}  {rep['meter']}  bars {rep['bars']:>3} "
+        print(f"{cfg['id']:18s} {cfg['file'][:28]:28s} bpm {rep['bpm_src']:>6} -> {rep['bpm']:>5}  {rep['meter']}  bars {rep['bars']:>3} "
               f"loop {rep['loop']:>2}  {rep['sec']:>6}s  voices {len(df['v'])}")
-        for line in rep['log']:
-            print('      ' + line)
+        if not a.quiet:
+            for line in rep['log']:
+                print('      ' + line)
     if a.out:
         out = [HEADER]
         for cfg, df in defs:
@@ -719,49 +882,65 @@ def main():
 
 
 # ----------------------------------------------------------------------------------------
-# Track table. slow = tempo factor vs. the sequence's main tempo. Channel numbers are 1-based.
+# Track table. Channel numbers are 1-based. Per track:
+#   slow      tempo factor vs. the sequence (the game wants a slower, tactics pace)
+#   lead      the melody channel (kept on top by automix.cjs, reported by measure.cjs)
+#   inst      {channel: patch | {gm_program: patch}} overrides of the GM table
+#   drop      channels left out on purpose (the sequencers' hand-made echo copies: the engine has a real echo)
+#   drummap   GM percussion key -> kit key, where the sequence uses a stand-in sound
+#   loop/end  loop start bar / first bar after the loop (when there are no markers and no repeat in the file)
+#   echo      [beats, feedback, wet, low-pass Hz, stereo spread]
+#   kind      'battle' / 'jingle': these interrupt a field track, which resumes afterwards
+#   target    RMS (dBFS) automix.cjs aims the finished mix at
 # ----------------------------------------------------------------------------------------
-FIELD = [0.75, 0.35, 0.3]
-BATTLE = [0.5, 0.25, 0.2]
-AMBIENT = [1, 0.5, 0.45]
+FIELD = [0.75, 0.32, 0.26, 3000, 0.6]
+BATTLE = [0.5, 0.2, 0.13, 3200, 0.5]       # dry and punchy
+AMBIENT = [1, 0.5, 0.4, 2600, 0.7]
+CATHEDRAL = [1, 0.62, 0.52, 2400, 0.8]     # long, dark, wide: Corridors of Time, the End of Time
 TRACKS = [
-    dict(id='mus_title', mvol=0.81, title='Chrono Trigger', file='ct_chrono1.mid', seq='Quietust', slow=0.7,
-         inst={1: {48: 'strings', 66: 'brass'}, 7: {46: 'harp', 66: 'horn'}}, kitvol=0.5, echo=[0.75, 0.4, 0.35]),
-    dict(id='mus_fair_night', mvol=0.55, title='Leene Square', file='millenialfair.mid', seq='Alex Jarvis', slow=0.85,
-         drumch=[4], drummap={83: 'h'}, kit_groups=['xg', 'h'], inst={1: 'harp', 2: 'harp', 3: 'tuba', 5: 'accordion', 6: 'accordion', 7: 'flute'},
-         kitvol=0.6, echo=FIELD),
-    dict(id='mus_rift', mvol=1.17, title="Lavos's Theme", file='lavos.mid', seq='Valius (Chris Hatfield)', slow=0.85, maxchord=6, echo=AMBIENT),
-    dict(id='mus_battle', mvol=1.26, title='Battle', file='chrono_trigger_battle1.mid', seq='', pickup='trim', slow=0.85, inst={1: 'sbass'},
-         kitvol=0.7, echo=BATTLE),
-    dict(id='mus_battle_boss', mvol=0.74, title='Boss Battle 1', file='CB_CTBoss1.mid', seq='', slow=0.85, scale=4 / 3, meter=[4, 4],
-         drop=[9, 11, 12, 13], kitvol=0.7, echo=BATTLE),
-    dict(id='mus_victory', mvol=1.64, title='Fanfare 2 (victory)', file='ct-winner.mid', seq='', slow=1.0, rebeat=(640, 416.5), grid=[16], inst={5: 'tuba'}, mono=True,
-         oneShot=True, kitvol=0.45, echo=[0.5, 0.3, 0.25]),
-    dict(id='mus_end_of_time', mvol=0.99, title='End of Time', file='EndOfTime.mid', seq='', slow=0.85, echo=AMBIENT),
-    dict(id='mus_guardia_600', mvol=0.95, title='Guardia Castle', file='guardia.mid', seq='Valius, modified by Noah Sp.', slow=0.85,
-         kitvol=0.6, echo=FIELD),
-    dict(id='mus_frog_theme', mvol=0.56, title="Frog's Theme", file='FROGct.mid', seq='Magnius', slow=0.85, kitvol=0.6, echo=FIELD),
-    dict(id='mus_denadoro', mvol=1.92, title='Middle Ages: World Map ("Wind Scene")', file='ctwndscene.mid', seq='Jaroban', slow=0.85,
-         tokit={6: 'q'}, kitvol=0.6, echo=FIELD),
-    dict(id='mus_ioka', mvol=2.6, title='Prehistoric World Map ("Rhythm of Earth, Wind and Sky")',
-         file='Chrono_Trigger_-_20_-_Rhythm_of_Earth_Wind_and_Sky.mid', seq='Wotan', slow=0.85,
-         kit_tracks=[[3], [4], [5], [2], [6]], kitvol=[0.8, 0.7, 0.6, 0.5, 0.5], echo=FIELD),
-    dict(id='mus_ayla_theme', mvol=1.45, title="Ayla's Theme", file='cavegirl_song.mid', seq='', slow=0.85, transpose={5: 12}, kits=2, kitvol=0.65, echo=FIELD),
-    dict(id='mus_tyrano', mvol=1.77, title='Tyrano Lair', file='cttyrano.mid', seq='Mark Jansen', slow=0.85, kits=2, kitvol=0.6, echo=FIELD),
-    dict(id='mus_last_village', mvol=1.16, title='Silent Light', file='CT-SilentLight.mid', seq='Powerlord', slow=0.85, echo=FIELD),
-    dict(id='mus_zeal_wreck', mvol=0.66, title='Zeal ("Corridors of Time")', file='ctzeal.mid', seq='', slow=0.85, kitvol=0.55, echo=FIELD),
-    dict(id='mus_magus_theme', mvol=0.56, title="Magus's Theme", file='Magus1.mid', seq='', slow=0.85, vol={1: 2.5, 3: 2.0}, kitvol=0.6, echo=FIELD),
-    dict(id='mus_hollow', mvol=0.79, title='Future: World Map ("Ruined World")', file='ct2300ad.mid', seq='KDS', slow=0.9,
+    dict(id='mus_title', title='Chrono Trigger', file='ct_chrono1.mid', seq='Quietust', slow=0.72, lead=1, pad=144, loop=9, end=80,
+         inst={1: {48: 'strings', 66: 'brass'}, 2: 'pbass', 7: {46: 'harp', 66: 'horn'}}, echo=[0.75, 0.36, 0.3, 3000, 0.6], target=-20.5),
+    dict(id='mus_fair_night', title='Leene Square', file='millenialfair.mid', seq='Alex Jarvis', slow=0.85, lead=5,
+         drumch=[4], inst={1: 'marimba', 2: 'pizz', 3: 'tuba', 5: 'panflute', 6: 'accordion', 7: 'flute'}, echo=FIELD, target=-20.5),
+    dict(id='mus_rift', title="Lavos's Theme", file='lavos.mid', seq='Valius (Chris Hatfield)', slow=0.85, lead=2,
+         inst={1: 'piano', 3: 'pipe'}, drumexpr=True, echo=AMBIENT, target=-21.5),
+    dict(id='mus_battle', title='Battle', file='chrono_trigger_battle1.mid', seq='Bregalad', pickup='trim', slow=0.9, lead=7, kind='battle',
+         inst={1: 'slap', 6: 'marimba'}, roles={8: 'counter'}, echo=BATTLE, target=-19.5),
+    dict(id='mus_battle_boss', title='Boss Battle 1', file='CB_CTBoss1.mid', seq='Corlen Belspar', slow=0.9, scale=4 / 3, meter=[4, 4], lead=1, kind='battle',
+         drop=[9, 11, 12, 13], inst={5: 'pbass'}, roles={3: 'acc', 4: 'acc'}, echo=BATTLE, target=-19.5),
+    dict(id='mus_victory', title='Fanfare 1 (victory)', file='ctlucca3.mid', seq='Andrew Thompson', slow=0.92, meter=[6, 8], lead=1, kind='jingle',
+         loop=6, end=22, maxLoops=2, dyn=[(6, 72)], inst={1: 'brass', 3: 'strings', 4: 'epiano'}, echo=[0.5, 0.28, 0.22, 3000, 0.6], target=-19.5),
+    dict(id='mus_end_of_time', title='End of Time', file='EndOfTime.mid', seq='Asa Lothario', slow=0.85, lead=3,
+         inst={2: 'piano', 3: 'vibes', 6: 'celesta'}, loop=0, end=53, echo=CATHEDRAL, target=-22),
+    dict(id='mus_guardia_600', title='Guardia Castle', file='guardia.mid', seq='Valius, modified by Noah Sp.', slow=0.85, lead=2, loop=4, end=54,
+         inst={2: 'brass'}, echo=FIELD, target=-20.5),
+    dict(id='mus_frog_theme', title="Frog's Theme", file='FROGct.mid', seq='Magnius', slow=0.85, lead=1,
+         inst={2: 'brass', 5: 'brass'}, echo=FIELD, target=-20.5),
+    dict(id='mus_denadoro', title='Middle Ages: World Map ("Wind Scene")', file='ctwndscene.mid', seq='Jaroban', slow=0.85, lead=3,
+         keep=[2], tokit={6: 76}, loop=0, end=64, echo=[0.75, 0.36, 0.3, 3000, 0.6], target=-20.5),
+    dict(id='mus_ioka', title='Prehistoric World Map ("Rhythm of Earth, Wind and Sky")',
+         file='Chrono_Trigger_-_20_-_Rhythm_of_Earth_Wind_and_Sky.mid', seq='Wotan', slow=0.85, echo=[0.75, 0.3, 0.22, 3200, 0.7], target=-20.5),
+    dict(id='mus_ayla_theme', title="Ayla's Theme", file='cavegirl_song.mid', seq='Teck', slow=0.85, lead=1, loop=2, end=50,
+         transpose={5: 12}, inst={1: 'brass', 5: 'slap', 6: 'lowbrass', 7: 'lowbrass'}, drummap={59: 70, 53: 62, 51: 63}, echo=FIELD, target=-20),
+    dict(id='mus_tyrano', title='Tyrano Lair', file='cttyrano.mid', seq='Mark Jansen', slow=0.85, lead=1, echo=FIELD, target=-20.5),
+    dict(id='mus_last_village', title='Silent Light', file='CT-SilentLight.mid', seq='Powerlord', slow=0.85, lead=2,
+         inst={7: 'fretless'}, echo=[0.75, 0.4, 0.34, 2800, 0.7], target=-21),
+    dict(id='mus_zeal_wreck', title='Zeal ("Corridors of Time")', file='ctzeal.mid', seq='', slow=0.85, lead=4,
+         inst={4: 'panflute'}, drummap={36: 64, 37: 62, 45: 63}, echo=CATHEDRAL, target=-21),
+    dict(id='mus_magus_theme', title="Magus's Theme", file='Magus1.mid', seq='Akane', slow=0.85, lead=3, loop=5, end=40,
+         inst={3: 'flute', 4: 'pbass', 7: 'brass'}, roles={1: 'pad'}, echo=FIELD, target=-20.5),
+    dict(id='mus_hollow', title='Future: World Map ("Ruined World")', file='ct2300ad.mid', seq='KDS', slow=0.9, lead=1,
          inst={2: 'wind', 3: 'wind', 9: 'wind', 4: 'wind', 5: 'wind'}, transpose={2: 48, 3: 48, 9: 48, 4: 24, 5: 24},
-         keep=[7, 8], echo=AMBIENT),
-    dict(id='mus_curator', mvol=0.53, title='Boss Battle 2', file='ct_bossbattle2.mid', seq='Quietust', slow=0.85, meter=[6, 8],
-         kitvol=0.65, echo=BATTLE),
-    dict(id='mus_curator_core', mvol=0.68, title='Lavos ("World Revolution")', file='CB_WorldRevolution.mid', seq='', pickup='trim', slow=0.85,
-         meter=[4, 4], drop=[12, 13, 14, 15, 16], inst={5: 'sbass'}, kitvol=0.65, echo=BATTLE),
-    dict(id='mus_ending', mvol=1.01, title='Epilogue ("To Good Friends")', file='ctmarle1.mid', seq='Masashi Ito', slow=0.9,
-         drop=[3, 4, 5, 6, 14, 15], oneShot=True, echo=FIELD),
-    dict(id='mus_credits', mvol=0.91, title='To Far Away Times', file='ct_tofarawaytimes.mid', seq='Quietust', slow=0.85,
-         oneShot=True, kitvol=0.5, echo=FIELD),
+         keep=[7, 8], echo=AMBIENT, target=-22),
+    dict(id='mus_curator', title='Boss Battle 2', file='ct_bossbattle2.mid', seq='Quietust', slow=0.88, meter=[6, 8], lead=1, kind='battle',
+         inst={1: 'brass', 6: {89: 'sbass', 35: 'pbass'}}, echo=BATTLE, target=-19.5),
+    dict(id='mus_curator_core', title='Lavos ("World Revolution")', file='CB_WorldRevolution.mid', seq='Corlen Belspar', pickup='trim', slow=0.9,
+         meter=[4, 4], lead=1, kind='battle', drop=[12, 13, 14, 15, 16], inst={5: 'sbass'}, drummap={28: 36, 31: 37},
+         echo=[0.5, 0.24, 0.16, 3200, 0.5], target=-19.5),
+    dict(id='mus_ending', title='Epilogue ("To Good Friends")', file='ctmarle1.mid', seq='Masashi Ito', slow=0.9, lead=1,
+         drop=[3, 4, 5, 6, 14, 15], inst={1: 'musicbox', 2: 'musicbox'}, oneShot=True, echo=[0.75, 0.4, 0.34, 2800, 0.7], target=-21),
+    dict(id='mus_credits', title='To Far Away Times', file='ct_tofarawaytimes.mid', seq='Quietust', slow=0.9, lead=3,
+         inst={7: {26: 'bass', 46: 'harp'}}, oneShot=True, echo=FIELD, target=-20.5),
 ]
 
 if __name__ == '__main__':

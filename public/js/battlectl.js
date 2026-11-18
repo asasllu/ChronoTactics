@@ -97,8 +97,10 @@
         // Non-combatant actors stay as props (e.g. dropped seeds, the Epoch).
         for (const a of scene.actors) if (!b.units.some((u) => u.id === a.id) && a.prop && !a.hidden) this.props.push(a);
       }
+      // The picture of the field cracks and falls away onto the battle.
+      if (!CT.FAST && this.r.fade < 0.5 && this.r.wipe) this.r.wipe('shatter', 620);
       this.r.setWorld(this.world);
-      this.r.flashScreen('255,255,255', 260);
+      this.r.flashScreen('255,255,255', 220, 0.8);
       sfx('sfx_battle_start');
       if (this.r.fade > 0) tween(400, (k) => (this.r.fade = 1 - k));
       await tween(CT.FAST ? 5 : 360, (k) => {
@@ -168,6 +170,11 @@
       await this.transition();
       await this.triggers();
       if (CT.Interact) await CT.Interact.intro(this);
+      if (!CT.FAST && this.r.card) {
+        const o = this.b.objective;
+        sfx('sfx_card');
+        await wait(this.r.card('BATTLE START', o.text || { DEFEAT_ALL: 'Defeat all enemies', DEFEAT_UNIT: 'Defeat the target' }[o.type] || 'Defeat all enemies', 1500));
+      }
       this.phase = 'battle';
       for (let guard = 0; guard < 2000; guard++) {
         const res = await this.checkEnd();
@@ -188,19 +195,34 @@
         }
         this.refresh();
         this.r.focus(u.x, u.y, b.tile(u.x, u.y).h);
+        if (!CT.FAST && u.team !== 2 && !u.passive && u.ai !== 'passive') {
+          // Who is up: name banner, a pulse on the tile, a soft tick.
+          this.r.turnBanner(u);
+          this.r.pulseRing(u);
+          sfx(u.team === 0 ? 'sfx_turn' : 'sfx_turn_foe');
+        }
         let skip = false;
         if (u.status.burn) {
           const d = Math.max(1, Math.round(u.maxHp * 0.05));
           const out = { results: [] };
           b.damage(u, d, out, {});
-          this.r.floatText(u, `${d}`, '#ff9040');
-          this.r.burst(u.x, u.y, u.rh, 'fire', { n: 10, noShake: true });
+          // The burn's own number is shown here; showResults only handles a KO from it.
+          this.r.pop(u, `${d}`, 'burn');
+          sfx('sfx_fire');
+          if (!CT.FAST) {
+            const [bx, by] = this.r.unitScreenPos(u);
+            this.r.scatter('ember', 8, bx, by - 12, by, CT.FX_RAMPS.fire, { spread: 12 });
+            this.r.tint(u, '#f8bc3c', 360, 0.6);
+            this.recoil(u, null, false);
+          }
+          u.flash = 1;
           await wait(400);
-          await this.showResults(out);
+          u.flash = 0;
+          await this.showResults({ results: out.results.filter((q) => q.ko || !q.target.alive).map((q) => ({ target: q.target, ko: true })) });
           if (!u.alive) skip = true;
         }
         if (!skip && (u.status.stun || u.status.stasis)) {
-          this.r.floatText(u, u.status.stun ? 'STUNNED' : 'STASIS', '#c0c8ff');
+          this.r.pop(u, u.status.stun ? 'STUNNED' : 'STASIS', 'miss');
           await wait(600);
           skip = true;
         }
@@ -551,17 +573,19 @@
         v.koPose = false;
         v.alpha = 1;
         v.hp = Math.max(1, Math.round(v.maxHp * it.revive));
-        this.r.floatText(v, 'REVIVED', '#80ff90');
+        this.r.pop(v, 'REVIVED', 'heal');
       } else if (it.heal) {
         const amt = Math.min(it.heal, v.maxHp - v.hp);
         v.hp += amt;
-        this.r.floatText(v, `+${amt}`, '#80ff90');
+        this.r.pop(v, `+${amt}`, 'heal');
       } else if (it.mpHeal) {
         const amt = Math.min(it.mpHeal, v.maxMp - v.mp);
         v.mp += amt;
-        this.r.floatText(v, `+${amt} MP`, '#80c0ff');
+        this.r.pop(v, `+${amt} MP`, 'mp');
       }
-      this.r.burst(v.x, v.y, v.rh, 'heal');
+      this.r.anim(u, 'cast');
+      if (CT.FAST) this.r.burst(v.x, v.y, v.rh, 'heal');
+      else this.r.healGlow(v, it.mpHeal ? { hex: '#8cc0f0' } : {});
       b.acted1 = true;
       await wait(600);
       this.busy = false;
@@ -637,11 +661,15 @@
       b.erasure = { pending: false };
       UI.banner('ERASE ERA', 1600, 'warn');
       sfx('sfx_hollow_gate');
-      this.r.bigFx('erase', 900);
-      await wait(400);
+      // The era breaks into blocks behind a scan bar and burns out white...
+      this.r.bigFx('erase', 520, { caster: u });
+      await wait(470);
       const out = { results: [] };
       if (z) b.voidTiles(b.zoneCells(z), 2, out);
       this.r.invalidateTiles();
+      // ...and resolves again with the ground gone (after the tiles have been rebuilt).
+      if (!CT.FAST) await new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done)));
+      this.r.bigFx('erase_out', 560, { caster: u });
       await this.showResults(out, u);
       b.acted1 = true;
     }
@@ -656,12 +684,24 @@
         const hc = b.visH(b.tile(c.x, c.y));
         u.face = CT.dirTo(a.x, a.y, c.x, c.y);
         const jump = Math.abs(hc - ha) >= 1 || u.float;
-        if (i % 2) sfx(u.key === 'seedbearer' || u.key === 'iselle' ? 'sfx_porcelain_step' : 'sfx_step');
+        // Footsteps: dust on land, a splash in water; a floater trails afterimages instead.
+        let ground = '';
+        if (!CT.FAST) {
+          if (u.float) this.r.ghost(u, { hex: '#6c3094', ms: 200, alpha: 0.45 });
+          else ground = this.r.footstep(u);
+        }
+        if (i % 2 || ground === 'water') sfx(ground === 'water' ? 'sfx_step_water' : u.key === 'seedbearer' || u.key === 'iselle' ? 'sfx_porcelain_step' : 'sfx_step');
         await tween(jump ? 240 : 140, (k) => {
           u.rx = a.x + (c.x - a.x) * k;
           u.ry = a.y + (c.y - a.y) * k;
           u.rh = ha + (hc - ha) * k + Math.sin(k * Math.PI) * (u.float ? 0.4 : jump ? 0.9 : 0.12);
         });
+        if (jump && !u.float && !CT.FAST) {
+          // Landing from a hop up or down a ledge.
+          u.rh = hc;
+          if (this.r.land(u, Math.abs(hc - ha) >= 2) !== 'water') sfx('sfx_land');
+          else sfx('sfx_step_water');
+        }
       }
       b.moveUnit(u, path);
       u.rx = u.x;
@@ -674,6 +714,7 @@
       const b = this.b;
       const from = { x: u.x, y: u.y };
       if (center.x !== u.x || center.y !== u.y) u.face = CT.dirTo(u.x, u.y, center.x, center.y);
+      if (!CT.FAST) this.focusAction(u, center);
       const partners = tech.dual ? b.partnersFor(u, tech) : [];
       // Hand-pixelled staging for this tech (or this unit's basic attack), if authored.
       const skey = (m) => (m.sprite || m.key || '').replace(/^echo_/, '');
@@ -711,6 +752,7 @@
           this.r.charge(m, elem, CT.FAST ? 5 : 520);
         }
         if (chargers.length) {
+          sfx(tech.kind === 'heal' ? 'sfx_charge_soft' : 'sfx_charge');
           await tween(CT.FAST ? 5 : 560, (k) => {
             for (const m of chargers) m.flash = Math.floor(k * 8) % 4 === 0 ? 0.4 : 0;
           });
@@ -741,8 +783,11 @@
         }
       }
       if (tech.big) {
-        this.r.bigFx(tech.big, tech.big === 'eclipse' ? 1600 : 1100);
-        await wait(tech.big === 'eclipse' ? 900 : 400);
+        // [length of the moment, ms before the tile effects and the damage]
+        const T = (CT.FEEL && CT.FEEL.BIG_TIME && CT.FEEL.BIG_TIME[tech.big]) || [tech.big === 'eclipse' ? 1600 : 1100, tech.big === 'eclipse' ? 900 : 400];
+        const ct = b.tile(center.x, center.y);
+        this.r.bigFx(tech.big, T[0], { caster: u, members: [u, ...partners], x: center.x, y: center.y, h: ct ? b.visH(ct) : u.rh });
+        await wait(T[1]);
       }
       const physMelee = (tech.isAttack || tech.kind === 'phys') && tech.range[1] <= 1 && !tech.special;
       if (!staged && tf && sprOf(u).sheet && tech.isAttack) {
@@ -782,9 +827,11 @@
         }
       }
       const out = b.execute(u, tech, center);
+      // A clean miss on a single target: the blow cuts air (no hit effect, no hit sound).
+      const whiff = out.results.length > 0 && out.results.every((q) => q.miss) && (tech.isAttack || tech.shape === 'single') && tech.kind !== 'status';
       // Moves caused by the tech (leap, dash, knockback, rearrange).
       for (const mv of out.moves.filter((m) => m.unit === u && (m.leap !== undefined || m.teleport))) await this.animateJump(mv);
-      if (tech.sfx) sfx(tech.sfx);
+      if (tech.sfx && !whiff) sfx(tech.sfx);
       if (out.rainTiles) {
         this.r.rain(out.rainTiles);
         this.ui.highlights = new Map(out.rainTiles.map((t) => [key(t.x, t.y), 'danger']));
@@ -792,7 +839,14 @@
         this.ui.highlights = null;
       }
       const area = tech.shape === 'map' ? b.living().filter((v) => b.hostile(u, v)).map((v) => b.tile(v.x, v.y)) : tech.special === 'rearrange' || tech.special === 'reconstruct' ? [] : b.areaTiles(u, { x: u.x, y: u.y }, tech, center);
-      if (staged && tf && tf.fx) {
+      if (staged && tf && tf.beam && this.r.beam && !CT.FAST && area.length) {
+        // One beam from the caster through the whole line.
+        const far = area.reduce((p, t) => (Math.abs(t.x - u.x) + Math.abs(t.y - u.y) > Math.abs(p.x - u.x) + Math.abs(p.y - u.y) ? t : p), area[0]);
+        this.r.beam(tf.beam, u, far, 620);
+      }
+      if (whiff) {
+        if (!CT.FAST) await wait(90);
+      } else if (staged && tf && tf.fx) {
         // Authored effect on the target tile, or on every tile of the area.
         const tiles = tech.isAttack || tech.shape === 'single' ? [b.tile(center.x, center.y)] : area;
         const fx = CT.getFx(tf.fx);
@@ -806,6 +860,11 @@
         // Numbers pop on the effect's impact frame.
         const imp = fx && fx.def.impact != null ? fx.frames.slice(0, fx.def.impact).reduce((a, f) => a + f.ms, 0) : 120;
         if (!CT.FAST) await wait(imp + Math.min(last, 200));
+        if (tf.ret && tf.proj && !CT.FAST) {
+          // What flew out comes back (Robo's fist).
+          const tt = b.tile(center.x, center.y);
+          this.r.playFx(tf.proj, u.x, u.y, u.rh + 1.4, { from: [center.x, center.y, b.visH(tt) + 1], travel: 150 + 50 * (Math.abs(u.x - center.x) + Math.abs(u.y - center.y)), flip: !west(u) });
+        }
       } else if (tech.kind !== 'special' || tech.special === 'steal') {
         const elem = tech.isAttack ? 'hit' : tech.vfx || tech.elem || 'hit';
         const tiles = tech.isAttack || tech.shape === 'single' ? [b.tile(center.x, center.y)] : area;
@@ -816,7 +875,7 @@
         this.r.burst(s.x, s.y, b.visH(b.tile(s.x, s.y)), 'glass');
         tween(500, (k) => (s.alpha = k));
       }
-      await this.showResults(out, u);
+      await this.showResults(out, u, { elem: tech.isAttack ? 'hit' : tech.vfx || tech.elem || 'hit' });
       await tween(160, (k) => {
         u.ox *= 1 - k;
         u.oy *= 1 - k;
@@ -832,6 +891,16 @@
       this.refresh();
       await wait(CT.FAST ? 5 : 280);
       await this.triggers();
+    }
+
+    // Frame both ends of an action; a long shot favours the target.
+    focusAction(u, c) {
+      const b = this.b;
+      const t = b.tile(c.x, c.y);
+      const d = Math.abs(u.x - c.x) + Math.abs(u.y - c.y);
+      if (!t || d === 0) return this.r.focus(u.x, u.y, b.tile(u.x, u.y).h);
+      const k = d <= 4 ? 0.5 : 0.7;
+      this.r.focus(u.x + (c.x - u.x) * k, u.y + (c.y - u.y) * k, (b.tile(u.x, u.y).h + t.h) / 2);
     }
 
     async animateJump(mv) {
@@ -850,54 +919,190 @@
         await tween(200, (k) => (u.alpha = k));
         return;
       }
+      let trail = -1;
       await tween(mv.fall ? 500 : 300, (k) => {
         u.rx = mv.from.x + (mv.to.x - mv.from.x) * Math.min(1, k * (mv.fall ? 2 : 1));
         u.ry = mv.from.y + (mv.to.y - mv.from.y) * Math.min(1, k * (mv.fall ? 2 : 1));
         u.rh = h0 + (h1 - h0) * k + (mv.push || mv.fall ? 0 : Math.sin(k * Math.PI) * 2);
+        if (!CT.FAST && !mv.fall && Math.floor(k * 5) !== trail && k < 0.9) {
+          trail = Math.floor(k * 5);
+          this.r.ghost(u, { ms: 170, alpha: 0.4 });
+        }
       });
       u.rx = u.x;
       u.ry = u.y;
       if (!mv.fall) u.rh = h1;
+      if (!CT.FAST && !mv.fall) sfx(this.r.land(u, true) === 'water' ? 'sfx_step_water' : 'sfx_land');
     }
 
-    async showResults(out, attacker) {
-      const b = this.b;
-      for (const r of out.results) {
-        const v = r.target;
-        if (r.miss) {
-          this.r.floatText(v, 'MISS', '#c0c8ff');
+    // Show what a tech did: numbers, hit feedback, then KOs. `opts.elem` colours the sparks.
+    async showResults(out, attacker, opts = {}) {
+      const r = this.r;
+      const fancy = !CT.FAST;
+      const elem = opts.elem || 'hit';
+      const from = (v) => (attacker && attacker !== v ? attacker : null);
+      const hitN = new Map(); // several hits on one target: the numbers come one after another
+      const crowded = new Set(out.results.filter((q) => q.dmg != null).map((q) => q.target)).size > 2; // big areas: colour alone says weak / resisted
+      let heavy = false, critOn = null;
+      for (const res of out.results) {
+        const v = res.target;
+        if (!v) continue;
+        const n = hitN.get(v) || 0;
+        hitN.set(v, n + 1);
+        const delay = fancy ? n * 90 : 0;
+        if (res.miss) {
+          r.pop(v, 'MISS', 'miss', { delay });
           sfx('sfx_miss');
-        } else if (r.immune) this.r.floatText(v, 'IMMUNE', '#c0f0ff');
-        else if (r.heal != null) this.r.floatText(v, `+${r.heal}`, '#80ff90');
-        else if (r.status) this.r.floatText(v, { stun: 'STUN', slow: 'SLOW', burn: 'BURN', catalogued: 'CATALOGUED', stasis: 'STASIS', magdown: 'MAG DOWN', haste: 'HASTE' }[r.status] || r.status.toUpperCase(), '#ffd0f0');
-        else if (r.text) this.r.floatText(v, r.text, r.steal ? '#ffe080' : '#ffffff');
-        else if (r.dmg != null) {
-          const col = r.crit ? '#ff6040' : r.weak ? '#ffe040' : r.side === 'back' ? '#ffb040' : '#ffffff';
-          this.r.floatText(v, `${r.dmg}${r.crit ? '!' : ''}`, col, r.crit || r.dmg > 150);
-          if (r.crit) sfx('sfx_crit');
+          if (fancy && v.alive) this.dodge(v, from(v));
+        } else if (res.immune) {
+          r.pop(v, 'IMMUNE', 'immune', { delay });
+          sfx('sfx_clank');
+          if (fancy) r.guardSpark(v, from(v));
+        } else if (res.heal != null) {
+          r.pop(v, `+${res.heal}`, 'heal', { delay });
+          if (fancy) r.healGlow(v);
+        } else if (res.status) {
+          const good = res.status === 'haste' || res.status === 'might' || res.status === 'barrier';
+          r.pop(v, { stun: 'STUN', slow: 'SLOW', burn: 'BURN', catalogued: 'CATALOGUED', stasis: 'STASIS', magdown: 'MAG DOWN', haste: 'HASTE', might: 'MIGHT', barrier: 'WALL' }[res.status] || res.status.toUpperCase(), good ? 'buff' : 'status', { delay: delay + (fancy && n ? 60 : 0) });
+          if (fancy) r.statusPop(v, res.status);
+        } else if (res.text) r.pop(v, res.text, res.steal ? 'learn' : 'info', { delay });
+        else if (res.dmg != null) {
+          // Colour language: critical gold-red and large, weakness yellow, resisted grey.
+          const kind = res.crit ? 'crit' : res.weak ? 'weak' : res.resist ? 'resist' : 'dmg';
+          r.pop(v, `${res.dmg}${res.crit ? '!' : ''}`, kind, { delay, tag: crowded ? null : res.weak ? 'WEAK!' : res.resist ? 'RESIST' : null });
+          if (res.crit) {
+            sfx('sfx_crit');
+            critOn = v;
+          } else if (res.weak) sfx('sfx_weak');
+          else if (res.resist) sfx('sfx_clank');
+          const big = !!res.crit || !v.alive || res.dmg >= v.maxHp * 0.3;
+          heavy = heavy || big;
           v.flash = 1;
-          if (v.alive) this.r.anim(v, 'hurt');
+          if (v.alive) r.anim(v, 'hurt');
+          if (fancy) {
+            if (res.resist) r.guardSpark(v, from(v));
+            else r.hitSpark(v, from(v), { heavy: big, elem });
+            this.recoil(v, from(v), big);
+          }
         }
+      }
+      if (fancy && heavy) {
+        // Hit-stop: a heavy blow hangs on its impact frame; a critical pushes the camera in.
+        const ms = critOn ? 110 : 70;
+        r.hitStop(ms);
+        if (critOn) {
+          const [zx, zy] = r.unitScreenPos(critOn);
+          r.zoomPunch(zx, zy - 14);
+          r.shake(5, 220);
+        }
+        await new Promise((done) => setTimeout(done, ms));
       }
       await tween(CT.FAST ? 5 : 200, (k) => {
-        for (const r of out.results) if (r.dmg) r.target.flash = Math.floor(k * 6) % 2 ? 0 : 1;
+        for (const res of out.results) if (res.dmg) res.target.flash = k < 0.22 ? 1 : Math.floor(k * 6) % 2 ? 0 : 0.5;
       });
-      for (const r of out.results) if (r.target) r.target.flash = 0;
-      const kos = [...new Set(out.results.filter((r) => r.ko || (r.target && !r.target.alive && r.dmg != null)).map((r) => r.target))];
+      for (const res of out.results) if (res.target) res.target.flash = 0;
+      const kos = [...new Set(out.results.filter((res) => res.ko || (res.target && !res.target.alive && res.dmg != null)).map((res) => res.target))];
       if (kos.length) {
-        await wait(CT.FAST ? 5 : 200);
-        sfx('sfx_ko');
+        await wait(CT.FAST ? 5 : 140);
+        const gone = kos.filter((v) => !v.hero && !v.guest);
         for (const v of kos) {
-          if (v.hero || v.guest) {
-            v.koPose = true;
-            v.alpha = 0.75;
-            this.r.floatText(v, 'KO', '#ff6060');
-          } else this.r.burst(v.x, v.y, v.rh, v.flicker ? 'porcelain' : 'hit', { n: 12, noShake: true });
+          if (v.hero || v.guest) this.fall(v);
+          else if (!fancy) r.burst(v.x, v.y, v.rh, v.flicker ? 'porcelain' : 'hit', { n: 12, noShake: true });
         }
-        const fade = kos.filter((v) => !v.hero && !v.guest);
-        if (fade.length) await tween(CT.FAST ? 5 : 600, (k) => fade.forEach((v) => (v.alpha = 1 - k)));
+        if (!gone.length) sfx('sfx_ko');
+        else if (!fancy) {
+          sfx('sfx_ko');
+          await tween(5, (k) => gone.forEach((v) => (v.alpha = 1 - k)));
+        } else {
+          // Bosses die long; echoes lose their signal; everything else is filed away.
+          const ends = gone.map((v) => {
+            if (v.boss || v.big) return this.bossDeath(v);
+            sfx(v.flicker ? 'sfx_echo_out' : 'sfx_archive');
+            return wait(r.dissolve(v, v.flicker ? 'crt' : 'archive', v.flicker ? 520 : 680));
+          });
+          await Promise.all(ends);
+          for (const v of gone) {
+            v.alpha = 0;
+            v.fxKo = null;
+          }
+        }
       }
       this.refresh();
+    }
+
+    // A missed blow: the target leans out of the way and leaves an afterimage.
+    dodge(v, from) {
+      let dx = 0, dy = 0;
+      if (from) {
+        const d = Math.hypot(v.x - from.x, v.y - from.y) || 1;
+        dx = (v.x - from.x) / d;
+        dy = (v.y - from.y) / d;
+      }
+      this.r.ghost(v, { ms: 300, hex: '#c4e4ff', alpha: 0.7 });
+      tween(300, (k) => {
+        // Out fast, hang, back: a hop away from the blow.
+        const e = k < 0.3 ? k / 0.3 : k < 0.6 ? 1 : 1 - (k - 0.6) / 0.4;
+        v.ox = dx * 0.5 * e;
+        v.oy = dy * 0.5 * e;
+        v.oz = Math.sin(k * Math.PI) * 12;
+      }).then(() => {
+        v.ox = v.oy = v.oz = 0;
+      });
+    }
+    // Knocked back along the line of the blow, then springs home with a small overshoot.
+    recoil(v, from, heavy) {
+      const amp = (heavy ? 0.26 : 0.14) * (v.big ? 0.5 : 1);
+      if (!from || (from.x === v.x && from.y === v.y)) {
+        tween(180, (k) => (v.oz = -Math.sin(k * Math.PI) * 3)).then(() => (v.oz = 0));
+        return;
+      }
+      const d = Math.hypot(v.x - from.x, v.y - from.y) || 1;
+      const dx = (v.x - from.x) / d, dy = (v.y - from.y) / d;
+      tween(heavy ? 300 : 220, (k) => {
+        const e = k < 0.2 ? k / 0.2 : k < 0.8 ? 1 - ((k - 0.2) / 0.6) * 1.15 : -0.15 * (1 - (k - 0.8) / 0.2);
+        v.ox = dx * amp * e;
+        v.oy = dy * amp * e;
+      }).then(() => {
+        v.ox = v.oy = 0;
+      });
+    }
+    // A hero or guest goes down: a last stagger, then the fall and a puff of dust.
+    fall(v) {
+      v.koPose = true;
+      v.alpha = 0.75;
+      this.r.pop(v, 'KO', 'ko');
+      sfx('sfx_ko');
+      if (CT.FAST) return;
+      this.r.land(v, true);
+      this.r.shake(3, 160);
+      tween(260, (k) => (v.oz = Math.sin(k * Math.PI) * 4)).then(() => (v.oz = 0));
+    }
+    // A boss does not just vanish: it convulses, bursts, whites out and is filed away slowly.
+    async bossDeath(v) {
+      const r = this.r;
+      const R = CT.FX_RAMPS;
+      r.focus(v.x, v.y, this.b.tile(v.x, v.y).h);
+      sfx('sfx_boss_die');
+      r.shake(6, 1000);
+      for (let i = 0; i < 7; i++) {
+        v.flash = i % 2 ? 0 : 1;
+        const [x, y] = r.unitScreenPos(v);
+        const bx = x + (Math.random() - 0.5) * 30, by = y - 6 - Math.random() * 34;
+        r.scatter('flash', 1, bx, by, y, R.hit);
+        r.scatter('spark', 6, bx, by, y, R.hit, { speed: 1.2 });
+        r.scatter('flake', 3, bx, by, y, R.porcelain);
+        r.rings.push({ x: Math.round(bx), y: Math.round(by), t0: performance.now(), ms: 260, r: 10, ramp: R.hit });
+        sfx('sfx_boss_pop');
+        v.ox = (i % 2 ? 1 : -1) * 0.05;
+        await wait(125);
+      }
+      v.flash = 0;
+      v.ox = 0;
+      const [zx, zy] = r.unitScreenPos(v);
+      r.flashScreen('255,255,255', 300, 0.9);
+      r.zoomPunch(zx, zy - 18, 0.08, 260);
+      sfx('sfx_archive');
+      await wait(r.dissolve(v, 'boss', 1000));
     }
 
     // ---- Trigger engine ---------------------------------------------------------------------
@@ -1297,6 +1502,24 @@
     }
   }
 
+  // The party's moment: the camera finds them, they strike their victory poses under the banner.
+  BattleCtl.prototype.victoryMoment = async function () {
+    const r = this.r, b = this.b;
+    const heroes = b.units.filter((u) => u.team === 0 && (u.hero || u.guest) && u.alive);
+    this.ui.highlights = null;
+    if (heroes.length) r.focus(heroes.reduce((s, u) => s + u.x, 0) / heroes.length, heroes.reduce((s, u) => s + u.y, 0) / heroes.length, b.tile(heroes[0].x, heroes[0].y).h);
+    await wait(260);
+    r.victory(true);
+    sfx('sfx_victory');
+    heroes.forEach((u, i) => setTimeout(() => {
+      if (r.screenDir(u.face).startsWith('north')) u.face = (u.face + 2) % 4; // turn to the camera
+      r.anim(u, 'victory', { hold: true });
+      const [sx, sy] = r.unitScreenPos(u);
+      r.scatter('sparkle', 5, sx, sy - 14, sy, CT.FX_RAMPS.lightning, { spread: 22, jitter: 400 });
+    }, i * 140));
+    await wait(1500);
+  };
+
   // ---- Entry point used by scenes ------------------------------------------------------------
   CT.runBattle = async function (id, scene, opts = {}) {
     const base = typeof id === 'string' ? CT.BATTLES[id] : id;
@@ -1322,6 +1545,7 @@
       if (result === 'victory') {
         if (window.TEST_LOG) window.TEST_LOG.push({ battle: def.name, result: 'victory', round: ctl.b.round, lv: g.avgLevel(), hp: ctl.b.party().map((u) => Math.round((u.hp / u.maxHp) * 100)) });
         if (CT.audio && !def.noFanfare) CT.audio.playMusic('mus_victory');
+        if (!def.noFanfare && !opts.noRewards && !CT.FAST && scene.r.victory) await ctl.victoryMoment();
         g.syncFromBattle(ctl.b);
         // Everyone walks away from a won battle at full HP and MP (KO'd members too).
         g.fullHeal();
@@ -1341,8 +1565,9 @@
           }
           for (const [k, n] of Object.entries(rw.items || {})) g.addItem(k, n);
           if (rw.key) g.addKey(rw.key);
-          await UI.results({ xp, gold, items: rw.items, key: rw.key, ups });
+          await (CT.FEEL && CT.FEEL.results ? CT.FEEL.results : UI.results)({ xp, gold, items: rw.items, key: rw.key, ups });
         }
+        if (scene.r.victory) scene.r.victory(false);
         // Everyone gets back on their feet after a win.
         for (const m of Object.values(g.members)) if (m.hp < 1) m.hp = 1;
         scene.r.setWorld(scene.world);

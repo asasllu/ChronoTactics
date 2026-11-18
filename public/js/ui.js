@@ -73,6 +73,39 @@
     }
     return pixURL(rows, { k: INK, h: hi, l: lo, m: mid, i: inner });
   }
+  // Title veil: only the top edge and the strip under the legal line darken, through an
+  // ordered dither (4 px wide, one row per game row); the scene itself stays clear.
+  function veilURL() {
+    const B = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+    const rows = [];
+    for (let y = 0; y < 300; y++) {
+      const f = y < 22 ? 0.3 - (y / 22) * 0.3 : y > 244 ? Math.min(1, (y - 244) / 30) : 0;
+      let r = '';
+      for (let x = 0; x < 4; x++) r += f > (B[(y & 3) * 4 + x] + 0.5) / 16 ? 'k' : '.';
+      rows.push(r);
+    }
+    return pixURL(rows, { k: INK });
+  }
+  // Chapter-card rule: a gold line with a jewel at the centre and stops at the ends.
+  function ruleURL() {
+    const w = 161, rows = [];
+    for (let y = 0; y < 9; y++) {
+      let r = '';
+      for (let x = 0; x < w; x++) {
+        const dc = Math.abs(x - 80) + Math.abs(y - 4), de = Math.min(Math.abs(x - 6), Math.abs(x - 154)) + Math.abs(y - 4);
+        if (dc <= 1) r += 'w';
+        else if (dc <= 3) r += 'g';
+        else if (dc === 4) r += 'd';
+        else if (de <= 1) r += 'g';
+        else if (de === 2) r += 'd';
+        else if (y === 4 && x > 8 && x < 152 && Math.abs(x - 80) > 7) r += 'g';
+        else if (y === 5 && x > 8 && x < 152 && Math.abs(x - 80) > 7) r += 'd';
+        else r += '.';
+      }
+      rows.push(r);
+    }
+    return pixURL(rows, { w: R.gold[4], g: R.gold[2], d: R.gold[0] });
+  }
   const vars = {
     '--ui-frame': frameURL(R.slate[5], R.slate[2], R.slate[4], R.ink[1]),
     '--ui-frame-gold': frameURL(R.gold[4], R.gold[0], R.gold[2], R.ink[1]),
@@ -87,7 +120,10 @@
     '--ui-warn-bot': bandURL([0.25, 0.5, 0.75, 1], R.red[2], R.red[1]),
     '--ui-cur-top': bandURL([1, 0.75, 0.5, 0.25], R.slate[5], R.white[0]),
     '--ui-scan': pixURL(['k.', '..', '..', '..'], { k: R.blue[1] }),
-    '--ui-veil': pixURL(['k.', '..'], { k: INK }),
+    '--ui-veil': veilURL(),
+    '--ui-rule': ruleURL(),
+    '--ui-tick': pixURL(['....k'], { k: INK }),
+    '--ui-now': pixURL(['kkkkkkk', 'kyyyyyk', '.kyYyk.', '..kyk..', '...k...'], { k: INK, y: R.gold[3], Y: R.gold[4] }),
   };
   for (const k in vars) document.documentElement.style.setProperty(k, `url(${vars[k]})`);
   const openMenus = new Set();
@@ -406,7 +442,7 @@
       <img class="portrait" src="${img}">
       <div class="info">
         <div class="name"><span class="team${u.guest ? 'g' : u.team}">${esc(u.name)}</span>${u.level ? ` <small>Lv${u.level}</small>` : ''}</div>
-        <div class="bar-row"><b>HP</b><div class="bar hp"><i style="width:${hp}%"></i></div><span>${u.hp}<small>/${u.maxHp}</small></span></div>
+        <div class="bar-row"><b>HP</b><div class="bar hp${hp <= 25 ? ' crit' : hp <= 50 ? ' low' : ''}"><i style="width:${hp}%"></i></div><span>${u.hp}<small>/${u.maxHp}</small></span></div>
         ${u.maxMp && u.maxMp < 999 ? `<div class="bar-row"><b>MP</b><div class="bar mp"><i style="width:${mp}%"></i></div><span>${u.mp}<small>/${u.maxMp}</small></span></div>` : ''}
         <div class="stats">ATK${u.atk} DEF${u.def} MAG${u.mag}</div>
         <div class="stats">MDF${u.mdef} SPD${u.spd} Mv${u.move} ${u.float ? 'Float' : 'Jp' + u.jump}</div>
@@ -679,11 +715,13 @@
   UI.title = function () {
     const t = $('title');
     t.classList.add('show');
+    // The square sits low so the logo stands against the night sky.
+    if (CT.renderer) CT.renderer.dialogueBias = 80;
     const has = CT.Game.anySave();
     t.innerHTML = `
       <div class="logo" role="img" aria-label="Chrono Trigger: The Hollow Future. A fan-made tactics sequel."><canvas class="logo-art" width="${LW}" height="${LH}" style="width:${LW * 2}px;height:${LH * 2}px"></canvas></div>
       <div id="title-menu"></div>
-      <div class="legal">Non-commercial fan project. Chrono Trigger © Square Enix; sprites and portraits from the original game. New art, arrangements &amp; code by fans.</div>`;
+      <div class="legal">Non-commercial fan project. Chrono Trigger © Square Enix.<br>Sprites and portraits from the original game; new art, arrangements &amp; code by fans.</div>`;
     const items = [
       { label: 'New Game', value: 'new' },
       { label: 'Continue', value: 'continue', disabled: !has },
@@ -700,7 +738,10 @@
     }, 250);
     return UI.menu(items, { host: $('title-menu'), cls: 'title-menu', noCancel: true }).then((v) => v);
   };
-  UI.hideTitle = () => $('title').classList.remove('show');
+  UI.hideTitle = () => {
+    $('title').classList.remove('show');
+    if (CT.renderer) CT.renderer.dialogueBias = 0;
+  };
 
   UI.credits = async function (credits) {
     const c = $('credits');

@@ -8135,8 +8135,8 @@
   CT.techFx('attack_lucca', { anim: 'attack', casterFx: 'fx_lucca_muzzle', proj: 'fx_lucca_shot', fx: 'fx_hit_shot' });
   CT.techFx('lucca_flame', { anim: 'cast', fx: 'fx_lucca_flame', stagger: 80 });
   CT.techFx('lucca_napalm', { anim: 'cast', proj: 'fx_napalm_proj', fx: 'fx_napalm', stagger: 35 });
-  CT.techFx('attack_robo', { anim: 'attack', proj: 'fx_robo_fist', fx: 'fx_hit_metal' });
-  CT.techFx('robo_laser', { anim: 'cast', casterFx: 'fx_laser_spin', fx: 'fx_laser_hit', stagger: 70 });
+  CT.techFx('attack_robo', { anim: 'attack', proj: 'fx_robo_fist', fx: 'fx_hit_metal', ret: true }); // the fist flies home
+  CT.techFx('robo_laser', { anim: 'cast', casterFx: 'fx_laser_spin', fx: 'fx_laser_hit', stagger: 70, beam: 'laser' });
   CT.techFx('robo_cure', { anim: 'cast', fx: 'fx_cure_beam' });
   // Recast enemies and guests (RECAST.md): weapon hits matched to each new sprite.
   CT.techFx('attack_cyrus', { anim: 'attack', fx: 'fx_hit_ledger' });

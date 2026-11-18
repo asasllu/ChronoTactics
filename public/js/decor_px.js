@@ -1511,4 +1511,6 @@
 
   // Anything registered earlier but not redrawn here stays legacy (auto-halved).
   CT.DECOR_NATIVE = done;
+  // Shared with js/dress.js (set dressing uses the same painter and materials).
+  CT.DPX = { paint, r3, r2, dot, memo, isoBox, isoEdge, flame, text3, glass, hash };
 })();

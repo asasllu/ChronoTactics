@@ -32,11 +32,11 @@
     dawn: {
       sky: [[0, '#2c3470'], [0.4, '#8c6ca8'], [0.65, '#f4a0a0'], [0.85, '#fcd49c'], [1, '#fff0c0']],
       stars: 30, sun: [480, 420, '255,230,170'], mountains: ['#8c78b0', '#6c5c94', '#4c4478'], forest: '#302c58',
-      clouds: ['#f8b8b8', '#fff0e0'], particles: 'motes', tint: '#fff0e8',
+      clouds: ['#f8b8b8', '#fff0e0'], particles: 'motes', tint: '#fff0e8', life: 'leaves',
     },
     day: {
       sky: [[0, '#3c78d8'], [0.6, '#88c0f0'], [1, '#d8f0ff']], sun: [820, 80, '255,250,220'],
-      mountains: ['#8cacd8', '#6c90c0', '#4c74a8'], forest: '#2c5c48', clouds: ['#c8dcf0', '#ffffff'],
+      mountains: ['#8cacd8', '#6c90c0', '#4c74a8'], forest: '#2c5c48', clouds: ['#c8dcf0', '#ffffff'], life: 'butterflies',
     },
     mountain: {
       sky: [[0, '#4c80d0'], [0.55, '#a8d0f0'], [1, '#e8f4ff']], sun: [820, 90, '255,250,220'],
@@ -44,17 +44,17 @@
       particles: 'wind',
     },
     castle: {
-      sky: [[0, '#0c0810'], [0.6, '#1c1418'], [1, '#2c1c18']], particles: 'dust', tint: '#f0c8a0', dark: 0.3,
-      interior: true,
+      sky: [[0, '#0c0810'], [0.6, '#1c1418'], [1, '#2c1c18']], particles: 'dust', tint: '#f4d4b0', dark: 0.22,
+      interior: true, vignette: 0.35,
     },
     prehistoric: {
       sky: [[0, '#3c5c48'], [0.5, '#a8a860'], [0.8, '#f0c070'], [1, '#f8e0a0']], sun: [700, 300, '255,210,140'],
       mountains: ['#6c7c58', '#4c5c40', '#34442c'], volcano: true, forest: '#1c3020', clouds: ['#d0c8a0', '#f0e8c0'],
-      particles: 'motes',
+      particles: 'motes', life: 'butterflies',
     },
     volcanic: {
       sky: [[0, '#1c0808'], [0.5, '#5c1810'], [0.8, '#c84018'], [1, '#f88030']], mountains: ['#3c1810', '#2c100c', '#1c0806'],
-      volcano: true, particles: 'embers', tint: '#ffc0a0', dark: 0.15,
+      volcano: true, particles: 'embers', tint: '#ffd8c0', dark: 0.06, vignette: 0.3,
     },
     snow: {
       sky: [[0, '#5c6c8c'], [0.5, '#98a8c0'], [1, '#d8e0ec']], mountains: ['#c8d0e0', '#a8b4cc', '#8494b0'], peaks: true,
@@ -65,19 +65,21 @@
       sea: '#1c3c5c', clouds: ['#6c8098', '#a0b4c4'], particles: 'sparkle', tint: '#c8e0ff',
     },
     void: {
-      sky: [[0, '#000000'], [0.6, '#06060e'], [1, '#0c0c1c']], stars: 60, particles: 'motes', interior: true, dark: 0.35,
+      sky: [[0, '#000000'], [0.6, '#06060e'], [1, '#0c0c1c']], stars: 60, particles: 'motes', interior: true, dark: 0.3, vignette: 0.3,
+      fog: ['#2a2038', 238],
     },
     museum: {
       sky: [[0, '#b8bcc8'], [0.5, '#d8dce4'], [1, '#f0f0f4']], particles: 'dust', interior: true, tint: '#f4f6ff', scan: 0.04,
     },
     core: {
       sky: [[0, '#0c0204'], [0.5, '#3c0810'], [1, '#8c1018']], stars: 0, particles: 'embers', interior: true, scan: 0.08,
-      tint: '#ffd0d0',
+      tint: '#ffd0d0', vignette: 0.3,
     },
   };
   CT.THEMES = THEMES;
 
   const PXD = CT.PXD;
+  const NO_LOOK = {};
   // Palette ramps for effects, light -> dark. Particles walk down their ramp as they age.
   const RAMPS = {
     fire: ['#fff4b0', '#fce068', '#f8bc3c', '#e88c28', '#c05c1c', '#6c1422'],
@@ -248,6 +250,7 @@
   CT.PX.halve = halve;
 
   class Renderer {
+    static _rid = 0;
     constructor(canvas) {
       // `canvas` is the on-screen 480x300 canvas; the frame is composed on a CPU
       // back buffer, then quantised to the master palette into the screen canvas.
@@ -288,6 +291,16 @@
       this.bgCache = new Map();
       this.decorHalf = new Map();
       this.motes = Array.from({ length: 60 }, (_, i) => ({ x: hash(i, 1) * this.W, y: hash(i, 2) * this.H, p: hash(i, 3) * 6.28, s: 0.3 + hash(i, 4) * 0.7 }));
+      // The world (tiles, decor, units) is composed on its own layer so that grading and
+      // light pools can be masked to it; `gcv` is the scratch layer for those masks and
+      // `rcv` a tile-sized one for floor reflections.
+      this.wcv = CT.PX.canvas(this.W, this.H);
+      this.wctx = this.wcv.getContext('2d');
+      this.gcv = CT.PX.canvas(this.W, this.H);
+      this.gctx = this.gcv.getContext('2d');
+      this.rcv = CT.PX.canvas(TW, TH);
+      this.rctx = this.rcv.getContext('2d');
+      this.refl = new Map();
     }
 
     get rot() {
@@ -304,6 +317,7 @@
         this.cache.clear();
         this.cam = null;
         this.rifts = [];
+        if (this.decals) this.decals.clear(); // spell residue belongs to the old map
       }
       this.world = world;
     }
@@ -313,6 +327,11 @@
     }
     get theme() {
       return THEMES[(this.map && this.map.theme) || 'dusk'] || THEMES.dusk;
+    }
+    // Set dressing for the current map (js/dress.js): floor art, props, room walls.
+    get look() {
+      const m = this.map;
+      return (m && CT.LOOKS && CT.LOOKS[m.id]) || NO_LOOK;
     }
 
     // ---- Projection ------------------------------------------------------------------
@@ -390,12 +409,24 @@
     updateCamera() {
       if (!this.camTarget) this.focusMap(true);
       if (!this.cam) this.cam = [...this.camTarget];
-      this.cam[0] += (this.camTarget[0] - this.cam[0]) * 0.12;
-      this.cam[1] += (this.camTarget[1] - this.cam[1]) * 0.12;
+      // Glide: the same ease whatever the frame rate (0.12 per 60 Hz frame), snapping
+      // onto the target at the end so the picture comes to rest on whole pixels.
+      const tNow = performance.now();
+      const dt = Math.min(4, Math.max(0.25, (tNow - (this._camT || tNow - 16.7)) / 16.7));
+      this._camT = tNow;
+      const glide = 1 - Math.pow(1 - 0.12, dt);
+      for (let i = 0; i < 2; i++) {
+        const d = this.camTarget[i] - this.cam[i];
+        this.cam[i] = Math.abs(d) < 0.4 ? this.camTarget[i] : this.cam[i] + d * glide;
+      }
       const bias = this.dialogueBias || 0;
       this.biasNow = (this.biasNow || 0) + (bias - (this.biasNow || 0)) * 0.1;
+      const ox0 = this.ox, oy0 = this.oy;
       this.ox = Math.round(this.W / 2 - this.cam[0]);
       this.oy = Math.round(this.H * 0.46 - this.cam[1] + this.biasNow);
+      // Effects live in screen space: carry them with the camera so they stay on their tile.
+      if (this.shiftFx && this._camMap === this.map && (this.ox !== ox0 || this.oy !== oy0)) this.shiftFx(this.ox - ox0, this.oy - oy0);
+      this._camMap = this.map;
     }
 
     // ---- Picking ---------------------------------------------------------------------
@@ -471,6 +502,9 @@
       const ph = (frame / WATER_FRAMES) * Math.PI * 2;
 
       const p = { t, nb, frame, ph, native: true, rot: this._rot };
+      const floorArt = this.look.floor;
+      const gloss = mat.reflect ? CT.ATMOS.wallReflection : null;
+      const [tvx, tvy] = this.view(t.x, t.y);
       for (let y = 0; y < TH; y++) {
         const hw = y < HH ? 2 * (y + 1) : 2 * (TH - y);
         for (let x = HW - hw; x < HW + hw; x++) {
@@ -489,11 +523,23 @@
           p.n = vnoise(p.wx * 2.2, p.wy * 2.2, 1) * 0.55 + vnoise(p.wx * 7, p.wy * 7, 2) * 0.45;
           let c = mat.top(p);
           let k = light;
+          p.vx = tvx + ovx;
+          p.vy = tvy + ovy;
+          const fa = floorArt && floorArt(p, t, mat, c);
+          if (fa) {
+            c = fa;
+            k = 1;
+          }
           const dUL = 0.5 + ovx;
           const dUR = 0.5 + ovy;
           if (hBack.l > h + 0.2) k *= 0.72 + 0.28 * Math.min(1, dUL / 0.3);
           if (hBack.r > h + 0.2) k *= 0.72 + 0.28 * Math.min(1, dUR / 0.3);
           c = [c[0] * k, c[1] * k, c[2] * k];
+          if (gloss) {
+            // glossy floors pick up the far walls
+            const wr = gloss(this, tvx + ovx, tvy + ovy);
+            if (wr) c = CT.TX.mixc(c, CT.PAL.hex(wr[0]), wr[1] * mat.reflect * 2);
+          }
           if (!liquid && !mat.noRim) {
             // 1px lit lip on edges that drop away, faint highlight on the back edges.
             const edgeR = x >= HW && x - HW >= 2 * (TH - y) - 2 && y >= HH;
@@ -558,158 +604,12 @@
     }
 
     // ---- Background -----------------------------------------------------------------
-    // Painted at full logical size; theme coordinates are authored at 960x600 and halved.
-    buildBackground(name) {
-      const th = THEMES[name] || THEMES.dusk;
-      const W = this.W;
-      const H = this.H;
-      const cv = CT.PX.canvas(W, H);
-      const g = cv.getContext('2d');
-      const sky = g.createLinearGradient(0, 0, 0, H);
-      for (const [s, c] of th.sky) sky.addColorStop(s, c);
-      g.fillStyle = sky;
-      g.fillRect(0, 0, W, H);
-      for (let i = 0; i < (th.stars || 0); i++) {
-        const y = hash(i, 5) * H * 0.55;
-        const bright = hash(i, 6) * (1 - y / (H * 0.55));
-        g.fillStyle = bright > 0.55 ? '#ffffff' : bright > 0.25 ? '#bcc0d4' : '#6e7090';
-        g.fillRect(Math.floor(hash(i, 4) * W), Math.floor(y), 1, 1);
-      }
-      if (th.moon) {
-        const mx = Math.round(th.moon[0] / 2), my = Math.round(th.moon[1] / 2);
-        for (let r = 16; r > 9; r -= 3) {
-          // stepped halo rings, checker-dithered
-          for (let y = -r; y <= r; y++)
-            for (let x = -r; x <= r; x++)
-              if (x * x + y * y <= r * r && ((x + y) & 1) === 0) {
-                g.fillStyle = 'rgba(200,210,255,0.18)';
-                g.fillRect(mx + x, my + y, 1, 1);
-              }
-        }
-        g.fillStyle = '#fff0dc';
-        PXD.disc(g, mx, my, 9);
-        g.fillStyle = '#bcc0d4';
-        g.fillRect(mx - 4, my - 2, 3, 2);
-        g.fillRect(mx + 2, my + 3, 2, 2);
-        g.fillRect(mx - 1, my + 5, 2, 1);
-      }
-      if (th.sun) {
-        const [sx, sy, col] = th.sun;
-        const X = Math.round(sx / 2), Y = Math.round(sy / 2);
-        const sun = g.createRadialGradient(X, Y, 2, X, Y, 65);
-        sun.addColorStop(0, `rgba(${col},0.9)`);
-        sun.addColorStop(0.15, `rgba(${col},0.45)`);
-        sun.addColorStop(1, `rgba(${col},0)`);
-        g.fillStyle = sun;
-        g.fillRect(0, 0, W, H);
-        g.fillStyle = `rgb(${col})`;
-        PXD.disc(g, X, Y, 5);
-      }
-      if (th.volcano) {
-        g.fillStyle = th.mountains[0];
-        const pts = [[280, 200], [350, 95], [370, 95], [450, 200]];
-        for (let y = 95; y <= 200; y++) {
-          const k = (y - 95) / 105;
-          g.fillRect(Math.round(350 - k * 70), y, Math.round(20 + k * 150), 1);
-        }
-        void pts;
-        for (let i = 0; i < 40; i++) {
-          g.fillStyle = 'rgba(90,70,70,0.35)';
-          PXD.disc(g, 360 + (hash(i, 50) - 0.5) * 60, 80 - hash(i, 51) * 60, 3 + Math.floor(hash(i, 52) * 6));
-        }
-      }
-      (th.mountains || []).forEach((col, li) => {
-        const base = 165 + li * 27;
-        const amp = (th.peaks ? 75 : 45) - li * 10;
-        const f = [0.012, 0.02, 0.032][li];
-        for (let x = 0; x < W; x++) {
-          let n = vnoise(x * f, 0, li + 1) * 0.7 + vnoise(x * f * 4, 1, li + 1) * 0.3;
-          if (th.peaks) n = Math.pow(n, 0.7);
-          const top = Math.round(base - n * amp);
-          g.fillStyle = col;
-          g.fillRect(x, top, 1, H - top);
-          if (th.peaks && li === 0 && n > 0.55) {
-            g.fillStyle = '#e4e8f0';
-            g.fillRect(x, top, 1, Math.round((n - 0.55) * 30));
-          }
-          // 1px lighter ridge line on the nearest layer
-          if (li === (th.mountains.length - 1)) {
-            g.fillStyle = 'rgba(255,255,255,0.12)';
-            g.fillRect(x, top, 1, 1);
-          }
-        }
-      });
-      if (th.sea) {
-        g.fillStyle = th.sea;
-        g.fillRect(0, 220, W, H - 220);
-        g.fillStyle = '#8cc0f0';
-        for (let i = 0; i < 60; i++) g.fillRect(Math.floor(hash(i, 30) * W), 222 + Math.floor(hash(i, 31) * 75), 3 + Math.floor(hash(i, 32) * 7), 1);
-      }
-      if (th.forest) {
-        g.fillStyle = th.forest;
-        for (let x = 0; x < W; x += 2) {
-          const top = 235 - Math.floor(vnoise(x * 0.16, 3, 4) * 13) - (x % 6 === 0 ? 2 : 0);
-          g.fillRect(x, top, 2, H - top);
-        }
-      }
-      if (th.interior) {
-        for (let i = 0; i < 7; i++) {
-          const x = Math.round(30 + i * 70 + hash(i, 40) * 20);
-          for (let k = 0; k < 25; k++) {
-            const a = (name === 'museum' ? 0.3 : 0.05) * Math.sin((k / 25) * Math.PI);
-            g.fillStyle = `rgba(255,255,255,${a})`;
-            g.fillRect(x + k, 0, 1, H);
-          }
-        }
-      }
-      const clouds = th.clouds
-        ? [0, 1, 2, 3, 4].map((i) => {
-            const w = 60 + Math.floor(hash(i, 8) * 50);
-            const c = CT.PX.canvas(w, 18, (cg) => {
-              for (let k = 0; k < 8; k++) {
-                const cx = 8 + hash(i, k + 20) * (w - 16);
-                const cy = 10 + hash(i, k + 40) * 4;
-                const r = 4 + Math.floor(hash(i, k + 60) * 5);
-                cg.fillStyle = th.clouds[0];
-                PXD.disc(cg, cx, cy, r);
-              }
-              for (let k = 0; k < 8; k++) {
-                const cx = 8 + hash(i, k + 20) * (w - 16);
-                const cy = 10 + hash(i, k + 40) * 4;
-                const r = 4 + Math.floor(hash(i, k + 60) * 5);
-                cg.fillStyle = th.clouds[1];
-                PXD.disc(cg, cx - 1, cy - 2, Math.max(1, r - 2));
-              }
-            });
-            return { c, x: hash(i, 9) * W, y: 30 + i * 22 + hash(i, 10) * 10, v: 0.002 + hash(i, 11) * 0.003, a: 0.5 + hash(i, 12) * 0.3 };
-          })
-        : [];
-      const vg = CT.PX.canvas(W, H, (v) => {
-        const rg = v.createRadialGradient(W / 2, H / 2, H * 0.5, W / 2, H / 2, H * 0.95);
-        rg.addColorStop(0, 'rgba(0,0,0,0)');
-        rg.addColorStop(1, `rgba(8,4,20,${th.vignette != null ? th.vignette : 0.4})`);
-        v.fillStyle = rg;
-        v.fillRect(0, 0, W, H);
-      });
-      return { cv, clouds, vignette: vg };
-    }
-
+    // Skies, far layers and sky life are painted by js/atmos.js.
     background(name) {
-      if (!this.bgCache.has(name)) this.bgCache.set(name, this.buildBackground(name));
-      return this.bgCache.get(name);
+      return CT.ATMOS.background(this, name);
     }
-
     drawBackground(now) {
-      const name = (this.map && this.map.theme) || 'dusk';
-      const bg = this.background(name);
-      const ctx = this.ctx;
-      ctx.drawImage(bg.cv, 0, 0);
-      for (const cl of bg.clouds) {
-        const x = ((cl.x + now * cl.v) % (this.W + cl.c.width)) - cl.c.width;
-        ctx.globalAlpha = cl.a;
-        ctx.drawImage(cl.c, Math.round(x), Math.round(cl.y));
-      }
-      ctx.globalAlpha = 1;
+      CT.ATMOS.drawBackground(this, now);
     }
 
     // ---- Frame -------------------------------------------------------------------
@@ -744,13 +644,17 @@
       }
       this.updateCamera();
       this.drawBackground(now);
+      CT.ATMOS.drawWalls(this, ctx);
+      CT.DRESS.drawUnder(this, ctx);
 
+      let shx = 0, shy = 0;
       if (now < this.shakeT) {
         // Whole-pixel shake that decays; alternates so it never drifts.
         const k = (this.shakeT - now) / (this.shakeMs || 250);
         const a = Math.max(1, Math.round(this.shakeAmt * k));
         const ph = Math.floor(now / 33) % 4;
-        ctx.translate([a, -a, a, -a][ph], [0, a, -a, 0][ph] >> (k < 0.5 ? 1 : 0));
+        shx = [a, -a, a, -a][ph];
+        shy = [0, a, -a, 0][ph] >> (k < 0.5 ? 1 : 0);
       }
 
       const drawables = [];
@@ -766,20 +670,39 @@
         this.casts = this.casts.filter((c) => now - c.t0 < c.ms);
         for (const c of this.casts) drawables.push({ z: Math.max(this.depth(Math.floor(c.u.rx), Math.floor(c.u.ry)), this.depth(Math.ceil(c.u.rx), Math.ceil(c.u.ry))), sub: 1.4, c });
       }
+      for (const f of CT.DRESS.frontList(this)) drawables.push(f); // set dressing in front of units
       drawables.sort((a, b) => a.z - b.z || a.sub - b.sub);
 
+      // The world goes on its own layer, then onto the frame; grading and light pools
+      // are masked to it so the painted sky stays clean.
       const lights = [];
-      for (const d of drawables) {
-        if (d.t) this.drawTile(d.t, ui, now, lights);
-        else if (d.e) this.drawSheetFx(d.e, now);
-        else if (d.c) this.drawCast(d.c, now, -1);
-        else this.drawUnit(d.u, world, ui, now, lights);
+      const wctx = this.wctx;
+      wctx.setTransform(1, 0, 0, 1, 0, 0);
+      wctx.globalAlpha = 1;
+      wctx.globalCompositeOperation = 'source-over';
+      wctx.clearRect(0, 0, this.W, this.H);
+      wctx.translate(shx, shy);
+      this.ctx = wctx;
+      try {
+        for (const d of drawables) {
+          if (d.t) this.drawTile(d.t, ui, now, lights);
+          else if (d.e) this.drawSheetFx(d.e, now);
+          else if (d.c) this.drawCast(d.c, now, -1);
+          else if (d.fr) CT.DRESS.drawFront(this, d.fr, now, lights);
+          else this.drawUnit(d.u, world, ui, now, lights);
+        }
+        for (const r of this.rifts) this.drawRift(r, now);
+      } finally {
+        this.ctx = ctx;
       }
-      for (const r of this.rifts) this.drawRift(r, now);
-
-      this.drawGrading(lights, now);
+      wctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.drawImage(this.wcv, 0, 0);
+      this.drawGrading(lights, now, shx, shy);
+      ctx.translate(shx, shy);
       if (ui.spotAt && CT.Interact) CT.Interact.drawIcons(this, ctx, ui.spotAt, now); // spot icons stay bright at night
+      if (world.onDraw) world.onDraw(this, ctx, now); // scene overlay hook (field examine sparkles)
       this.drawDim(now);
+      if (this.drawMid) this.drawMid(now); // feel.js: shock bands, domes and beams under the effect sheets
       for (const b of this.big) this.drawBig(b, now);
       for (const e of this.sheetFx) if (e.fx.def.layer !== 'back') this.drawSheetFx(e, now);
       if (this.casts) for (const c of this.casts) this.drawCast(c, now, 1);
@@ -788,106 +711,58 @@
       this.drawUnitHud(world, ui, now);
       this.drawFloaters(now);
       ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.drawImage(this.background(this.map.theme || 'dusk').vignette, 0, 0);
+      if (this.drawPost) this.drawPost(now); // feel.js: screen warps (heat shimmer, pinch, mosaic) and the zoom punch
+      if (this.theme.vignette) ctx.drawImage(CT.ATMOS.vignette(this.theme.vignette), 0, 0);
       this.drawOverlays(now);
       this.present();
     }
 
-    // Colour grading, darkness and light sources (stepped pools).
-    drawGrading(lights, now) {
-      const ctx = this.ctx;
+    // Colour grading, darkness and light pools, all masked to the world layer.
+    drawGrading(lights, now, shx = 0, shy = 0) {
+      const ctx = this.ctx, g = this.gctx;
       const th = this.theme;
+      const W = this.W, H = this.H;
+      const masked = (fill) => {
+        g.setTransform(1, 0, 0, 1, 0, 0);
+        g.globalCompositeOperation = 'source-over';
+        g.globalAlpha = 1;
+        g.clearRect(0, 0, W, H);
+        fill();
+        g.setTransform(1, 0, 0, 1, 0, 0);
+        g.globalCompositeOperation = 'destination-in';
+        g.drawImage(this.wcv, 0, 0);
+        g.globalCompositeOperation = 'source-over';
+      };
       ctx.save();
       ctx.setTransform(1, 0, 0, 1, 0, 0);
-      if (th.tint) {
+      if (th.tint || th.dark) {
+        // one multiply pass: the tint, scaled down by the darkness
+        const [tr, tg, tb] = CT.PAL.hex(th.tint || '#ffffff');
+        const k = 1 - (th.dark || 0);
+        masked(() => {
+          g.fillStyle = `rgb(${Math.round(tr * k)},${Math.round(tg * k)},${Math.round(tb * k)})`;
+          g.fillRect(0, 0, W, H);
+        });
         ctx.globalCompositeOperation = 'multiply';
-        ctx.fillStyle = th.tint;
-        ctx.fillRect(0, 0, this.W, this.H);
-      }
-      if (th.dark) {
+        ctx.drawImage(this.gcv, 0, 0);
         ctx.globalCompositeOperation = 'source-over';
-        ctx.fillStyle = `rgba(4,6,20,${th.dark})`;
-        ctx.fillRect(0, 0, this.W, this.H);
       }
-      ctx.restore();
-      ctx.save();
-      ctx.globalCompositeOperation = 'lighter';
-      for (const l of lights) {
-        const fl = l.flicker ? 0.85 + 0.15 * Math.sin(now / 90 + l.x * 7) * Math.sin(now / 53 + l.y) : 1;
-        const r = Math.round(l.radius * (0.95 + 0.05 * fl));
-        // Three concentric steps, brightest in the middle.
-        for (const [kr, a] of [[1, 0.1], [0.62, 0.12], [0.3, 0.16]]) {
-          ctx.fillStyle = `rgba(${l.color},${a * fl})`;
-          PXD.ellipse(ctx, l.x, l.y, Math.round(r * kr), Math.round(r * kr * 0.7));
-        }
+      if (lights.length) {
+        masked(() => {
+          g.translate(shx, shy);
+          CT.ATMOS.drawLights(this, g, lights, now);
+        });
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.drawImage(this.gcv, 0, 0);
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.translate(shx, shy);
+        CT.ATMOS.drawGlows(this, ctx, lights, now);
       }
       ctx.restore();
     }
 
     drawWeather(now) {
-      const ctx = this.ctx;
-      const th = this.theme;
-      ctx.save();
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      const kind = th.particles;
-      const W = this.W, H = this.H;
-      if (kind === 'snow') {
-        ctx.fillStyle = '#ffffff';
-        for (const m of this.motes) {
-          const x = (m.x + Math.sin(now / 1600 + m.p) * 12 + now * 0.005 * m.s) % W;
-          const y = (m.y + now * 0.015 * (0.5 + m.s)) % H;
-          const s = m.s > 0.7 ? 2 : 1;
-          ctx.fillRect(Math.round(x), Math.round(y), s, s);
-        }
-      } else if (kind === 'embers') {
-        for (const m of this.motes) {
-          const x = (m.x + Math.sin(now / 900 + m.p) * 10) % W;
-          const y = H - ((m.y + now * 0.015 * (0.4 + m.s)) % H);
-          const k = 0.5 + 0.5 * Math.sin(now / 200 + m.p);
-          ctx.fillStyle = k > 0.66 ? '#fce068' : k > 0.33 ? '#e88c28' : '#a02030';
-          ctx.fillRect(Math.round(x), Math.round(y), 1, 1);
-        }
-      } else if (kind === 'fireflies' || kind === 'motes' || kind === 'sparkle') {
-        const ramp = kind === 'fireflies' ? ['#fff4b0', '#fce068', '#a8d45c'] : kind === 'sparkle' ? ['#ffffff', '#c4e4ff', '#8cc0f0'] : ['#fff0dc', '#c0aa92', '#7a665a'];
-        const n = kind === 'fireflies' ? 26 : 40;
-        for (let i = 0; i < n; i++) {
-          const m = this.motes[i];
-          const x = Math.round((m.x + Math.sin(now / 2100 + m.p) * 15 + now * 0.002 * m.s) % W);
-          const y = Math.round((m.y * 0.8 + 30 + Math.sin(now / 1300 + m.p * 2) * 8) % H);
-          const a = 0.5 + 0.5 * Math.sin(now / 400 + m.p * 3);
-          if (a < 0.2) continue;
-          ctx.fillStyle = ramp[a > 0.75 ? 0 : a > 0.45 ? 1 : 2];
-          ctx.fillRect(x, y, 1, 1);
-          if (a > 0.85 && kind !== 'motes') {
-            ctx.fillStyle = ramp[2];
-            ctx.fillRect(x - 1, y, 1, 1); ctx.fillRect(x + 1, y, 1, 1); ctx.fillRect(x, y - 1, 1, 1); ctx.fillRect(x, y + 1, 1, 1);
-          }
-        }
-      } else if (kind === 'dust') {
-        ctx.fillStyle = '#c0aa92';
-        for (let i = 0; i < 30; i++) {
-          const m = this.motes[i];
-          if (m.s < 0.5) continue;
-          const x = (m.x + now * 0.003 * m.s) % W;
-          const y = (m.y + Math.sin(now / 1500 + m.p) * 5) % H;
-          ctx.fillRect(Math.round(x), Math.round(y), 1, 1);
-        }
-      } else if (kind === 'wind') {
-        ctx.fillStyle = '#e4e8f0';
-        for (let i = 0; i < 18; i++) {
-          const m = this.motes[i];
-          const x = ((m.x + now * 0.12 * (0.5 + m.s)) % (W + 100)) - 50;
-          const y = m.y * 0.7 + Math.sin(now / 700 + m.p) * 4;
-          const len = 12 + Math.floor(m.s * 18);
-          for (let k = 0; k < len; k += 2) ctx.fillRect(Math.round(x) + k, Math.round(y + Math.sin((x + k) / 20) * 1), 1, 1);
-        }
-      }
-      if (th.scan) {
-        ctx.fillStyle = `rgba(0,0,0,${th.scan})`;
-        const off = Math.floor(now / 60) % 3;
-        for (let y = off; y < H; y += 3) ctx.fillRect(0, y, W, 1);
-      }
-      ctx.restore();
+      CT.ATMOS.drawWeather(this, now);
     }
 
     // Full-screen fades & flashes, drawn over everything.
@@ -898,19 +773,27 @@
       if (!this.world || !this.world.map) for (const b of this.big) this.drawBig(b, now);
       this.drawLetterbox(now);
       this.big = this.big.filter((b) => now - b.t0 < b.ms);
+      if (this.drawHudFx) this.drawHudFx(now); // feel.js: turn banner, battle cards, victory
       if (this.screenFlash) {
         const k = (now - this.screenFlash.t0) / this.screenFlash.ms;
         if (k >= 1) this.screenFlash = null;
         else {
-          ctx.fillStyle = `rgba(${this.screenFlash.color},${(Math.round((1 - k) * 4) / 4) * (this.screenFlash.peak || 1)})`;
+          // Colour-math flash: the colour is ADDED to the picture in four steps, so the
+          // first frame burns out and the rest brighten without turning to fog.
+          const lv = (k < 0.25 ? 1 : Math.round((1 - k) * 4) / 8) * (this.screenFlash.peak || 1); // burn-out, then a short afterglow
+          const [fr, fg, fb] = String(this.screenFlash.color).split(',').map(Number);
+          ctx.globalCompositeOperation = 'lighter';
+          ctx.fillStyle = `rgb(${Math.round(fr * lv)},${Math.round(fg * lv)},${Math.round(fb * lv)})`;
           ctx.fillRect(0, 0, this.W, this.H);
+          ctx.globalCompositeOperation = 'source-over';
         }
       }
-      if (this.fade > 0) {
+      if (this.fade > 0 && !(this.drawFade && this.drawFade(now))) {
         // Stepped fade (8 levels) so it reads as a palette fade.
         ctx.fillStyle = `rgba(${this.fadeColor},${Math.min(1, Math.ceil(this.fade * 8) / 8)})`;
         ctx.fillRect(0, 0, this.W, this.H);
       }
+      if (this.drawWipe) this.drawWipe(now); // feel.js: battle shatter, era warp
       ctx.restore();
     }
 
@@ -924,6 +807,8 @@
       if (!mat.void) {
         const { cv } = this.tileImage(t, now);
         ctx.drawImage(cv, sx - TW / 2, sy - TH / 2);
+        if (this.decals && this.decals.size) this.drawDecals(t, sx, sy, now); // feel.js: scorch, frost, puddles left by spells
+        if (mat.reflect) this.drawReflection(t, sx, sy, mat);
         if (mat.glow && ((t.x + t.y) & 1) === 0) lights.push({ x: sx, y: sy, color: mat.glow, radius: 20, flicker: true }); // every other tile, so clusters don't flood
       }
 
@@ -934,29 +819,149 @@
 
       const hl = ui.highlights && ui.highlights.get(key);
       if (hl) {
-        const pulse = Math.floor(now / 220) % 2;
+        // The range reads as one lit region: a soft fill on every tile, a faint inner
+        // lattice, and a bright rim only where the region ends.
+        const pulse = [0, 0.5, 1, 0.5][Math.floor(now / 190 - (t.x + t.y) * 0.5) & 3]; // a slow swell rolling across the region
         const col = { move: [92, 144, 220], aoe: [252, 224, 104], tech: [252, 224, 104], range: [212, 60, 60], zone: [224, 112, 156], danger: [240, 108, 76] }[hl] || [255, 255, 255];
-        ctx.fillStyle = `rgba(${col},${hl === 'zone' ? 0.22 : 0.34 + pulse * 0.08})`;
+        ctx.fillStyle = `rgba(${col},${hl === 'zone' ? 0.2 : 0.28 + pulse * 0.1})`;
         PXD.diamond(ctx, sx, sy, TW / 2 - 1, true);
-        ctx.fillStyle = `rgb(${col.map((c) => Math.min(255, c + 70))})`;
-        PXD.diamond(ctx, sx, sy, TW / 2 - 1, false);
+        const rim = `rgb(${col.map((c) => Math.min(255, c + 80))})`;
+        const inner = `rgba(${col.map((c) => Math.min(255, c + 60))},0.3)`;
+        // edges: [view dx, view dy, x step, first row, x offset]
+        for (let e = 0; e < 4; e++) {
+          const [dvx, dvy] = [[0, -1], [-1, 0], [1, 0], [0, 1]][e];
+          const [dx, dy] = this.vecToWorld(dvx, dvy);
+          const open = ui.highlights.get(`${t.x + dx},${t.y + dy}`) !== hl;
+          if (!open && e > 1) continue; // shared inner lines are drawn once, by the far tile
+          ctx.fillStyle = open ? rim : inner;
+          for (let i = 0; i < 8; i++) {
+            const y = e < 2 ? i : 15 - i;
+            const x = e === 0 || e === 2 ? sx + 2 * i : sx - 2 * (i + 1);
+            ctx.fillRect(x, sy - 8 + y, 2, 1);
+          }
+        }
       }
       if (ui.path && ui.path.has(key)) {
-        ctx.fillStyle = '#ffffff';
-        PXD.diamond(ctx, sx, sy, 4, true);
+        if (this.drawPathStep) this.drawPathStep(ui, t, sx, sy, now); // feel.js: footprints marching to the goal
+        else {
+          ctx.fillStyle = '#0a0612';
+          PXD.diamond(ctx, sx, sy + 1, 3, true);
+          ctx.fillStyle = Math.floor(now / 200 + t.x + t.y) % 2 ? '#ffffff' : '#c4e4ff';
+          PXD.diamond(ctx, sx, sy, 3, true);
+        }
       }
       if (ui.hover && ui.hover.x === t.x && ui.hover.y === t.y) {
-        ctx.fillStyle = Math.floor(now / 160) % 2 ? '#ffffff' : '#fce068';
-        PXD.diamond(ctx, sx, sy, TW / 2, false);
-        PXD.diamond(ctx, sx, sy - 1, TW / 2, false);
+        this.drawCursor(ctx, sx, sy, now);
         if (ui.grid) PXD.text(ctx, String(t.h), sx, sy - 3, '#ffffff', { align: 'center' });
       }
 
       // Interactive spots (js/interactives.js): glow on the tile, icon above any decor.
       const spot = ui.spotAt && CT.Interact && ui.spotAt.get(key);
       if (spot) CT.Interact.drawMarker(this, ctx, spot, sx, sy, now, lights, 'base');
+      // Set dressing (never blocks, never part of the rules), then the tile's decor.
+      const dress = this.look.dressAt && this.look.dressAt.get(key);
+      if (dress) for (const dd of dress) if (!dd.theme || dd.theme.includes(this.map.theme)) this.drawDecor(dd, sx + (dd.dx || 0), sy + (dd.dy || 0), now, lights);
       const d = this.map.decorAt.get(key);
       if (d && !d.hidden) this.drawDecor(d, sx, sy, now, lights);
+    }
+
+    // Tile cursor: four corner chevrons that breathe in and out, with a dark under-line.
+    drawCursor(ctx, sx, sy, now) {
+      const o = Math.floor(now / 260) % 2;
+      const seg = (x, y, dx, dy) => {
+        for (let i = 0; i < 4; i++) ctx.fillRect(x + dx * i * 2, y + dy * i, 2, 1);
+      };
+      for (const [col, oy] of [['#0a0612', 1], [o ? '#ffffff' : '#fce068', 0]]) {
+        ctx.fillStyle = col;
+        const T = sy - 8 - o + oy, B = sy + 7 + o + oy, M = sy + oy;
+        const L = sx - 16 - o * 2, Rt = sx + 14 + o * 2;
+        seg(sx - 2, T, -1, 1); seg(sx, T, 1, 1);
+        seg(sx - 2, B, -1, -1); seg(sx, B, 1, -1);
+        seg(L, M - 1, 1, -1); seg(L, M, 1, 1);
+        seg(Rt, M - 1, -1, -1); seg(Rt, M, -1, 1);
+      }
+    }
+
+    // Glossy floors (mat.reflect) mirror the decor standing on and just behind a tile.
+    // One small overlay per tile, rebuilt only when that decor changes.
+    drawReflection(t, sx, sy, mat) {
+      if (this._reflMap !== this.map || this._reflRot !== this._rot) {
+        this.refl.clear();
+        this._reflMap = this.map;
+        this._reflRot = this._rot;
+      }
+      const src = [];
+      let sig = 0;
+      const h = this.tileHeight(t);
+      for (const [dvx, dvy] of [[0, 0], [-1, -1], [-1, 0], [0, -1]]) {
+        const [dx, dy] = this.vecToWorld(dvx, dvy);
+        const d = this.map.decorAt.get(`${t.x + dx},${t.y + dy}`);
+        const def = d && !d.hidden && CT.DECOR[d.kind];
+        if (!def || !def.native || def.flat || def.noReflect) continue;
+        const nt = this.tileAt(t.x + dx, t.y + dy);
+        if (!nt || this.tileHeight(nt) !== h) continue;
+        src.push([d, def, dvx, dvy]);
+        sig += (d._rid || (d._rid = ++Renderer._rid)) * (src.length * 7919 + 1) + (d.variant || 0);
+      }
+      const key = `${t.x},${t.y}`;
+      let e = this.refl.get(key);
+      if (!e || e.sig !== sig) {
+        e = { sig, cv: null };
+        if (src.length) {
+          e.cv = CT.PX.canvas(TW, TH, (g) => {
+            for (const [d, def, dvx, dvy] of src) {
+              const img = CT.getDecor(d.kind, d.variant || 0);
+              const bx = 16 + (dvx - dvy) * 16, by = 8 + (dvx + dvy) * 8 + (def.yOff || 0);
+              g.setTransform(1, 0, 0, -1, Math.round(bx - img.width / 2 + (def.xOff || 0)), by);
+              g.drawImage(img, 0, -img.height);
+            }
+            g.setTransform(1, 0, 0, 1, 0, 0);
+            g.globalCompositeOperation = 'destination-in';
+            g.drawImage(Renderer.diamondMask(), 0, 0);
+          });
+        }
+        this.refl.set(key, e);
+      }
+      if (e.cv) {
+        const ctx = this.ctx;
+        ctx.globalAlpha = mat.reflect;
+        ctx.drawImage(e.cv, sx - TW / 2, sy - TH / 2);
+        ctx.globalAlpha = 1;
+      }
+    }
+    static diamondMask() {
+      if (!Renderer._mask) {
+        Renderer._mask = CT.PX.canvas(TW, TH, (g) => {
+          g.fillStyle = '#fff';
+          for (let y = 0; y < TH; y++) {
+            const hw = y < TH / 2 ? 2 * (y + 1) : 2 * (TH - y);
+            g.fillRect(TW / 2 - hw, y, hw * 2, 1);
+          }
+        });
+      }
+      return Renderer._mask;
+    }
+    // A unit's mirror image on a glossy tile, clipped to that tile.
+    drawUnitReflection(u, f, sx, sy) {
+      const t = this.tileAt(Math.round(u.rx), Math.round(u.ry));
+      const mat = t && CT.TERRAIN[t.t];
+      if (!mat || !mat.reflect || u.koPose || (u.oz || 0) > 2) return;
+      const [tx0, ty0] = this.project(t.x, t.y, this.tileHeight(t));
+      const tsx = Math.round(tx0), tsy = Math.round(ty0);
+      const g = this.rctx;
+      g.setTransform(1, 0, 0, 1, 0, 0);
+      g.globalCompositeOperation = 'source-over';
+      g.clearRect(0, 0, TW, TH);
+      g.setTransform(1, 0, 0, -1, 0, 0);
+      g.drawImage(f.img, Math.round(sx - f.cx) - (tsx - TW / 2), -(sy - tsy + f.footY + TH / 2));
+      g.setTransform(1, 0, 0, 1, 0, 0);
+      g.globalCompositeOperation = 'destination-in';
+      g.drawImage(Renderer.diamondMask(), 0, 0);
+      const ctx = this.ctx;
+      const a = ctx.globalAlpha;
+      ctx.globalAlpha = a * mat.reflect * 0.9;
+      ctx.drawImage(this.rcv, tsx - TW / 2, tsy - TH / 2);
+      ctx.globalAlpha = a;
     }
 
     drawDecor(d, sx, sy, now, lights) {
@@ -976,10 +981,7 @@
         }
         frameImg = h;
       }
-      if (def.shadow) {
-        ctx.fillStyle = 'rgba(10,6,18,0.3)';
-        PXD.ellipse(ctx, sx, sy + 1, Math.round(def.shadow[0] * k), Math.max(1, Math.round(def.shadow[1] * k)));
-      }
+      if (def.shadow) CT.ATMOS.drawShadow(ctx, sx + 1, sy + 1, Math.round(def.shadow[0] * k), Math.max(1, Math.round(def.shadow[1] * k)), 0.32);
       const flat = def.flat;
       const dx = Math.round(sx - frameImg.width / 2 + (def.xOff || 0) * k);
       const dy = flat ? Math.round(sy - frameImg.height / 2) : Math.round(sy - frameImg.height + (def.yOff || 0) * k);
@@ -1000,7 +1002,7 @@
       if (u.koPose) return { name: 'ko', t: 0 };
       if (u.anim) {
         const a = spr.anims[u.anim.name];
-        const t = now - u.anim.t0;
+        const t = u._freeze && now < u._freeze.until ? u._freeze.t : now - u.anim.t0; // hit-stop holds the frame
         if (a && (u.anim.hold || u.anim.charge || a.loop || t < a.total)) return { name: u.anim.name, t, charge: u.anim.charge };
         if (!u.anim.hold) u.anim = null;
       }
@@ -1033,7 +1035,7 @@
       const f = this.spriteFrame(u, now);
       const [sx0, sy0] = this.unitScreenPos(u);
       const sx = Math.round(sx0);
-      const sy = Math.round(sy0 - (u.oz || 0) / 2);
+      const sy = Math.round(sy0 - (u.oz || 0) / 2) - (this.unitBob ? this.unitBob(u, now) : 0); // floaters hover
       const isActive = world.active === u;
       const showRing = ui.grid && !u.prop && u.team != null;
       u._f = f;
@@ -1043,15 +1045,24 @@
       ctx.save();
       ctx.globalAlpha = u.alpha;
       if (!u.noShadow) {
-        const big = u.big ? 1.8 : 1;
-        ctx.fillStyle = 'rgba(10,6,18,0.35)';
-        PXD.ellipse(ctx, sx, Math.round(sy0) + 1, Math.round(8 * big), Math.round(3 * big));
+        // The shadow tightens as the unit leaves the ground.
+        const big = (u.big ? 1.8 : 1) * Math.max(0.55, 1 - (u.oz || 0) / 90);
+        CT.ATMOS.drawShadow(ctx, sx, Math.round(sy0) + 1, Math.round(8 * big), Math.round(3 * big), 0.4);
+        this.drawUnitReflection(u, f, sx, sy);
       }
       if (showRing) {
         const ring = u.guest ? '#a8d45c' : u.team === 0 ? '#8cc0f0' : u.team === 1 ? '#f06c4c' : '#bcc0d4';
         ctx.fillStyle = ring;
-        if (!isActive || Math.floor(now / 200) % 2) PXD.ellipseRing(ctx, sx, Math.round(sy0) + 1, u.big ? 16 : 10, u.big ? 6 : 4);
+        const rw = u.big ? 16 : 10, rh = u.big ? 6 : 4;
+        PXD.ellipseRing(ctx, sx, Math.round(sy0) + 1, rw, rh);
+        if (isActive) {
+          // The unit whose turn it is: a second ring breathes out from the first.
+          const o = [0, 1, 2, 3, 2, 1][Math.floor(now / 110) % 6];
+          ctx.fillStyle = o > 1 ? '#ffffff' : ring;
+          PXD.ellipseRing(ctx, sx, Math.round(sy0) + 1, rw + 1 + o, rh + 1 + (o >> 1));
+        }
       }
+      if (u._ghosts) this.drawGhosts(u, now); // feel.js: afterimages
 
       const img = f.img;
       const dx = Math.round(sx - f.cx);
@@ -1066,11 +1077,13 @@
         ctx.rotate((Math.PI / 2) * (west ? -1 : 1));
         ctx.drawImage(img, -Math.round(f.cx), -f.footY + 4);
         ctx.setTransform(1, 0, 0, 1, 0, 0);
-      } else ctx.drawImage(img, dx, dy);
-      if (u.flash > 0) {
+      } else if (u.fxKo && this.drawKo) this.drawKo(u, f, dx, dy, now); // feel.js: archive dissolve / echo power-off
+      else if (!(u._squash && this.drawSquash(u, f, dx, dy, now))) ctx.drawImage(img, dx, dy);
+      if (u.flash > 0 && !u.fxKo) {
         ctx.globalAlpha = u.alpha * (u.flash > 0.5 ? 1 : 0.5);
-        ctx.drawImage(f.flash, dx, dy);
+        ctx.drawImage(f.flash, dx, dy + (u._squash ? 1 : 0));
       }
+      if (u._tint && this.drawTint) this.drawTint(u, f, dx, dy, now);
       ctx.restore();
       if (f.glow && lights) lights.push({ x: dx + f.glow.x, y: dy + f.glow.y, color: CT.PAL.hex(f.glow.color).join(','), radius: 14, flicker: true });
       const top = f.box ? f.box.y0 : f.top;
@@ -1083,7 +1096,8 @@
       for (const u of world.units) {
         if (u.hidden || u._headY == null || (!u.alive && u.alpha <= 0)) continue;
         const sx = u._sx, headY = u._headY;
-        if (u.status && u.status.stasis) {
+        if (u.status && u.alive !== false && this.drawAuras) this.drawAuras(u, sx, headY, now); // feel.js: status auras
+        else if (u.status && u.status.stasis) {
           ctx.fillStyle = Math.floor(now / 150) % 2 ? '#c4e4ff' : '#8cc0f0';
           PXD.ellipseRing(ctx, sx, Math.round((headY + u._sy) / 2), 11, Math.round((u._sy - headY) / 2) + 3);
         }
@@ -1095,11 +1109,20 @@
           ctx.fillRect(bx - 1, by - 1, bw + 2, 4);
           const fr = Math.max(0, u.hp / u.maxHp);
           const w = Math.max(1, Math.round(bw * fr));
+          // The chunk just lost lingers pale for a moment, then drains away.
+          if (u._hpLag == null || u._hpLag < fr) u._hpLag = fr;
+          if (u._hpLag > fr) {
+            if (!u._hpLagT) u._hpLagT = now + 320;
+            if (now > u._hpLagT) u._hpLag = Math.max(fr, u._hpLag - 0.02);
+            ctx.fillStyle = '#fff0dc';
+            ctx.fillRect(bx + w, by, Math.max(1, Math.round(bw * u._hpLag) - w), 2);
+          } else u._hpLagT = 0;
           ctx.fillStyle = fr > 0.5 ? '#488c34' : fr > 0.25 ? '#e88c28' : '#a02030';
           ctx.fillRect(bx, by, w, 2);
           ctx.fillStyle = fr > 0.5 ? '#a8d45c' : fr > 0.25 ? '#fce068' : '#f06c4c';
           ctx.fillRect(bx, by, w, 1);
-          if (u.status) {
+          if (u.status && this.drawStatusIcons) this.drawStatusIcons(u, bx, by, bw, now); // feel.js: pixel icons
+          else if (u.status) {
             const S = { burn: ['B', '#f06c4c'], slow: ['S', '#8cc0f0'], haste: ['H', '#a8d45c'], stun: ['*', '#fce068'], catalogued: ['C', '#e0709c'], stasis: ['∎', '#c4e4ff'], magdown: ['M', '#bc84e4'], might: ['A', '#f06c4c'], barrier: ['W', '#d0b8f8'] };
             let i = 0;
             for (const k in u.status) {
@@ -1189,25 +1212,7 @@
     }
 
     // ---- Effects -------------------------------------------------------------------
-    floatText(u, text, color, big) {
-      const [sx, sy] = this.project(u.x, u.y, u.rh);
-      const now = performance.now();
-      // Stack above any recent text on the same unit.
-      let y = Math.round(sy - 38);
-      for (const f of this.floaters) if (now - f.t0 < 700 && Math.abs(f.x - sx) < 14) y = Math.min(y, f.y - (big ? 17 : 10));
-      this.floaters.push({ x: Math.round(sx), y, text, color, t0: now, big });
-    }
-
-    drawFloaters(now) {
-      const ctx = this.ctx;
-      this.floaters = this.floaters.filter((f) => now - f.t0 < 1300);
-      for (const f of this.floaters) {
-        const k = (now - f.t0) / 1300;
-        if (k > 0.8 && Math.floor(now / 50) % 2) continue; // blink out
-        const y = f.y - (k < 0.2 ? Math.round(Math.sin((k / 0.2) * Math.PI) * 7) : 0) - Math.round(k * 5);
-        PXD.text(ctx, f.text, f.x, y, f.color, { align: 'center', scale: f.big ? 2 : 1 });
-      }
-    }
+    // Damage / heal numbers: pop(), floatText() and drawFloaters() are in js/feel.js.
 
     // Pooled pixel particles. p: { x, y, vx, vy, g, t0, life, ramp, s, heart, drag }
     spawn(p) {
@@ -1344,6 +1349,7 @@
         else if (k === 'sparkle') Object.assign(d, { x: x + (Math.random() - 0.5) * (opts.spread || 26), y: y - Math.random() * 22, vx: 0, vy: -0.15 - Math.random() * 0.25, life: 600 + Math.random() * 600 });
         else if (k === 'smoke') Object.assign(d, { vx: (Math.random() - 0.5) * 0.25, vy: -0.12 - Math.random() * 0.1, life: 360 + Math.random() * 240 });
         else if (k === 'crackle') Object.assign(d, { x: x + (Math.random() - 0.5) * 22, y: gy + (Math.random() - 0.5) * 8, life: 380 + Math.random() * 300 });
+        else if (this.bitInit) this.bitInit(k, d, a, sp, x, y, gy, opts); // puff, flake, orb, flash, wisp, ripple, chip
         this.addBit(d);
       }
     }
@@ -1457,6 +1463,8 @@
             poly(ctx, zig(Math.floor(b.ph * 10), st >> 1, x - 4, y, x + 4, y - 1, 3, 2), 1);
             break;
           }
+          default:
+            if (this.drawBitX) this.drawBitX(b, x, y, k, st, R, t);
         }
       }
     }
@@ -1495,33 +1503,57 @@
       const t = now - b.t0;
       if (t < 0) return;
       const st = Math.floor(t / STEP);
-      if (st % 4 === 3 && st > 2) return; // strobe
       const ctx = this.ctx, R = b.ramp;
-      const ph = st >> 1;
-      const x0 = b.x + (hashI(b.seed, 0, 1) - 0.5) * 50;
-      const pts = zig(b.seed, ph, x0, b.top, b.x, b.y, 11, 7);
+      const total = Math.max(7, Math.round((b.ms || 300) / STEP));
+      const x0 = b.x + (hashI(b.seed, 0, 1) - 0.5) * 60;
+      // One channel for the leader and the stroke; it only wanders once it is dying.
+      const pts = zig(b.seed, st < 5 ? 0 : st >> 1, x0, b.top, b.x, b.y, 9, 6);
       const forks = [];
-      for (let f = 0; f < 2; f++) {
-        const j = 1 + Math.floor(hashI(b.seed, ph, 90 + f) * Math.max(1, pts.length - 3));
+      for (let f = 0; f < 3; f++) {
+        const j = 1 + Math.floor(hashI(b.seed, 90 + f) * Math.max(1, pts.length - 3));
         const [fx, fy] = pts[j];
-        const dir = f ? 1 : -1;
-        forks.push(zig(b.seed + 7 * f, ph, fx, fy, fx + dir * (14 + hashI(b.seed, f) * 16), fy + 18 + hashI(b.seed, f, 3) * 14, 6, 4));
+        const dir = f % 2 ? 1 : -1;
+        const fk = zig(b.seed + 7 * f, 0, fx, fy, fx + dir * (12 + hashI(b.seed, f) * 20), fy + 14 + hashI(b.seed, f, 3) * 18, 5, 4);
+        forks.push(fk);
+        // Each big fork splits once more.
+        const m = fk[fk.length >> 1];
+        if (f < 2) forks.push(zig(b.seed + 31 * f, 0, m[0], m[1], m[0] - dir * (5 + hashI(b.seed, f, 5) * 9), m[1] + 8 + hashI(b.seed, f, 6) * 9, 4, 3));
       }
-      const fat = st < 2;
-      ctx.fillStyle = R[3];
-      poly(ctx, pts, fat ? b.w + 2 : b.w);
-      ctx.fillStyle = R[2];
-      for (const f of forks) poly(ctx, f, 1);
-      ctx.fillStyle = R[1];
-      poly(ctx, pts, fat ? 3 : 1);
-      ctx.fillStyle = '#ffffff';
-      poly(ctx, pts, 1);
+      if (st < 2) {
+        // Stepped leader: a faint channel feels its way down.
+        ctx.fillStyle = R[3];
+        for (const f of forks.slice(0, st ? 5 : 2)) poly(ctx, f, 1, 0.55);
+        ctx.fillStyle = R[1];
+        poly(ctx, pts, 1, st === 0 ? 0.5 : 0.92);
+        return;
+      }
       if (st < 5) {
+        // Return stroke: the whole channel lights at once, fat and white-hot.
+        const fat = st === 2;
+        if (!b.hit) {
+          b.hit = 1;
+          this.flashScreen(CT.PAL.hex(R[1]).join(','), 100, 0.22);
+          this.scatter('spark', 5, b.x, b.y - 2, b.y, R, { speed: 1.2 });
+        }
+        ctx.fillStyle = R[3];
+        poly(ctx, pts, b.w + (fat ? 4 : 2));
+        for (const f of forks) poly(ctx, f, fat ? 3 : 1);
+        ctx.fillStyle = R[1];
+        poly(ctx, pts, b.w + (fat ? 2 : 0));
+        if (fat) for (const f of forks) poly(ctx, f, 1);
+        ctx.fillStyle = '#ffffff';
+        poly(ctx, pts, fat ? b.w : 1);
         // Strike point: a hot cross and a ground ring.
-        star(ctx, b.x, b.y, st < 2 ? 4 : 2, '#ffffff', R[1]);
-        ctx.fillStyle = R[2];
-        PXD.ellipseRing(ctx, b.x, b.y + 1, 4 + st * 3, 2 + Math.round(st * 1.5));
+        star(ctx, b.x, b.y, fat ? 6 : 3, '#ffffff', R[1]);
+        const rr = 5 + (st - 2) * 5;
+        if (CT.FEEL) CT.FEEL.bandRing(ctx, b.x, b.y + 1, rr, Math.max(2, rr >> 1), fat ? 3 : 2, '#ffffff', R[1], R[3], st);
+        return;
       }
+      // Afterglow: the channel breaks into pieces and strobes out.
+      if (st % 2) return;
+      const k = (st - 5) / Math.max(1, total - 5);
+      ctx.fillStyle = R[Math.min(5, 2 + Math.floor(k * 3))];
+      for (let i = 1; i < pts.length; i++) if (hashI(b.seed, i, st) > 0.2 + k * 0.55) PXD.line(ctx, pts[i - 1][0], pts[i - 1][1], pts[i][0], pts[i][1], 1);
     }
 
     // Spectacle staging for an effect sheet (CT.FX_STAGE[key], see public/js/sheets/fx_*.js):
@@ -1549,7 +1581,7 @@
         const n = first ? st.bolt : Math.max(0, st.bolt - 1);
         setTimeout(() => { const [sx, sy] = pos(); for (let i = 0; i < n; i++) this.skyBolt(sx + (i ? (Math.random() - 0.5) * 16 : 0), sy - (st.boltY || 0), { delay: i * 70, ramp: R, ms: st.boltMs || 300 }); }, at(st.boltAt != null ? st.boltAt : imp) - (st.lead || 0));
       }
-      for (const s2 of st.also || []) this.stageFx(key, Object.assign({ elem: st.elem, y: st.y }, s2), fx, x, y, h, opts);
+      for (const s2 of st.also || []) this.stageFx(key, Object.assign({ elem: st.elem, y: st.y, _sub: true }, s2), fx, x, y, h, opts);
       // Follow-up hand-drawn sheets on the same spot (a geyser after the splash, a shatter after the freeze).
       for (const sp of st.spawn || []) if (first || sp.all) setTimeout(() => this.playFx(sp.fx, x, y, h, { flip: opts.flip, noShake: !first, unit: opts.unit }), at(sp.at || 0));
       setTimeout(() => {
@@ -1561,6 +1593,14 @@
         for (const [k, n0] of Object.entries(st.bits || {})) {
           const n = first ? n0 : Math.ceil(n0 * 0.5);
           this.scatter(k, n, sx, k === 'mote' ? cy - 4 : cy, gy, k === 'debris' ? RAMPS.slash : R, { spread: st.spread, speed: st.speed });
+        }
+        // Spell-sized effects (anything that dims the field, rolls a wave or opens a full-screen
+        // moment) also leave their element on the tile: residue, a tint on whoever stands there,
+        // heat shimmer, a pool of dark... (feel.js elemBeat). `beat: false` opts out, `beat: 'fire'` forces one.
+        const beat = st.beat === false || st._sub ? null : st.beat || ((st.dim || st.wave || st.big) && st.elem);
+        if (beat && this.elemBeat) {
+          this.elemBeat(beat, x, y, h, first, opts.unit);
+          if (first && (st.dim || st.big) && CT.audio) CT.audio.sfx('sfx_impact');
         }
       }, at(imp));
     }
@@ -1583,7 +1623,7 @@
       return (opts.delay || 0) + e.until;
     }
     drawSheetFx(e, now) {
-      const t = now - e.t0;
+      const t = e._freeze && now < e._freeze.until ? e._freeze.t : now - e.t0; // hit-stop holds the frame
       if (t < 0) return;
       const fr = CT.fxFrame(e.fx, e.fx.def.loop || e.travel || e.until > e.fx.total ? t % e.fx.total : t);
       if (!fr) return;
@@ -1689,6 +1729,7 @@
     }
     bigCentre(b) {
       const a = b.at;
+      if (a && a.caster) { const [x, y] = this.unitScreenPos(a.caster); return [Math.round(x), Math.round(y) - 18]; } // started by the battle: on the caster
       if (a && a.unit) { const [x, y] = this.unitScreenPos(a.unit); return [Math.round(x), Math.round(y) - 16]; }
       if (a && a.key) {
         let n = 0, sx = 0, sy = 0;
@@ -1710,6 +1751,10 @@
       const [cx, cy] = this.bigCentre(b);
       const once = (id, fn) => { if (!b.fired[id]) { b.fired[id] = 1; fn(); } };
       const G = RAMPS.lightning, V = RAMPS.shadow;
+      // The signature moments are staged in js/feel.js (CT.FEEL.BIG); what is left below are the
+      // lighter field-wide accents.
+      const X = CT.FEEL && CT.FEEL.BIG && CT.FEEL.BIG[b.kind];
+      if (X) return X.call(this, b, ctx, t, k, st, cx, cy, once);
       switch (b.kind) {
         case 'luminaire': {
           const g = 0.33;
@@ -2019,13 +2064,12 @@
         case 'laser': {
           // Shockwave rings rolling out over the field (colours per element), plus a swirl for gale.
           const RR = b.kind === 'inferno' ? RAMPS.fire : b.kind === 'psy' ? RAMPS.charm : b.kind === 'prism' || b.kind === 'laser' ? RAMPS.laser : V;
-          for (let j = 0; j < 3; j++) {
-            const rr = k * 1.4 - j * 0.22;
+          for (let j = 0; j < 2; j++) {
+            const rr = k * 1.3 - j * 0.3;
             if (rr <= 0 || rr > 1) continue;
-            const rx = Math.round(12 + rr * 200), ry = Math.round(rx * 0.5);
-            ctx.fillStyle = RR[Math.min(5, Math.floor(rr * 5))];
-            PXD.ellipseRing(ctx, cx, cy + 12, rx, ry);
-            if (rr < 0.5) PXD.ellipseRing(ctx, cx, cy + 12, rx - 1, ry);
+            const rx = Math.round(12 + (1 - (1 - rr) * (1 - rr)) * 150), ry = Math.round(rx * 0.5);
+            if (CT.FEEL) CT.FEEL.bandRing(ctx, cx, cy + 12, rx, ry, Math.max(1, Math.round(5 * (1 - rr))), rr < 0.3 ? '#ffffff' : RR[Math.min(5, Math.floor(rr * 3))], RR[Math.min(5, 1 + Math.floor(rr * 4))], RR[Math.min(5, 3 + Math.floor(rr * 2))], st);
+            else { ctx.fillStyle = RR[Math.min(5, Math.floor(rr * 5))]; PXD.ellipseRing(ctx, cx, cy + 12, rx, ry); }
           }
           if (b.kind === 'gale')
             for (let arm = 0; arm < 4; arm++)
@@ -2069,14 +2113,22 @@
       this.rings = this.rings.filter((r) => now - r.t0 < r.ms);
       for (const r of this.rings) {
         const k = (now - r.t0) / r.ms;
-        const rad = Math.max(1, Math.round(r.r * (0.3 + k * 0.7)));
+        if (k < 0) continue;
+        // Fast out, slow to settle; the band starts thick and thins as it spends itself.
+        const e = 1 - (1 - k) * (1 - k);
+        const rad = Math.max(1, Math.round(r.r * (0.22 + e * 0.78)));
         const sq = r.flat ? 0.5 : 0.75;
-        ctx.fillStyle = rampAt(r.ramp, k);
-        PXD.ellipseRing(ctx, r.x, r.y, rad, Math.max(1, Math.round(rad * sq)));
-        if (r.two && k < 0.7) {
-          if (k < 0.35) PXD.ellipseRing(ctx, r.x, r.y, rad + 1, Math.max(1, Math.round((rad + 1) * sq)));
-          ctx.fillStyle = rampAt(r.ramp, Math.min(0.99, k + 0.35));
-          const r2 = Math.max(1, Math.round(rad * 0.72));
+        const ry = Math.max(1, Math.round(rad * sq));
+        const th = Math.max(1, Math.round((r.th || (r.flat ? 4 : 3)) * (1 - k * 0.9)));
+        if (CT.FEEL && th > 1) CT.FEEL.bandRing(ctx, r.x, r.y, rad, ry, th, k < 0.3 ? '#ffffff' : rampAt(r.ramp, k * 0.4), rampAt(r.ramp, k * 0.9), rampAt(r.ramp, Math.min(0.99, k + 0.35)), Math.floor(now / STEP));
+        else {
+          ctx.fillStyle = rampAt(r.ramp, k);
+          PXD.ellipseRing(ctx, r.x, r.y, rad, ry);
+        }
+        if (r.two && k < 0.6) {
+          // A thin echo ring trailing inside the band.
+          ctx.fillStyle = rampAt(r.ramp, Math.min(0.99, k + 0.4));
+          const r2 = Math.max(1, Math.round(rad * 0.6));
           PXD.ellipseRing(ctx, r.x, r.y, r2, Math.max(1, Math.round(r2 * sq)));
         }
         if (k < 0.25 && !r.flat) {

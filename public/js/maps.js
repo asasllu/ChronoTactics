@@ -214,6 +214,7 @@
       SHRINE: R(6, 1, 9, 2),
       BRIDGE: [[7, 5], [8, 5], [9, 5]],
       EXIT_SOUTH: [[5, 15], [6, 15], [7, 15]],
+      APPROACH: R(0, 11, 15, 11), // field: stepping onto the climb starts the reunion
     }, {
       cairn: [5, 12], party_start: [7, 14], iselle: [8, 5], seed_a: [10, 7], seed_b: [11, 8],
       kilwala1: [3, 8], kilwala2: [13, 10], kilwala3: [5, 5], shrine: [7, 1],
@@ -368,6 +369,7 @@
       ...D('rock', [[0, 7], [15, 8], [4, 15], [11, 15]]),
     ], {
       SEED: [[8, 2]],
+      HALL_MID: R(0, 9, 15, 9), // field: crossing the middle of the hall starts the confrontation
     }, {
       crono: [6, 12], frog: [8, 12], ayla: [10, 12], magus: [8, 13], iselle: [7, 2], guard: [9, 2], case: [8, 1],
       sentinel1: [6, 7], sentinel2: [10, 7], nu1: [6, 4], nu2: [10, 4], nu_spawn: [8, 3], magus_stop: [8, 11],
@@ -520,6 +522,35 @@
       ...PED, ...Q, RING_OUTER: ring,
     }, {
       curator: [8, 7], case: [8, 5], party: [7, 12], iselle_edge: [2, 13], sprout_e: [12, 8], sprout_w: [3, 7],
+    });
+  }
+
+  // ==============================================================================
+  // CHAPTER 4 — The Hollow: the East Wing (11×15). A walkable gallery between the
+  // atrium and the archive: one exhibit per hero, a bell that does not ring, a
+  // cairn with no flowers on it. Enter at the south, leave by the north arch.
+  // ==============================================================================
+  {
+    const g = grid(11, 15, 'k', 0);
+    g.rect(0, 0, 10, 0, 'k', 2).rect(0, 0, 0, 14, 'k', 2); // back walls
+    g.rect(10, 1, 10, 14, 'k', 1).rect(1, 14, 10, 14, 'k', 1); // low front walls
+    g.set(5, 0, 'k', 1); // the north arch
+    g.rect(5, 1, 5, 13, 'O'); // runner
+    for (const y of [2, 5, 8, 11]) g.rect(2, y, 8, y, 'O'); // an inlaid bar in front of each pair of exhibits
+    g.tiles([[4, 1], [6, 1], [3, 1], [7, 2], [2, 13]], 'K'); // Lavos veins, thicker toward the Core
+    def('hollow_gallery', 'The Hollow — East Wing', 'museum', 'mus_hollow', g, [
+      ...D('arch', [[5, 0, 0], [2, 0, 1], [8, 0, 1], [0, 3, 1], [0, 7, 1], [0, 11, 1]]),
+      ...D('pillar', [[10, 14, 2], [10, 1, 2], [1, 14, 2]]),
+      ...D('vitrine', [[1, 11, 0], [9, 11, 5], [1, 8, 1], [1, 5, 2], [9, 5, 3], [1, 2, 4]]),
+      ...D('cairn', [[9, 8]]),
+      ...D('pedestal_placard', [[9, 2, 4]]),
+    ], {
+      EXIT_NORTH: [[5, 0]],
+      MID: R(0, 7, 10, 7), // walk-on banter; spans the wall tops too, so nobody tiptoes round it
+    }, {
+      entry: [5, 13], exit: [5, 0],
+      ex_fair: [1, 11], ex_bell: [9, 11], ex_sword: [1, 8], ex_cairn: [9, 8],
+      ex_ioka: [1, 5], ex_zeal: [9, 5], ex_epoch: [1, 2], ex_empty: [9, 2],
     });
   }
 })();

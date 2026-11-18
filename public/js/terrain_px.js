@@ -602,21 +602,43 @@
   // ======================================================================================
   // a — Ash rock: black basalt plates, ember cracks; A — scree.
   // ======================================================================================
+  // Lattice px (0..) from this pixel to the nearest edge shared with a lava tile, or 99.
+  function lavaEdge(p) {
+    if (p._lv !== p.t) {
+      p._lv = p.t;
+      p._lvn = [[-1, 0], [1, 0], [0, -1], [0, 1]].map(([dx, dy]) => {
+        const n = p.nb(dx, dy);
+        return !!n && !!T[n.t].lava && n.h <= p.t.h;
+      });
+    }
+    const n = p._lvn;
+    return Math.min(n[0] ? p.li : 99, n[1] ? 15 - p.li : 99, n[2] ? p.lj : 99, n[3] ? 15 - p.lj : 99);
+  }
+  // Rock beside the melt: a glowing lip, then scorched red stone.
+  function scorch(p, c) {
+    const d = lavaEdge(p);
+    if (d > 5) return c;
+    if (d === 0) return GD[1];
+    if (d === 1) return ((p.GX + p.GY) & 1) ? GD[0] : RD[3];
+    if (d === 2) return RD[2];
+    return ((p.GX + p.GY + d) & 1) ? RD[1] : c;
+  }
   T.a.top = (p) => {
     px(p);
     const w = wl(p, 8, 461, 0.85);
     const e = w.f2 - w.f1;
     if (e < 0.1) {
       const hot = vnoise(p.wx * 0.8, p.wy * 0.8, 462);
-      return out(p, hot > 0.66 ? (hot > 0.76 ? GD[1] : hot > 0.7 ? RD[2] : RD[1]) : IN[0]);
+      return out(p, scorch(p, hot > 0.7 ? (hot > 0.78 ? GD[1] : hot > 0.74 ? RD[3] : RD[1]) : IN[0]));
     }
     const lit = facetLit(p, w);
-    let c = w.id > 0.5 ? IN[2] : SL[0];
-    if (lit > 0.2) c = w.id > 0.5 ? SL[0] : SL[1];
-    else if (lit < -0.25) c = IN[1];
+    let c = w.id > 0.5 ? SL[0] : SL[1];
+    if (lit > 0.2) c = w.id > 0.5 ? SL[1] : SL[2];
+    else if (lit < -0.25) c = IN[2];
+    if (e < 0.2 && lit < 0) c = IN[1];
     const ash = vnoise(p.wx * 1.1, p.wy * 1.1, 463);
-    if (ash > 0.66) c = lit > 0 ? ST[2] : ST[1];
-    return out(p, c);
+    if (ash > 0.68) c = lit > 0 ? ST[2] : ST[1];
+    return out(p, scorch(p, c));
   };
   T.a.side = (sp) => {
     // Columnar basalt: 4 px columns, lit left edge.
@@ -639,16 +661,26 @@
     const a = mod(i, 5) - o, b = mod(j, 5) - o;
     return a >= 0 && a < 3 && b >= 0 && b < 3 && !(a === 2 && b === 2) ? ci * 1000 + cj : -1;
   };
+  // Rim rock: big lit facets of warm stone, rust streaks, drifts of pale ash and a few
+  // loose stones. (aPat places the loose stones.)
   T.A.top = (p) => {
     px(p);
-    const n = vnoise(p.wx * 1.3, p.wy * 1.3, 582);
-    let c = n > 0.5 ? ST[2] : ST[1];
-    const [id, e] = bevel(p, aPat);
-    if (id >= 0) {
-      const dark = hash(id, 1, 584) > 0.7;
-      c = e > 0 ? (dark ? SL[2] : ST[4]) : e < 0 ? ST[1] : dark ? SL[1] : ST[3];
-    } else if (vnoise(p.wx * 0.8, p.wy * 0.8, 583) > 0.7) c = WD[2];
-    return out(p, c);
+    const w = wl(p, 9, 586, 0.9);
+    const e = w.f2 - w.f1;
+    if (e < 0.085) return out(p, scorch(p, ST[0]));
+    const lit = facetLit(p, w);
+    let i = 2 + (w.id > 0.68 ? 1 : 0) - (w.id < 0.2 ? 1 : 0);
+    if (lit > 0.2) i += 1;
+    else if (lit < -0.24) i -= 1;
+    if (e < 0.17 && lit < 0) i -= 1;
+    let c = ST[Math.max(1, Math.min(4, i))];
+    const rust = vnoise(p.wx * 0.9 + 5, p.wy * 0.9, 583);
+    if (rust > 0.7) c = lit > 0.1 ? WD[3] : WD[2];
+    const ash = vnoise(p.wx * 1.6, p.wy * 1.6 + 7, 584);
+    if (ash > 0.72 && e > 0.2 && ((p.GX + p.GY) & 1)) c = SL[3];
+    const [id, b] = bevel(p, aPat);
+    if (id >= 0 && hash(id, 2, 587) > 0.72) c = b > 0 ? ST[4] : b < 0 ? ST[0] : SL[2];
+    return out(p, scorch(p, c));
   };
   T.A.side = (sp) => {
     if (sp.pv === 0) return fc(sp, ST, 3);
@@ -755,10 +787,17 @@
     const [id, e] = bevel(p, dark ? kPat8 : kPat16);
     if (id < 0) return dark ? BL[4] : SL[3];
     const chk = (Math.floor((p.tx + o) / n) + Math.floor((p.ty + o) / n)) & 1;
-    const R = dark ? [IN[2], BL[1], BL[1], BL[2]] : [SL[4], SL[4], SL[5], WH];
+    const tone = dark ? 0 : hash(id, 5, 561);
+    // most tiles white; a few a shade greyer or a breath bluer, as if relaid
+    const R = dark ? [IN[2], BL[1], BL[1], BL[2]] : tone > 0.9 ? [SL[3], SL[4], SL[4], SL[5]] : tone < 0.07 ? [SL[4], SL[4], BL[6], WH] : [SL[4], SL[4], SL[5], WH];
     let i = dark ? (chk ? 1 : 2) : 2;
     if (e > 0) i = 3;
     else if (e < 0) i = 0;
+    if (!dark && e === 0 && tone > 0.55 && tone < 0.63) {
+      // a hairline crack wandering across the glaze
+      const k = Math.abs(vnoise(p.tx * 0.21 + id, p.ty * 0.21, 562) - 0.5);
+      if (k < 0.016) return SL[3];
+    }
     // Glossy glint: a short diagonal streak near the lit corner (view space).
     const a = mod(p.tx + o, n) - o, b = mod(p.ty + o, n) - o;
     const [va, vb] = INV[p._r](a, b);

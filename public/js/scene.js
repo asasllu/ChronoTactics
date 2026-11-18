@@ -1,5 +1,20 @@
 // Scene runner: executes story scripts (docs/ENGINE_SPEC.md §7) — cutscenes,
 // field exploration, battles, chapter cards and credits.
+//
+// Field mode (`['field', cfg]`) — what a scene can put between its battles:
+//   leader, followers   who walks (followers default to the party; they update when someone joins)
+//   hint                objective tracker: a string, or [[cond, text], ..., fallback] (first true cond wins);
+//                       it is re-read after every step, talk and examine
+//   npcs   [{ id, talk, if }]            talk scripts can branch on flags; `t_<scene>_<id>` counts talks
+//   spots  [{ id, at, label, script, if, once }]   examinable things: they sparkle until looked at
+//                       (flag `seen_<scene>_<id>`); stand next to (or on) one and press Enter, or click it
+//   events [{ id, zone, script, if, once }]         walk-on banter / triggers (flag `ev_<scene>_<id>`)
+//   exits  [{ zone, goto, requires, locked, if }]   leave the map
+//   save                save point tile
+// A script run from the field may end it with ['endfield'] (the scene script then continues),
+// or leave the scene with ['goto', id]. Conditions are a flag name, '!flag', {flag, eq|gt|gte|lt},
+// or an array of those (all must hold).
+// Other additions: ['par', [cmds]] runs commands at once; ['hide'|'show', id]; ['anim', id, name, {hold}].
 (function () {
   const CT = (window.CT = window.CT || {});
   const UI = CT.UI;
@@ -7,6 +22,29 @@
   const key = (x, y) => `${x},${y}`;
   const FACE = { E: 0, S: 1, W: 2, N: 3 };
   const sfx = (id) => CT.audio && CT.audio.sfx(id);
+
+  // Examine sparkle: a four-point twinkle in hard palette pixels on a 33 ms step clock.
+  const TWINKLE = ['#fff4b0', '#fce068', '#ffffff'];
+  function drawTwinkle(ctx, x, y, now) {
+    const f = Math.floor(now / 100) % 14;
+    y -= Math.floor(now / 350) % 2;
+    const size = [0, 1, 2, 3, 4, 3, 2, 1, 0, -1, -1, -1, 0, 1][f];
+    if (size < 0) return;
+    const arm = (len, col, w) => {
+      ctx.fillStyle = col;
+      ctx.fillRect(x - len - w, y - w, len * 2 + 1 + w * 2, 1 + w * 2);
+      ctx.fillRect(x - w, y - len - w, 1 + w * 2, len * 2 + 1 + w * 2);
+    };
+    arm(size, '#0a0612', 1); // dark keyline so it reads on snow and on white ceramic
+    arm(size, TWINKLE[1], 0);
+    if (size >= 2) {
+      ctx.fillStyle = '#0a0612';
+      ctx.fillRect(x - 2, y - 2, 5, 5);
+      ctx.fillStyle = TWINKLE[0];
+      ctx.fillRect(x - 1, y - 1, 3, 3);
+      arm(Math.max(1, size - 2), TWINKLE[2], 0);
+    } else arm(0, TWINKLE[2], 0);
+  }
 
   function tween(ms, fn) {
     if (CT.FAST) ms = Math.min(ms, 8);
@@ -103,8 +141,9 @@
       const a = this.actor(id);
       if (a) this.actors.splice(this.actors.indexOf(a), 1);
     }
-    occupied(x, y, except) {
-      return this.actors.some((a) => a !== except && !a.hidden && !a.prop && a.x === x && a.y === y);
+    // `pass`: a Set of actor ids that do not block (the leader walks through followers; they swap).
+    occupied(x, y, except, pass) {
+      return this.actors.some((a) => a !== except && !a.hidden && !a.prop && a.x === x && a.y === y && !(pass && pass.has(a.id)));
     }
     walkable(t, a) {
       if (!t) return false;
@@ -115,7 +154,8 @@
       return m.walk || (m.swim && a && CT.HEROES[a.id] && (CT.HEROES[a.id].swim || CT.HEROES[a.id].float));
     }
     // BFS path for cutscenes & field walking.
-    path(a, to, avoidActors) {
+    // `avoidTile(x, y)`: tiles not to route through (the goal itself is always allowed).
+    path(a, to, avoidActors, pass, avoidTile) {
       const from = { x: a.x, y: a.y };
       const prev = new Map([[key(from.x, from.y), null]]);
       const q = [from];
@@ -132,7 +172,8 @@
           const nt = this.tile(nx, ny);
           if (!nt || !this.walkable(nt, a)) continue;
           if (Math.abs(nt.h - ct.h) > 3) continue;
-          if (avoidActors && this.occupied(nx, ny, a) && !goalOk(nx, ny)) continue;
+          if (avoidActors && this.occupied(nx, ny, a, pass) && !goalOk(nx, ny)) continue;
+          if (avoidTile && !goalOk(nx, ny) && avoidTile(nx, ny)) continue;
           prev.set(k, c);
           q.push({ x: nx, y: ny });
         }
@@ -210,6 +251,7 @@
       for (let i = start; i < cmds.length; i++) {
         this.cmdIndex = i;
         this.cmdTop = cmds === (CT.SCENES[this.sceneId] || {}).script;
+        if (this.cmdTop) this.topIndex = i; // saves made inside nested commands resume from here
         const r = await this.exec(cmds[i], resume && i === start ? resume : null, i);
         if (r) return r;
       }
@@ -264,8 +306,20 @@
           break;
         }
         case 'anim':
-          await this.anim(a[0], a[1]);
+          await this.anim(a[0], a[1], a[2]);
           break;
+        case 'hide':
+        case 'show': {
+          const u = this.actor(a[0]);
+          if (u) u.hidden = op === 'hide';
+          break;
+        }
+        case 'par':
+          // Run several commands at once (simultaneous walks, emotes, gestures); waits for all.
+          await Promise.all((a[0] || []).map((cmd) => this.exec(cmd, null, index)));
+          break;
+        case 'endfield':
+          return { endField: true };
         case 'emote': {
           const u = this.actor(a[0]);
           if (u) u.emote = { text: a[1], t0: performance.now(), ms: 1500 };
@@ -366,8 +420,12 @@
         case 'setflag':
           g.flags[a[0]] = a.length > 1 ? a[1] : true;
           break;
+        case 'losekey':
+          // A key item handed over or used up (the flowers laid, the rib eaten).
+          g.keyItems = g.keyItems.filter((k) => k !== a[0]);
+          break;
         case 'if': {
-          const ok = g.checkFlag(a[0]);
+          const ok = this.cond(a[0]);
           const branch = ok ? a[1] : a[2];
           if (branch) {
             const r = await this.run(branch);
@@ -397,6 +455,13 @@
           console.warn('unknown command', op);
       }
       return null;
+    }
+
+    // A condition is a flag name, '!flag', {flag, eq|gt|gte|lt}, or an array of those (all must hold).
+    cond(c) {
+      if (c == null) return true;
+      if (Array.isArray(c)) return c.every((x) => this.cond(x));
+      return this.game.checkFlag(c);
     }
 
     async reward(r) {
@@ -480,16 +545,17 @@
     }
 
     // Crono's (and everyone's) wordless acting.
-    async anim(id, name) {
+    async anim(id, name, opts) {
       const u = this.actor(id);
       if (!u) return;
+      const keep = !!(opts && opts.hold);
       // A hand-pixelled sheet that authors this gesture plays it as drawn.
       const spr = CT.getSprite(u.sprite || u.key || u.id);
       const authored = spr && spr.sheet && ((spr.def.se || {})[name] || (spr.def.ne || {})[name]);
       if (authored && name !== 'run_off' && name !== 'stand') {
         if (name === 'draw_sword') sfx('sfx_sword_swing');
         if (name === 'jump') sfx('sfx_step');
-        const hold = name === 'kneel' || name === 'fall';
+        const hold = keep || name === 'kneel' || name === 'fall';
         const ms = this.r.anim(u, name, { hold }) || 600;
         if (name === 'jump') await tween(Math.max(400, ms), (k) => (u.oz = Math.sin(k * Math.PI) * 10));
         else await wait(name === 'kneel' ? Math.min(ms, 400) : ms);
@@ -575,15 +641,20 @@
     // ---- Field exploration ----------------------------------------------------------
     async field(cfg, index, resume) {
       const g = this.game;
+      const sid = this.sceneId;
+      // A save made here resumes at the enclosing top-level command (re-entering this field).
+      const saveIndex = this.topIndex != null ? this.topIndex : index;
       const leader = this.actor(cfg.leader || 'crono') || this.actors[0];
       if (!leader) return null;
-      if (resume && resume.leader) {
-        /* positions already restored via snapshot */
-      }
-      const followers = g.party.filter((id) => id !== leader.id).map((id) => this.actor(id)).filter(Boolean);
+      // Followers are looked up on every step, so a hero who joins mid-field falls in line.
+      const followers = () => (cfg.followers || g.party).filter((id) => id !== leader.id).map((id) => this.actor(id)).filter((a) => a && !a.hidden);
       const trail = [];
+      // The leader never gets boxed in by the party: followers are walked through (they swap places).
+      const pass = () => new Set(followers().map((f) => f.id));
+      const live = (o) => this.cond(o.if);
       const npcs = (cfg.npcs || []).map((n) => ({ ...n }));
-      const events = (cfg.events || []).map((e) => ({ ...e, fired: false }));
+      const events = (cfg.events || []).map((e) => ({ ...e, flag: e.flag || (e.id ? `ev_${sid}_${e.id}` : null), fired: false }));
+      const spots = (cfg.spots || []).map((s) => ({ ...s, pos: this.resolve(s.at), flag: s.flag || `seen_${sid}_${s.id}` })).filter((s) => s.pos);
       const exits = cfg.exits || [];
       const savePos = cfg.save ? this.resolve(cfg.save) : null;
       const inZone = (z, x, y) => {
@@ -591,19 +662,65 @@
         const s = this.world.map.zones[z];
         return !!(s && s.has(key(x, y)));
       };
-      UI.hint(cfg.hint || '');
+      // Click-to-walk never cuts across an exit or a walk-on trigger on its way to somewhere else
+      // (unless there is no other way): leaving, or starting a scene, is something the player chooses.
+      const hot = (x, y) => exits.some((ex) => live(ex) && inZone(ex.zone, x, y))
+        || events.some((e) => live(e) && !(e.once !== false && (e.fired || (e.flag && g.flags[e.flag]))) && inZone(e.zone, x, y));
+      const route = (to) => this.path(leader, to, true, pass(), hot) || this.path(leader, to, true, pass());
+      // Objective tracker: always says what to do next, plus how many sparkles are left to look at.
+      const objective = () => {
+        const h = cfg.hint;
+        if (!Array.isArray(h)) return h || '';
+        for (const e of h) {
+          if (typeof e === 'string') return e;
+          if (this.cond(e[0])) return e[1];
+        }
+        return '';
+      };
+      const unseen = () => spots.filter((s) => live(s) && !g.flags[s.flag]);
+      const refreshHint = () => {
+        const text = objective();
+        const n = unseen().length;
+        UI.hint(text ? text + (n ? `<br><span style="opacity:.7">${n} thing${n > 1 ? 's' : ''} to look at here (optional)</span>` : '') : '');
+      };
+      refreshHint();
       this.r.focus(leader.x, leader.y, this.tile(leader.x, leader.y).h);
       let busy = false;
       let result = null;
       let finish;
       const done = new Promise((r) => (finish = r));
-      this.fieldState = { leader, npcs, exits, savePos };
+      this.fieldState = { leader, npcs, spots, exits, savePos };
+
+      // Examine sparkles: a small twinkle over every spot not yet looked at, drawn by the
+      // renderer's world overlay hook so it stays glued to the map while the camera moves.
+      const world = this.world;
+      world.onDraw = (R, ctx, now) => {
+        for (let i = 0; i < spots.length; i++) {
+          const s = spots[i];
+          if (g.flags[s.flag] || !live(s)) continue;
+          const t = this.tile(s.pos.x, s.pos.y);
+          if (!t) continue;
+          const [px, py] = R.project(s.pos.x, s.pos.y, R.tileHeight(t));
+          const tall = this.blocked(t);
+          drawTwinkle(ctx, Math.round(px), Math.round(py) - (s.lift != null ? s.lift : tall ? 30 : 9), now + i * 370);
+        }
+      };
 
       const npcAt = (x, y) => npcs.find((n) => {
         const a = this.actor(n.id);
-        return a && !a.hidden && a.x === x && a.y === y;
+        return a && !a.hidden && live(n) && a.x === x && a.y === y;
       });
+      const spotAt = (x, y) => spots.find((s) => live(s) && !(s.once && g.flags[s.flag]) && s.pos.x === x && s.pos.y === y);
       const adjacent = (a, b) => Math.abs(a.x - b.x) + Math.abs(a.y - b.y) === 1;
+      const nearNpc = () => npcs.find((n) => {
+        const a = this.actor(n.id);
+        return a && !a.hidden && live(n) && adjacent(a, leader);
+      });
+      const nearSpot = () => {
+        const [fx, fy] = CT.DIRS[leader.face];
+        return spotAt(leader.x + fx, leader.y + fy) || spotAt(leader.x, leader.y)
+          || spots.find((s) => live(s) && !(s.once && g.flags[s.flag]) && adjacent(s.pos, leader));
+      };
       const talk = async (n) => {
         const a = this.actor(n.id);
         if (a) {
@@ -612,44 +729,64 @@
         }
         UI.prompt('');
         const r = await this.run(n.talk || []);
+        const tk = `t_${sid}_${n.id}`;
+        g.flags[tk] = (g.flags[tk] || 0) + 1;
+        if (r) result = r;
+      };
+      const examine = async (s) => {
+        if (s.pos.x !== leader.x || s.pos.y !== leader.y) leader.face = CT.dirTo(leader.x, leader.y, s.pos.x, s.pos.y);
+        UI.prompt('');
+        if (!g.flags[s.flag]) sfx('sfx_confirm');
+        g.flags[s.flag] = true; // the sparkle goes out as soon as it is looked at
+        const r = await this.run(s.script || []);
         if (r) result = r;
       };
       const followStep = () => {
+        const fs = followers();
         trail.unshift({ x: leader.x, y: leader.y });
-        followers.forEach((f, i) => {
+        fs.forEach((f, i) => {
           const p = trail[i + 1];
           if (!p || (f.x === p.x && f.y === p.y)) return;
+          if (Math.abs(f.x - p.x) + Math.abs(f.y - p.y) > 1) {
+            // Someone who just joined (or was left behind by a cutscene) catches up along a real path.
+            const path = this.path(f, p, false);
+            if (path) this.walk(f, path, 110);
+            return;
+          }
           this.walk(f, [{ x: f.x, y: f.y }, p], 150);
         });
-        trail.length = followers.length + 2;
+        trail.length = fs.length + 2;
+      };
+      const showPrompt = () => {
+        if (savePos && leader.x === savePos.x && leader.y === savePos.y) return UI.prompt('Save point — press Enter / click to save');
+        const n = nearNpc();
+        if (n) return UI.prompt(`Talk: ${n.name || UI.speakerName(n.id) || n.id} — Enter / click`);
+        const s = nearSpot();
+        UI.prompt(s ? `${g.flags[s.flag] ? 'Look again' : 'Look'}: ${s.label || 'something'} — Enter / click` : '');
       };
       const checkTile = async () => {
         this.r.focus(leader.x, leader.y, this.tile(leader.x, leader.y).h);
         for (const e of events) {
-          if (e.fired && e.once !== false) continue;
-          if (inZone(e.zone, leader.x, leader.y)) {
-            e.fired = true;
-            const r = await this.run(e.script || []);
-            if (r) return r;
-          }
+          if (e.once !== false && (e.fired || (e.flag && g.flags[e.flag]))) continue;
+          if (!live(e) || !inZone(e.zone, leader.x, leader.y)) continue;
+          e.fired = true;
+          if (e.flag && e.once !== false) g.flags[e.flag] = true;
+          UI.prompt('');
+          const r = await this.run(e.script || []);
+          refreshHint();
+          if (r) return r;
         }
         for (const ex of exits) {
-          if (!inZone(ex.zone, leader.x, leader.y)) continue;
-          if (ex.requires && !g.checkFlag(ex.requires)) {
+          if (!live(ex) || !inZone(ex.zone, leader.x, leader.y)) continue;
+          if (ex.requires && !this.cond(ex.requires)) {
+            UI.prompt('');
             if (ex.locked) await this.run(ex.locked);
             else UI.banner('The way is closed.');
             return 'blocked';
           }
           return { goto: ex.goto, fromField: true };
         }
-        if (savePos && leader.x === savePos.x && leader.y === savePos.y) UI.prompt('Save point — press Enter / click to save');
-        else {
-          const near = npcs.find((n) => {
-            const a = this.actor(n.id);
-            return a && !a.hidden && adjacent(a, leader);
-          });
-          UI.prompt(near ? `Talk: ${UI.speakerName(near.id) || near.id} — Enter / click` : '');
-        }
+        showPrompt();
         return null;
       };
       const walkPath = async (path) => {
@@ -660,6 +797,7 @@
           const r = await checkTile();
           if (r === 'blocked') {
             await this.walk(leader, [{ x: leader.x, y: leader.y }, prevPos], 170);
+            showPrompt();
             return null;
           }
           if (r) return r;
@@ -675,7 +813,20 @@
         } finally {
           busy = false;
         }
-        if (result) finish();
+        if (result) return finish();
+        this.r.focus(leader.x, leader.y, this.tile(leader.x, leader.y).h); // back from whoever was speaking
+        refreshHint();
+        showPrompt();
+      };
+      // Walk next to a thing (an NPC or a spot that can't be stood on), by the shortest way.
+      const approach = async (pos) => {
+        let best = null;
+        for (const [dx, dy] of CT.DIRS) {
+          if (this.occupied(pos.x + dx, pos.y + dy, leader, pass())) continue; // someone is standing there
+          const p = route({ x: pos.x + dx, y: pos.y + dy });
+          if (p && (!best || p.length < best.length)) best = p;
+        }
+        return best ? walkPath(best) : null;
       };
 
       const onClick = (t) =>
@@ -685,24 +836,31 @@
           if (n) {
             const a = this.actor(n.id);
             if (!adjacent(a, leader)) {
-              let best = null;
-              for (const [dx, dy] of CT.DIRS) {
-                const p = this.path(leader, { x: a.x + dx, y: a.y + dy }, true);
-                if (p && (!best || p.length < best.length)) best = p;
-              }
-              if (best) {
-                const r = await walkPath(best);
-                if (r) return r;
-              }
+              const r = await approach(a);
+              if (r) return r;
             }
             if (adjacent(this.actor(n.id), leader)) await talk(n);
             return result;
           }
+          const s = spotAt(t.x, t.y);
+          if (s) {
+            const on = () => leader.x === s.pos.x && leader.y === s.pos.y;
+            if (!on() && !adjacent(s.pos, leader)) {
+              let r = await approach(s.pos);
+              if (!r && !on() && !adjacent(s.pos, leader)) {
+                const p = route(t);
+                if (p) r = await walkPath(p);
+              }
+              if (r) return r;
+            }
+            if (on() || adjacent(s.pos, leader)) await examine(s);
+            return result;
+          }
           if (savePos && t.x === savePos.x && t.y === savePos.y && leader.x === t.x && leader.y === t.y) {
-            await this.savePrompt(index);
+            await this.savePrompt(saveIndex);
             return null;
           }
-          const p = this.path(leader, t, true);
+          const p = route(t);
           if (p) return walkPath(p);
           return null;
         });
@@ -714,23 +872,27 @@
           const [dx, dy] = this.r.vecToWorld(vx, vy);
           const t = this.tile(leader.x + dx, leader.y + dy);
           leader.face = CT.dirTo(0, 0, dx, dy);
-          if (t && !this.occupied(t.x, t.y, leader) && this.walkable(t, leader) && Math.abs(t.h - this.tile(leader.x, leader.y).h) <= 3)
+          if (t && !this.occupied(t.x, t.y, leader, pass()) && this.walkable(t, leader) && Math.abs(t.h - this.tile(leader.x, leader.y).h) <= 3)
             act(() => walkPath([{ x: leader.x, y: leader.y }, { x: t.x, y: t.y }]));
+          else showPrompt();
           return true;
         }
         if (e.key === 'Enter' || e.key === ' ' || e.key === 'z') {
           act(async () => {
-            if (savePos && leader.x === savePos.x && leader.y === savePos.y) return this.savePrompt(index);
+            if (savePos && leader.x === savePos.x && leader.y === savePos.y) return this.savePrompt(saveIndex);
             const [fx, fy] = CT.DIRS[leader.face];
-            let n = npcAt(leader.x + fx, leader.y + fy);
-            if (!n) n = npcs.find((m) => { const a = this.actor(m.id); return a && !a.hidden && adjacent(a, leader); });
+            const n = npcAt(leader.x + fx, leader.y + fy) || (spotAt(leader.x + fx, leader.y + fy) ? null : nearNpc());
             if (n) await talk(n);
+            else {
+              const s = nearSpot();
+              if (s) await examine(s);
+            }
             return result;
           });
           return true;
         }
         if (e.key === 'Escape' || e.key === 'Tab' || e.key === 'm') {
-          act(() => this.pauseMenu(index, savePos && Math.abs(leader.x - savePos.x) + Math.abs(leader.y - savePos.y) <= 1));
+          act(() => this.pauseMenu(saveIndex, savePos && Math.abs(leader.x - savePos.x) + Math.abs(leader.y - savePos.y) <= 1));
           return true;
         }
         return false;
@@ -738,35 +900,76 @@
       CT.input.field = { click: onClick, key: onKey };
       await checkTile();
       if (CT.onFieldReady) CT.onFieldReady(this, cfg);
-      // Test mode: talk to every NPC, then take the first open exit.
+      // Test mode: talk to every NPC, look at every spot, then take the first open exit
+      // (or step into the walk-on trigger that moves the story on).
       if (CT.AUTOFIELD && !result)
         act(async () => {
+          const moves = (o) => /"(battle|goto|endfield)"/.test(JSON.stringify(o));
+          const warp = (x, y) => {
+            leader.x = x;
+            leader.y = y;
+            leader.rx = x;
+            leader.ry = y;
+            leader.rh = this.visH(this.tile(x, y));
+          };
+          const cellsOf = (z) => (Array.isArray(z) ? z : [...(this.world.map.zones[z] || [])].map((k) => k.split(',').map(Number)));
+          // The zone tile a real player would reach first (shortest walk from the leader).
+          const reach = (z) => {
+            let best = null;
+            for (const [x, y] of cellsOf(z)) {
+              const t = this.tile(x, y);
+              if (!t || !this.walkable(t, leader)) continue;
+              const p = this.path(leader, { x, y }, false);
+              if (p && (!best || p.length < best.n)) best = { x, y, n: p.length };
+            }
+            return best;
+          };
           for (const n of npcs) {
-            const flat = JSON.stringify(n.talk || []);
-            if (flat.includes('"battle"') || flat.includes('"goto"')) continue;
+            const a = this.actor(n.id);
+            if (!a || a.hidden || !live(n) || moves(n.talk || [])) continue;
             await talk(n);
             if (result) return result;
           }
-          const open = exits.filter((e) => !e.requires || g.checkFlag(e.requires));
+          for (const s of spots) {
+            if (!live(s) || moves(s.script || [])) continue;
+            await examine(s);
+            if (result) return result;
+          }
+          for (const e of events) {
+            if (moves(e.script || []) || !live(e) || e.fired || (e.flag && g.flags[e.flag])) continue;
+            const c = reach(e.zone);
+            if (!c) continue;
+            warp(c.x, c.y);
+            const r = await checkTile();
+            if (r && r !== 'blocked') return r;
+          }
+          const open = exits.filter((e) => live(e) && (!e.requires || this.cond(e.requires)));
           const pickEx = (CT.AUTOFIELD_PREFER && open.find((e) => e.goto === CT.AUTOFIELD_PREFER)) || open.find((e) => e.goto !== 'spekkio') || open[0];
-          if (!pickEx) return null;
-          const cells = Array.isArray(pickEx.zone) ? pickEx.zone : [...(this.world.map.zones[pickEx.zone] || [])].map((k) => k.split(',').map(Number));
-          if (!cells.length) return null;
-          const [x, y] = cells[0];
-          leader.x = x;
-          leader.y = y;
-          leader.rx = x;
-          leader.ry = y;
-          leader.rh = this.visH(this.tile(x, y));
+          const target = pickEx || events.find((e) => moves(e.script || []) && live(e));
+          if (!target) return null;
+          const c = reach(target.zone);
+          if (!c) {
+            console.warn('field: no reachable way on from', sid);
+            return null;
+          }
+          warp(c.x, c.y);
           const r = await checkTile();
           return r === 'blocked' ? null : r;
         });
       await done;
       CT.input.field = null;
+      world.onDraw = null;
       UI.hint('');
       UI.prompt('');
       this.fieldState = null;
-      return result;
+      // ['endfield'] closes the field and lets the scene script carry on.
+      return result && result.endField ? null : result;
+    }
+
+    // True when something standing on the tile blocks walking (trees, cases, cairns...).
+    blocked(t) {
+      const d = this.world.map.decorAt.get(key(t.x, t.y));
+      return !!(d && CT.DECOR[d.kind] && CT.DECOR[d.kind].blocks);
     }
 
     async pauseMenu(index, canSave) {

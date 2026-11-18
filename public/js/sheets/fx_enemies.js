@@ -6295,7 +6295,7 @@
   CT.techFx('attack_ozzie', { anim: 'attack', fx: 'fx_hit_bonk' });
   CT.techFx('attack_goon', { anim: 'attack', fx: 'fx_roll_hit' });
   CT.techFx('attack_azala', { anim: 'attack', fx: 'fx_hit_claw' });
-  CT.techFx('flea_prism', { anim: 'cast', fx: 'fx_prism_beam', stagger: 70 });
+  CT.techFx('flea_prism', { anim: 'cast', fx: 'fx_prism_beam', stagger: 70, beam: 'prism' }); // one beam through the whole line
   CT.techFx('azala_psy', { anim: 'cast', fx: 'fx_psy_wave', stagger: 30 });
   // ---- end new cast fx ----
   // ---- Spectacle staging (render.js stageFx): impact bits, rings, field dim, full-screen moments ----

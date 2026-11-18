@@ -1,0 +1,237 @@
+{
+ "mus_title": {
+  "gain": 0.61,
+  "v": {
+   "pbass": 0.912,
+   "slowstr": 0.361,
+   "strings": 0.458,
+   "timp": 0.617,
+   "harp": 0.815,
+   "drums": 1.161
+  }
+ },
+ "mus_fair_night": {
+  "gain": 0.759,
+  "v": {
+   "marimba": 0.684,
+   "pizz": 0.488,
+   "tuba": 0.813,
+   "accordion": 0.305,
+   "flute": 0.332,
+   "drums": 1.53
+  }
+ },
+ "mus_rift": {
+  "gain": 0.519,
+  "v": {
+   "piano": 2.985,
+   "pipe": 0.309,
+   "timp": 1.585,
+   "harp": 0.865,
+   "choir": 0.496,
+   "drums": 4
+  }
+ },
+ "mus_battle": {
+  "gain": 0.822,
+  "v": {
+   "slap": 0.653,
+   "choir": 0.41,
+   "choir2": 0.492,
+   "choir3": 0.572,
+   "marimba": 0.871,
+   "organ2": 0.851,
+   "drums": 0.363
+  }
+ },
+ "mus_battle_boss": {
+  "gain": 0.75,
+  "v": {
+   "organ": 0.447,
+   "odguitar": 0.609,
+   "odguitar2": 0.612,
+   "pbass": 0.513,
+   "horn": 0.699,
+   "drums": 0.396
+  }
+ },
+ "mus_victory": {
+  "gain": 0.692,
+  "v": {
+   "horn": 0.518,
+   "strings": 0.417,
+   "epiano": 0.967,
+   "bass": 1.303,
+   "drums": 0.606
+  }
+ },
+ "mus_end_of_time": {
+  "gain": 0.442,
+  "v": {
+   "harp": 0.748,
+   "piano": 1.174,
+   "slowstr": 1.429,
+   "slowstr2": 0.381,
+   "celesta": 0.9
+  }
+ },
+ "mus_guardia_600": {
+  "gain": 0.724,
+  "v": {
+   "timp": 0.569,
+   "strings": 0.384,
+   "strings2": 0.464,
+   "strings3": 0.902,
+   "flute": 0.526,
+   "drums": 0.72
+  }
+ },
+ "mus_frog_theme": {
+  "gain": 0.933,
+  "v": {
+   "brass": 0.494,
+   "strings": 0.374,
+   "horn": 1.176,
+   "brass2": 0.557,
+   "timp": 0.25,
+   "strings2": 0.394,
+   "drums": 0.515
+  }
+ },
+ "mus_denadoro": {
+  "gain": 1.778,
+  "v": {
+   "strings": 0.31,
+   "pizz": 0.367,
+   "bass": 0.519,
+   "pizz2": 0.446,
+   "strings2": 0.427,
+   "strings3": 0.797,
+   "strings4": 1.254,
+   "drums": 0.594
+  }
+ },
+ "mus_ioka": {
+  "gain": 0.902,
+  "v": {}
+ },
+ "mus_ayla_theme": {
+  "gain": 1.349,
+  "v": {
+   "strings": 0.285,
+   "sax": 0.599,
+   "slap": 0.441,
+   "lowbrass": 0.427,
+   "slap2": 0.367,
+   "drums": 0.25
+  }
+ },
+ "mus_tyrano": {
+  "gain": 1.047,
+  "v": {
+   "trumpet2": 0.442,
+   "odguitar": 0.469,
+   "odguitar2": 0.761,
+   "bass": 0.371,
+   "slowstr": 0.289,
+   "slowstr2": 0.413,
+   "slowstr3": 0.611,
+   "sawlead": 0.776,
+   "drums": 0.345
+  }
+ },
+ "mus_last_village": {
+  "gain": 1,
+  "v": {
+   "piano": 0.422,
+   "piano3": 0.399,
+   "choir": 0.36,
+   "panflute": 0.385,
+   "slowstr": 0.294,
+   "fretless": 0.61
+  }
+ },
+ "mus_zeal_wreck": {
+  "gain": 0.624,
+  "v": {
+   "steeldrum": 0.415,
+   "steeldrum2": 0.594,
+   "sitar": 0.476,
+   "bass": 1.096,
+   "drums": 1.011
+  }
+ },
+ "mus_magus_theme": {
+  "gain": 1.072,
+  "v": {
+   "choir": 0.261,
+   "choir2": 0.258,
+   "pbass": 0.575,
+   "strings": 0.305,
+   "brass": 0.291,
+   "timp": 0.288,
+   "oboe": 0.278,
+   "horn": 0.507,
+   "trumpet": 0.335,
+   "drums": 1.237
+  }
+ },
+ "mus_hollow": {
+  "gain": 0.531,
+  "v": {
+   "wind": 0.517,
+   "wind2": 0.25,
+   "wind3": 0.25,
+   "bell": 0.343,
+   "crystal": 0.684,
+   "pad": 0.389
+  }
+ },
+ "mus_curator": {
+  "gain": 0.603,
+  "v": {
+   "strings": 0.427,
+   "organ": 0.696,
+   "horn": 0.982,
+   "pbass": 0.944,
+   "timp": 0.513,
+   "drums": 0.733
+  }
+ },
+ "mus_curator_core": {
+  "gain": 0.944,
+  "v": {
+   "strings": 0.367,
+   "flute2": 0.369,
+   "trumpet": 0.27,
+   "sbass": 0.468,
+   "timp": 0.282,
+   "horn": 0.44,
+   "drums": 0.369
+  }
+ },
+ "mus_ending": {
+  "gain": 0.933,
+  "v": {
+   "musicbox2": 0.476,
+   "harp": 0.26,
+   "strings": 0.27,
+   "strings2": 0.558,
+   "flute": 0.407,
+   "horn": 0.474,
+   "piano": 0.257
+  }
+ },
+ "mus_credits": {
+  "gain": 0.891,
+  "v": {
+   "piano": 0.489,
+   "strings": 0.406,
+   "choir": 0.365,
+   "harp": 0.618,
+   "harp2": 0.857,
+   "bass": 0.955,
+   "drums": 4
+  }
+ }
+}

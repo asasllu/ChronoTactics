@@ -132,6 +132,33 @@ CT.RIG.define('key', {
   light.radius light.dx light.dy`, where `dx`/`dy` place the light source relative to the sprite) are in logical px. Decor without `native` is legacy: it is
   halved automatically and its offsets are halved.
 
+## Atmosphere and set dressing
+
+- **`public/js/atmos.js`** paints everything behind and over the map in palette-exact
+  pixels with hand-placed ordered dither (so `present` never re-dithers it): banded skies,
+  lit/shaded mountain ridges, tree lines, sun and moon, clouds, twinkling stars, aurora
+  (snow, zeal), the smoking volcano, Zeal's far islets with waterfalls, the Core's pulsing
+  wound, birds/dactyls, weather, and the **room walls** behind interior maps
+  (`wallTex(style, side, u, v)`: `museum`, `archive`, `castle`). Far layers slide a few
+  pixels with the camera. Per-theme look lives in `SK` at the top of the file.
+- **Layers.** The world (tiles, decor, units) is drawn on its own layer; tint/darkness
+  and light pools are masked to it, so the sky stays clean and lamps do not light the
+  air. Light pools are 5-step dithered sprites (`drawLights`), plus a small unmasked glow
+  at each source. Ground shadows are dither-edged sprites (`drawShadow`).
+- **`public/js/dress.js`** holds `CT.LOOKS[mapId]`: things to look at that the rules never
+  see. `walls` (room walls), `floor(p, t, mat, c)` (art baked into tile tops in world
+  lattice space: the atrium orrery, Zeal's sun sigil, stained-glass light, confetti),
+  `under` (flat decals drawn before a tile's decor), `front` (props at tile corners and
+  effects such as smoke, heat and spray, depth-sorted after the units behind them),
+  `spans` (ropes, railings, bunting, strings of lights between two points), `pit` and
+  `underside` (chasms and the broken underside of floating floors). Add dressing here,
+  never to a map's `decor` list: decor is gameplay (it blocks, and boulders stop on it).
+- **Glossy floors.** A terrain with `reflect` (ceramic, ice, marble) mirrors the far
+  walls (baked into the tile), the decor on and behind it, and units' feet.
+- In `floor()` use `p.px/p.py` (screen pixel in the tile) for dither parity; the world
+  lattice sum `p.tx + p.ty` is always even on screen. `p.vx/p.vy` are view-space tile
+  coordinates (distance from the two far walls).
+
 ## Rules for parallel work
 
 - Only edit the files you own. Never rewrite other files. If you need an engine change,

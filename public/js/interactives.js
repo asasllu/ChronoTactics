@@ -302,6 +302,11 @@
       r.flashScreen(k.color, 260);
       r.shake(4, 300);
       r.playFx(s.fx || k.fx, s.x, s.y, h, { noShake: true });
+      if (r.spotBurst && !CT.FAST) {
+        // The spot lets go: a pillar of its light, rings rolling out, sparks spiralling up.
+        r.spotBurst(s.x, s.y, h, k.color);
+        sfx('sfx_spot');
+      }
       UI.banner(`✦ ${u.name}: ${s.name}`, 1800, 'dual');
       if (b.game) (b.game.flags.ia_used = b.game.flags.ia_used || {})[s.id] = true;
       if (window.TEST_LOG) window.TEST_LOG.push({ interact: s.id, by: u.id });
@@ -425,6 +430,11 @@
       r.flashScreen('255,248,200', 500);
       r.shake(8, 500);
       sfx('sfx_level_up');
+      if (r.learnBurst && !CT.FAST && !already) {
+        // A reward should feel like one: gold rays turn behind the hero, stars climb, a fanfare.
+        r.learnBurst(u);
+        sfx('sfx_learn');
+      }
       u.flash = 1;
       CT.tween(CT.FAST ? 5 : 600, (k) => (u.flash = Math.floor(k * 8) % 2 ? 0 : 1 - k)).then(() => (u.flash = 0));
       if (already) {
@@ -651,15 +661,28 @@
         PXD.diamond(ctx, sx, sy, 13, false);
         ctx.fillStyle = 'rgba(255,255,255,0.8)';
         PXD.diamond(ctx, sx, sy, Math.round(4 + 9 * ((now / 1000 + s.x * 0.3) % 1)), false);
-        // A shimmering shaft of light so the spot reads from across the map.
-        for (let y = 0; y < 22; y++) {
-          const a = (1 - y / 22) * (0.35 + 0.25 * pulse);
-          ctx.fillStyle = `rgba(${k.color},${a.toFixed(2)})`;
-          ctx.fillRect(sx - 2, sy - y, 5, 1);
-          if ((y + Math.floor(now / 90)) % 7 === 0) {
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(sx + ((y * 5) % 9) - 4, sy - y - 2, 1, 1);
+        // So the spot reads from across the map: a dithered shaft of light that narrows as
+        // it climbs, with three sparks winding up around it.
+        const st = Math.floor(now / 66);
+        for (let y = 0; y < 26; y++) {
+          const wdt = y < 6 ? 3 : y < 14 ? 2 : 1;
+          for (let x = -wdt; x <= wdt; x++) {
+            if (((x + y + st) & 1) || (y > 14 && (y + st) % 3)) continue;
+            ctx.fillStyle = y < 4 && x === 0 ? '#ffffff' : (y + st) % 5 === 0 ? hi : `rgb(${k.color})`;
+            ctx.fillRect(sx + x, sy - y, 1, 1);
           }
+        }
+        for (let i = 0; i < 3; i++) {
+          const p = (now / 1400 + i / 3 + s.x * 0.13) % 1;
+          const a = p * 9 + i * 2.1;
+          const mx = Math.round(sx + Math.cos(a) * (7 - p * 4)), my = Math.round(sy - p * 28 + Math.sin(a) * 2);
+          if (p > 0.25 && p < 0.7) {
+            ctx.fillStyle = hi;
+            ctx.fillRect(mx - 1, my, 3, 1);
+            ctx.fillRect(mx, my - 1, 1, 3);
+          }
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(mx, my, 1, 1);
         }
         if (lights) lights.push({ x: sx, y: sy - 6, color: k.color, radius: 30 + 6 * pulse, flicker: false });
         return;
@@ -681,6 +704,16 @@
         ctx.fillStyle = IC[c] || '#ffffff';
         ctx.fillRect(x0 + (s.spent ? w - 1 - i : i), y0 + j, 1, 1);
       }));
+      if (!s.spent) {
+        // Every couple of seconds a glint runs off the icon's corner.
+        const g = (now + (s.x * 311 + s.y * 173)) % 2300;
+        if (g < 240) {
+          const r = g < 80 ? 1 : g < 160 ? 3 : 2;
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(x0 + w - 1 - r, y0 + 1, r * 2 + 1, 1);
+          ctx.fillRect(x0 + w - 1, y0 + 1 - r, 1, r * 2 + 1);
+        }
+      }
       if (!s.spent && s.who) {
         // Character-specific spots get a tiny star.
         ctx.fillStyle = Math.floor(now / 200) % 2 ? '#fce068' : '#ffffff';
