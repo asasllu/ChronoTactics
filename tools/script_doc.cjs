@@ -46,7 +46,8 @@ function commentsFor(sceneId) {
     const t = l.trim();
     if (t.startsWith('//')) pending.push(t.replace(/^\/\/\s?/, ''));
     else if (pending.length && t) {
-      out.push({ before: t.slice(0, 40), text: pending.join(' ') });
+      // Only comments that sit in front of a script command are stage directions.
+      if (/^(\['|say\(|radio\(|V\(|N\(|P\()/.test(t)) out.push({ before: t.slice(0, 40), text: pending.join(' ') });
       pending = [];
     }
   }
@@ -90,12 +91,16 @@ function renderScene(id) {
   const sc = CT.SCENES[id];
   const out = [];
   const notes = commentsFor(id);
+  // Comments are matched to commands strictly in source order.
   const note = (c, ind) => {
+    if (!notes.length) return;
     const k = cmdText(c);
-    const i = notes.findIndex((n) => k.startsWith(n.before.slice(0, 24)) || n.before.startsWith(k.slice(0, 24)));
-    if (i >= 0) { out.push(`${ind}*(${notes[i].text})*`); notes.splice(0, i + 1); }
+    const n = Math.min(24, notes[0].before.length, k.length);
+    if (k.slice(0, n) === notes[0].before.slice(0, n)) out.push(`${ind}*(${notes.shift().text})*`);
   };
   // How a command looks at the start of its source line (enough to match a comment to it).
+  const fmt = (x) => (typeof x === 'string' ? `'${x}'` : Array.isArray(x) ? `[${x.map(fmt).join(', ')}]`
+    : x && typeof x === 'object' ? `{ ${Object.entries(x).map(([k, v]) => `${k}: ${fmt(v)}`).join(', ')} }` : String(x));
   const cmdText = (c) => {
     if (c[0] === 'say') {
       if (c[1] === 'curator') return 'V(`' + c[3];
@@ -103,7 +108,7 @@ function renderScene(id) {
       return `${c[4] && c[4].radio ? 'radio' : 'say'}('${c[1]}', '${c[2]}', \`${c[3]}`;
     }
     if (c[0] === 'field') return `['field', {`;
-    return '[' + c.map((x) => (typeof x === 'string' ? `'${x}'` : Array.isArray(x) ? '[' + x.map((y) => (typeof y === 'string' ? `'${y}'` : JSON.stringify(y))).join(', ') + ']' : x && typeof x === 'object' ? '{ ' + Object.entries(x).map(([k, v]) => `${k}: ${typeof v === 'string' ? `'${v}'` : JSON.stringify(v)}`).join(', ') : String(x))).join(', ');
+    return fmt(c);
   };
   const walk = (cmds, ind) => {
     for (const c of cmds || []) {
@@ -158,6 +163,7 @@ function renderScene(id) {
   out.push(`MAP: \`${sc.map}\`${sc.theme ? ` (${sc.theme})` : ''}. MUSIC: \`${sc.music || CT.MAPS_MUSIC || 'none'}\`.`);
   out.push('');
   walk(sc.script, '');
+  if (notes.length) console.warn(`scene ${id}: ${notes.length} stage direction(s) not placed, first: "${notes[0].text.slice(0, 50)}"`);
   return out.join('\n').replace(/\n{3,}/g, '\n\n');
 }
 

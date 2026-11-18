@@ -957,7 +957,7 @@
       ['face', 'ayla', 'iselle'],
       say('ayla', 'angry', `Ghost-man! You put bad egg in Ayla's ground!`),
       say('iselle', 'sad', `Your ground? You watched the sky-fire dig this hole, chief. You gave it its name. It's been *its* ground since that night.`),
-      say('frog', 'angry', `Cyrus, enough. Thou hast no place here.`),
+      say('frog', 'angry', `Cyrus, enough. This is not thy place.`),
       say('iselle', 'neutral', `Neither do you, Glenn. And yet.`),
       // The archive brings out an old enemy of Ayla's.
       ['sfx', 'sfx_hollow_gate'],
