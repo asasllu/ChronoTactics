@@ -408,7 +408,8 @@
       DOOR_600: [[1, 3]], DOOR_65M: [[1, 5]], DOOR_12K: [[1, 7]], DOOR_GREY: [[10, 1]], DOOR_SPEKKIO: [[6, 1]],
     }, {
       arrive: [6, 10], lamppost: [7, 6], gaspar: [6, 7], nu: [9, 6], save: [4, 7],
-      door_600: [1, 3], door_65m: [1, 5], door_12k: [1, 7], door_grey: [10, 1], spekkio: [6, 1],
+      door_600: [1, 3], door_65m: [1, 5], door_12k: [1, 7], door_grey: [10, 1],
+      spekkio: [5, 1], // beside his door, not on its threshold (the party has to be able to walk in)
     });
   }
 

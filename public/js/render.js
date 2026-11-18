@@ -1699,7 +1699,8 @@
       }
     }
 
-    // Destruction Rain: needles falling onto a set of tiles.
+    // Destruction Rain: needles falling onto a set of tiles. (js/feel.js replaces this with
+    // authored needles that stick, burst and leave a scar; this is the fallback.)
     rain(tiles) {
       const now = performance.now();
       for (const t of tiles) {

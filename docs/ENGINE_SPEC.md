@@ -116,6 +116,7 @@ note this Magus has very long **dark** hair with a blue sheen and pale skin).
 CT.audio.unlock()                 // call on first user gesture (engine does)
 CT.audio.playMusic(id, {fade:ms}) // loops unless the track is one-shot; same id = no-op
 CT.audio.stopMusic(fadeMs)
+CT.audio.afterFanfare()           // victory results dismissed: back to the interrupted field theme
 CT.audio.sfx(id)
 CT.audio.setVolume({ music: 0..1, sfx: 0..1 })
 CT.audio.current                  // current track id
@@ -124,6 +125,15 @@ CT.audio.current                  // current track id
 All `mus_*` and `sfx_*` ids from the bible §5 and §4.7 (+ `sfx_core_scream`,
 `sfx_step`, `sfx_menu_move`, `sfx_miss`, `sfx_buy`, `sfx_door`). Unknown ids
 are ignored silently.
+
+Track switches never cut: the old track fades out (350 ms by default, `fade` to
+set it) while the new one starts. Tracks have a `kind`: a `battle` track or the
+victory `jingle` interrupts a `field` track and remembers where it was; asking
+for that field track again (or `afterFanfare()`, or the jingle running out)
+resumes it from that bar instead of the top. `stopMusic` means silence and
+forgets it (except right after a lost battle, so a retry keeps the memory).
+Music data is generated: `tools/music/build.sh` (MIDIs in `tools/music/midi/`
+-> `public/js/music_ct.js`); `tools/music/measure.cjs` measures the result.
 
 ## 5. Terrain & decor
 
@@ -259,7 +269,9 @@ E = +x, S = +y). An actor's sprite defaults to its id.
 | `['choice', ['A','B'], [[...cmdsA], [...cmdsB]], flag?]` | player choice; runs the matching branch; stores the index in `flag` if given. A single-option choice is allowed. |
 | `['move', id, at, opts?]` | walk (pathfinding) to a tile; `opts.speed` ms/tile, `opts.run`, `opts.nowait` |
 | `['face', id, dir \| otherId]` | turn |
-| `['anim', id, name]` | `nod shake_head shrug draw_sword point bow spin jump kneel fall run_off dissolve` |
+| `['anim', id, name, {hold}?]` | `nod shake_head shrug draw_sword point bow spin jump kneel stand fall run_off dissolve`, or any gesture the sprite's sheet authors (`salute`, `cheer`, `victory`, `hurt`...); `hold` keeps the last frame |
+| `['par', [...cmds]]` | run several commands at once (simultaneous walks, emotes, gestures) and wait for all |
+| `['hide', id]` / `['show', id]` | hide or show an actor without removing it |
 | `['emote', id, text]` | speech-bubble emote, e.g. `'!'`, `'...'`, `'?'`, `'♪'` |
 | `['spawn', {id, sprite?, at, face?, prop?}]` / `['despawn', id]` | add/remove actors |
 | `['music', trackId]` / `['music', null]` | change or stop music |
@@ -281,10 +293,12 @@ E = +x, S = +y). An actor's sprite defaults to its id.
 | `['popup', text]` | tutorial/info popup the player dismisses |
 | `['reward', {xp, gold, items: {tonic: 2}, key: 'denadoro_seed'}]` | rewards with a banner |
 | `['setflag', name, value?]` | story flags (value default true) |
-| `['if', cond, [...then], [...else]?]` | `cond`: `'flag'`, `'!flag'`, `{flag, gt\|gte\|lt\|eq: n}` |
+| `['losekey', keyItemId]` | a key item is handed over or used up |
+| `['if', cond, [...then], [...else]?]` | `cond`: `'flag'`, `'!flag'`, `{flag, gt\|gte\|lt\|eq: n}`, or an array of those (all must hold) |
 | `['shop', shopId]` | `guardia ioka last_village end_of_time` |
 | `['save_prompt']` | offer to save (save points) |
-| `['field', {...}]` | free exploration until an exit is taken (below) |
+| `['field', {...}]` | free exploration until an exit is taken or a script ends it (below) |
+| `['endfield']` | inside a field script (NPC talk, spot, walk-on event): close the field and continue the scene script |
 | `['goto', sceneId]` | continue with another scene |
 | `['credits']` | roll credits (`CT.CREDITS`) then return to title |
 | `['title']` | back to title |
@@ -293,19 +307,40 @@ E = +x, S = +y). An actor's sprite defaults to its id.
 
 ```js
 ['field', {
-  leader: 'crono',                       // player-controlled actor (others follow)
-  hint: 'Speak with the King.',           // objective text in the corner
-  npcs: [ { id: 'king', talk: [...cmds] }, { id: 'nu', talk: [['shop','end_of_time']] } ],
-  events: [ { zone: 'BRIDGE' | [[x,y],...], once: true, script: [...cmds] } ],
-  exits: [ { zone: 'EXIT_SOUTH', goto: '1.2', label: 'Denadoro Pass',
-             requires: 'flag' (optional), locked: [...cmds shown if locked] } ],
+  leader: 'crono',                       // player-controlled actor
+  followers: ['frog', 'iselle'],          // optional; default = the party (re-read every step, so a
+                                          //   hero who joins mid-field falls in line)
+  hint: 'Speak with the King.',           // objective tracker in the corner: a string, or
+                                          //   [[cond, text], ..., fallback]; first true cond wins
+  npcs: [ { id: 'king', name?, if?: cond, talk: [...cmds] } ],
+  spots: [ { id: 'banner', at: [9, 1] | '@marker', label: 'a faded banner', script: [...cmds],
+             if?: cond, once?: true, lift?: px } ],   // examinable things (they sparkle until looked at)
+  events: [ { id?, zone: 'BRIDGE' | [[x,y],...], once: true, if?: cond, script: [...cmds] } ],
+  exits: [ { zone: 'EXIT_SOUTH', goto: '1.2', label: 'Denadoro Pass', if?: cond,
+             requires: cond (optional), locked: [...cmds shown if locked] } ],
   save: '@save',                         // save point tile (optional)
 }]
 ```
 
-Talking: walk next to an NPC and click it (or press Enter facing it). The
-field ends when an exit's zone is entered (after an optional confirm) and the
-exit's `goto` scene starts.
+- **Talking / looking:** walk next to an NPC or a spot (or stand on a spot) and press Enter, or
+  click it: the leader walks over and interacts. The prompt at the bottom says what Enter will do.
+- **Objective tracker:** the hint is re-evaluated after every step, talk and look, and adds a
+  count of the sparkles not yet looked at.
+- **Spots** draw a small twinkle (the renderer calls `world.onDraw`) until examined; the flag
+  `seen_<scene>_<spot>` records it. They can be read again afterwards unless `once`.
+- **Events** fire when the leader steps into the zone. A once-only event with an `id` records
+  `ev_<scene>_<id>`, so it stays fired across save and load.
+- **NPC state:** `t_<scene>_<npc>` counts how often an NPC has been talked to; talk scripts
+  branch on it and on story flags with `['if', ...]`.
+- **Ending the field:** an exit's zone is entered (its `goto` scene starts), or a field script
+  runs `['endfield']` (the scene script continues after the `field` command, e.g. into a cutscene
+  and a battle on the same map) or a `['goto', ...]`.
+- **Walking:** the leader walks through followers (they swap places), and click-to-walk never
+  routes across an exit or a walk-on trigger on its way somewhere else unless there is no other way.
+- **Saving** inside a field resumes at the enclosing top-level command with every actor where it
+  stood; spot/event/NPC state lives in flags.
+- **Test mode** (`?test`): talks to every NPC, looks at every spot, steps into every banter
+  event, then takes the first open exit or the trigger that ends the field.
 
 ## 8. Battles (`CT.BATTLES[id]`)
 

@@ -747,7 +747,7 @@ def convert(src_dir, cfg, mix):
                 g['v'] = max(1, min(15, int(round(12 * max(n.amp for n in g['n']) / vref))))
                 L.append(g)
             lanes.append(L)
-        kit = dict(ch=dch, inst='drums', lanes=lanes, role='drums', pitch=0, level=vref * vol_ref, ctl=ctl, pan=0, moving=False,
+        kit = dict(ch=dch, inst='drums', lanes=lanes, role=roles_cfg.get(dch, 'drums'), pitch=0, level=vref * vol_ref, ctl=ctl, pan=0, moving=False,
                    notes=len(drums))
         voices.append(kit)
         log.append(f"  drums     notes {len(drums):4d} lanes {len(lanes)} level {vref * vol_ref:.2f}")
@@ -890,6 +890,7 @@ def main():
 #   drummap   GM percussion key -> kit key, where the sequence uses a stand-in sound
 #   loop/end  loop start bar / first bar after the loop (when there are no markers and no repeat in the file)
 #   echo      [beats, feedback, wet, low-pass Hz, stereo spread]
+#   roles     {channel: 'lead' | 'counter' | 'acc' | 'pad' | 'bass' | 'perc' | 'drums' | 'fx'} where the guess is wrong
 #   kind      'battle' / 'jingle': these interrupt a field track, which resumes afterwards
 #   target    RMS (dBFS) automix.cjs aims the finished mix at
 # ----------------------------------------------------------------------------------------
@@ -926,7 +927,7 @@ TRACKS = [
     dict(id='mus_last_village', title='Silent Light', file='CT-SilentLight.mid', seq='Powerlord', slow=0.85, lead=2,
          inst={7: 'fretless'}, echo=[0.75, 0.4, 0.34, 2800, 0.7], target=-21),
     dict(id='mus_zeal_wreck', title='Zeal ("Corridors of Time")', file='ctzeal.mid', seq='', slow=0.85, lead=4,
-         inst={4: 'panflute'}, drummap={36: 64, 37: 62, 45: 63}, echo=CATHEDRAL, target=-21),
+         inst={4: 'panflute'}, roles={1: 'counter', 2: 'counter'}, drummap={36: 64, 37: 62, 45: 63}, echo=CATHEDRAL, target=-21),
     dict(id='mus_magus_theme', title="Magus's Theme", file='Magus1.mid', seq='Akane', slow=0.85, lead=3, loop=5, end=40,
          inst={3: 'flute', 4: 'pbass', 7: 'brass'}, roles={1: 'pad'}, echo=FIELD, target=-20.5),
     dict(id='mus_hollow', title='Future: World Map ("Ruined World")', file='ct2300ad.mid', seq='KDS', slow=0.9, lead=1,
@@ -940,7 +941,7 @@ TRACKS = [
     dict(id='mus_ending', title='Epilogue ("To Good Friends")', file='ctmarle1.mid', seq='Masashi Ito', slow=0.9, lead=1,
          drop=[3, 4, 5, 6, 14, 15], inst={1: 'musicbox', 2: 'musicbox'}, oneShot=True, echo=[0.75, 0.4, 0.34, 2800, 0.7], target=-21),
     dict(id='mus_credits', title='To Far Away Times', file='ct_tofarawaytimes.mid', seq='Quietust', slow=0.9, lead=3,
-         inst={7: {26: 'bass', 46: 'harp'}}, oneShot=True, echo=FIELD, target=-20.5),
+         inst={7: {26: 'bass', 46: 'harp'}}, roles={10: 'fx'}, oneShot=True, echo=FIELD, target=-20.5),
 ]
 
 if __name__ == '__main__':

@@ -323,61 +323,61 @@
   ];
 
   // Walking into a door that will not open. The grey door's noise changes as the seeds come out.
+  const P_IS = (n) => ({ flag: 'progress', eq: n });
+  const P_OVER = (n) => ({ flag: 'progress', gt: n });
   const doorLocked = {
-    '600': (p) => (p > 1
-      ? [N(`The door to 600 A.D. is quiet. Its seed is out.`)]
-      : [N(`The door is dark.`)]),
-    '65m': (p) => (p > 2
-      ? [N(`The door to 65,000,000 B.C. is quiet. Its seed is out.`)]
-      : [N(`The door to 65,000,000 B.C. is dark. Gaspar's lamp hasn't reached it yet.`)]),
-    '12k': (p) => (p > 3
-      ? [N(`The door to 12,000 B.C. is quiet. Its seed is out.`)]
-      : [N(`The door to 12,000 B.C. is dark. Gaspar's lamp hasn't reached it yet.`)]),
-    grey: (p) => [
+    '600': [['if', P_OVER(1), [N(`The door to 600 A.D. is quiet. Its seed is out.`)], [N(`The door is dark.`)]]],
+    '65m': [['if', P_OVER(2), [N(`The door to 65,000,000 B.C. is quiet. Its seed is out.`)], [N(`The door to 65,000,000 B.C. is dark. Gaspar's lamp hasn't reached it yet.`)]]],
+    '12k': [['if', P_OVER(3), [N(`The door to 12,000 B.C. is quiet. Its seed is out.`)], [N(`The door to 12,000 B.C. is dark. Gaspar's lamp hasn't reached it yet.`)]]],
+    grey: [
       ['sfx', 'sfx_hollow_gate'],
-      ...(p <= 1 ? [N(`The grey door hums with red static. It will not open.`)]
-        : p === 2 ? [
-          N(`The grey door is purring. It will not open.`),
-          say('frog', 'neutral', `It sounds pleased. Why does it sound pleased?`),
-        ] : [
-          N(`Something is knocking on the other side. Three knocks, a wait, three knocks. Politely.`),
-          say('ayla', 'happy', `Ayla knock back?`),
-          say('frog', 'neutral', `No.`),
-        ]),
+      ['if', P_IS(1), [N(`The grey door hums with red static. It will not open.`)]],
+      ['if', P_IS(2), [
+        N(`The grey door is purring. It will not open.`),
+        say('frog', 'neutral', `It sounds pleased. Why does it sound pleased?`),
+      ]],
+      ['if', P_IS(3), [
+        N(`Something is knocking on the other side. Three knocks, a wait, three knocks. Politely.`),
+        say('ayla', 'happy', `Ayla knock back?`),
+        say('frog', 'neutral', `No.`),
+      ]],
     ],
   };
 
-  const HUB_HINTS = {
-    1: 'Take the lit door to 600 A.D.',
-    2: 'Take the lit door to 65,000,000 B.C.',
-    3: 'Take the lit door to 12,000 B.C.',
-    4: 'The grey door is open. Enter the Hollow.',
-  };
-
-  function eotField(p) {
-    const npcs = [
+  // One field for every visit: who is here and what they say follows `progress`.
+  const eotField = ['field', {
+    leader: 'crono',
+    hint: [
+      [P_IS(1), 'Take the lit door to 600 A.D.'],
+      [P_IS(2), 'Take the lit door to 65,000,000 B.C.'],
+      [P_IS(3), 'Take the lit door to 12,000 B.C.'],
+      'The grey door is open. Enter the Hollow.',
+    ],
+    npcs: [
       { id: 'gaspar', talk: gasparTalk },
       { id: 'nu', talk: [
         say('nu', 'happy', `Nu! Nu nu. …Nu?`),
-        ...(p === 3 ? [say('ayla', 'happy', `Blue thing soft. Ayla sit on it before. It not mind.`)] : []),
-        ...(p === 4 ? [say('magus', 'neutral', `Don't ask it anything. It answers.`)] : []),
+        ['if', P_IS(3), [say('ayla', 'happy', `Blue thing soft. Ayla sit on it before. It not mind.`)]],
+        ['if', P_IS(4), [say('magus', 'neutral', `Don't ask it anything. It answers.`)]],
         ['shop', 'end_of_time'],
       ] },
-      { id: 'spekkio', talk: p <= 2 ? [
-        say('spekkio', 'happy', `Heya! Master of War, at your service. Like the new shape? I wear whatever suits my visitors. Today: frog.`),
-        say('frog', 'neutral', `…Must thou?`),
-        say('spekkio', 'happy', `Professional courtesy! Wanna spar? Step through my door. No hard feelings, no permanent damage. Mostly.`),
-      ] : p === 3 ? [
-        say('spekkio', 'happy', `Ooh, the strong one's back! Don't tell her I said strong. She'll want proof.`),
-        say('ayla', 'happy', `Ayla hear. Ayla want proof.`),
-        say('spekkio', 'surprised', `…Door's right there. Bring friends.`),
-      ] : [
-        say('spekkio', 'neutral', `Is that a *dead* guy by the grey door? I can't size myself to a dead guy. Makes my scales itch.`),
-        say('spekkio', 'happy', `You four, though. You, I can size. One more round before you go in?`),
+      { id: 'spekkio', talk: [
+        ['if', { flag: 'progress', lt: 3 }, [
+          say('spekkio', 'happy', `Heya! Master of War, at your service. Like the new shape? I wear whatever suits my visitors. Today: frog.`),
+          say('frog', 'neutral', `…Must thou?`),
+          say('spekkio', 'happy', `Professional courtesy! Wanna spar? Step through my door. No hard feelings, no permanent damage. Mostly.`),
+        ]],
+        ['if', P_IS(3), [
+          say('spekkio', 'happy', `Ooh, the strong one's back! Don't tell her I said strong. She'll want proof.`),
+          say('ayla', 'happy', `Ayla hear. Ayla want proof.`),
+          say('spekkio', 'surprised', `…Door's right there. Bring friends.`),
+        ]],
+        ['if', P_OVER(3), [
+          say('spekkio', 'neutral', `Is that a *dead* guy by the grey door? I can't size myself to a dead guy. Makes my scales itch.`),
+          say('spekkio', 'happy', `You four, though. You, I can size. One more round before you go in?`),
+        ]],
       ] },
-    ];
-    if (p === 4) {
-      npcs.push({ id: 'iselle', name: 'Cyrus', talk: [
+      { id: 'iselle', name: 'Cyrus', if: P_IS(4), talk: [
         ['if', { flag: 't_eot_iselle', gte: 1 }, [
           say('iselle', 'neutral', `That lamp. It's the first thing in ten years I haven't seen before.`),
           ['wait', 500],
@@ -387,32 +387,27 @@
           say('frog', 'happy', `I never did. Until now.`),
           say('iselle', 'determined', `When you're ready: the grey door. I know the halls. I'll go first.`),
         ]],
-      ] });
-    }
-    return ['field', {
-      leader: 'crono',
-      hint: HUB_HINTS[p],
-      npcs,
-      spots: [
-        { id: 'lamp', at: [6, 6], label: 'the lamppost', script: [
-          N(`The lamp at the End of Time. It has never gone out. Nobody remembers lighting it.`),
-          say('frog', 'neutral', `A lamp no one lit, kept by a man who sleeps. I have stood stranger watches.`),
-        ] },
-        { id: 'bucket', at: [8, 8], label: 'a wet ring on the stone', lift: 4, script: [
-          N(`A wet ring where a bucket used to stand. The bucket led to the day of Lavos. That day is finished, and someone has taken the bucket in.`),
-          say('frog', 'happy', `Good riddance. I never liked that bucket.`),
-        ] },
-      ],
-      exits: [
-        { zone: 'DOOR_600', goto: '1.1', label: '600 A.D.', requires: 'ch1_open', locked: doorLocked['600'](p) },
-        { zone: 'DOOR_65M', goto: '2.1', label: '65,000,000 B.C.', requires: 'ch2_open', locked: doorLocked['65m'](p) },
-        { zone: 'DOOR_12K', goto: '3.1', label: '12,000 B.C.', requires: 'ch3_open', locked: doorLocked['12k'](p) },
-        { zone: 'DOOR_GREY', goto: '4.1', label: 'The Hollow', requires: 'ch4_open', locked: doorLocked.grey(p) },
-        { zone: 'DOOR_SPEKKIO', goto: 'spekkio', label: `Spekkio's Room` },
-      ],
-      save: '@save',
-    }];
-  }
+      ] },
+    ],
+    spots: [
+      { id: 'lamp', at: [6, 6], label: 'the lamppost', lift: 12, script: [
+        N(`The lamp at the End of Time. It has never gone out. Nobody remembers lighting it.`),
+        say('frog', 'neutral', `A lamp no one lit, kept by a man who sleeps. I have stood stranger watches.`),
+      ] },
+      { id: 'bucket', at: [8, 8], label: 'a wet ring on the stone', lift: 4, script: [
+        N(`A wet ring where a bucket used to stand. The bucket led to the day of Lavos. That day is finished, and someone has taken the bucket in.`),
+        say('frog', 'happy', `Good riddance. I never liked that bucket.`),
+      ] },
+    ],
+    exits: [
+      { zone: 'DOOR_600', goto: '1.1', label: '600 A.D.', requires: 'ch1_open', locked: doorLocked['600'] },
+      { zone: 'DOOR_65M', goto: '2.1', label: '65,000,000 B.C.', requires: 'ch2_open', locked: doorLocked['65m'] },
+      { zone: 'DOOR_12K', goto: '3.1', label: '12,000 B.C.', requires: 'ch3_open', locked: doorLocked['12k'] },
+      { zone: 'DOOR_GREY', goto: '4.1', label: 'The Hollow', requires: 'ch4_open', locked: doorLocked.grey },
+      { zone: 'DOOR_SPEKKIO', goto: 'spekkio', label: `Spekkio's Room` },
+    ],
+    save: '@save',
+  }];
 
   S.eot = {
     title: 'End of Time (hub)',
@@ -424,17 +419,16 @@
       { id: 'spekkio', sprite: 'frog_king', at: '@spekkio', face: 'S' },
     ],
     script: [
-      // The party travels together: everyone who has joined stands at the lamppost.
+      // Everyone who has joined arrives together at the lamppost.
       ['spawn', { id: 'frog', at: '@arrive', face: 'N' }],
       ['if', { flag: 'progress', gte: 3 }, [['spawn', { id: 'ayla', at: '@arrive', face: 'N' }]]],
       ['if', { flag: 'progress', gte: 4 }, [['spawn', { id: 'magus', at: '@arrive', face: 'N' }]]],
-      // Cyrus waits beside the grey door, clear of its threshold and of the causeway (the party has to get past him).
+      // In Chapter 4, Cyrus waits beside the grey door.
       ['if', { flag: 'progress', eq: 4 }, [
         ['spawn', { id: 'iselle', sprite: 'cyrus', at: [11, 2], face: 'S' }],
       ]],
       ['fade', 'in', 500],
-      // Between-chapter beats (once each, on arrival). Each one answers: what did the grey
-      // door do when we pulled a seed, and why is the next door the next door?
+      // On each return, once: what the grey door did when a seed came out, and why the next door lights.
       ['if', { flag: 'gaspar_after', eq: 1 }, [
         ['setflag', 'gaspar_heard', 0],
         ['sfx', 'sfx_hollow_gate'],
@@ -510,11 +504,7 @@
         ['close_rift'],
         ['setflag', 'gaspar_after', 0],
       ]],
-      ['if', { flag: 'progress', eq: 1 }, [eotField(1)], [
-        ['if', { flag: 'progress', eq: 2 }, [eotField(2)], [
-          ['if', { flag: 'progress', eq: 3 }, [eotField(3)], [eotField(4)]],
-        ]],
-      ]],
+      eotField,
     ],
   };
 
@@ -682,8 +672,7 @@
       ['face', 'frog', 'crono'],
       say('frog', 'sad', `Denadoro. I buried him at the foot of this trail. I have not climbed past it since.`),
       ['face', 'frog', 'N'],
-      // The foot of the pass is walkable: the cairn, an old cache, the tracks. Stepping onto
-      // the climb (zone APPROACH) starts the reunion.
+      // The foot of the pass can be walked: the cairn, an old cache, tracks. Stepping onto the climb starts the reunion.
       ['field', {
         leader: 'crono',
         hint: 'Climb the trail toward the pass.',
@@ -703,7 +692,7 @@
               N(`Crono lays the Queen's flowers at the foot of the stones.`),
               ['setflag', 'flowers_laid', true],
               ['losekey', 'leene_flowers'],
-              say('frog', 'sad', `From Leene. Plain ones. He liked plain things.`),
+              say('frog', 'sad', `From Leene. She could not make the climb. Now she has.`),
             ]],
           ] },
           { id: 'cache', at: [3, 13], label: 'the roots of an old pine', script: [
@@ -957,7 +946,7 @@
       ['face', 'ayla', 'iselle'],
       say('ayla', 'angry', `Ghost-man! You put bad egg in Ayla's ground!`),
       say('iselle', 'sad', `Your ground? You watched the sky-fire dig this hole, chief. You gave it its name. It's been *its* ground since that night.`),
-      say('frog', 'angry', `Cyrus, enough. This is not thy place.`),
+      say('frog', 'angry', `Cyrus, enough. Thou hast no place here.`),
       say('iselle', 'neutral', `Neither do you, Glenn. And yet.`),
       // The archive brings out an old enemy of Ayla's.
       ['sfx', 'sfx_hollow_gate'],
@@ -1227,7 +1216,7 @@
       ['fade', 'in', 1200],
       ['wait', 600],
       say('magus', 'neutral', `The great hall. I was born forty paces from here. It was a good deal higher up.`),
-      // The beached end of the hall is walkable; crossing its middle (zone HALL_MID) starts the scene.
+      // The beached end of the hall can be walked. Crossing the middle of the hall starts the confrontation.
       ['field', {
         leader: 'crono',
         hint: 'Cross the hall toward the light.',
@@ -1553,7 +1542,7 @@
             say('ayla', 'angry', `Ayla not lean. Ayla *push.*`),
             ['sfx', 'sfx_glass_shatter'],
             ['shake', 300],
-            V(`…THANK YOU.`),
+            V(`…YOUR FEEDBACK HAS BEEN RECORDED.`),
           ] },
         ],
         exits: [{ zone: 'EXIT_NORTH', goto: '4.3', label: 'The Archive' }],

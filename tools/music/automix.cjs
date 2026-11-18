@@ -8,7 +8,8 @@
 //   counter melody -3 dB(A) · accompaniment -6 dB(A) · pads -8 dB(A)      (A-weighted: how loud they sound)
 //   bass -2 dB · timpani / pitched percussion -5 dB                       (unweighted RMS: low end)
 //   drum kit: halfway between -6 dB unweighted (kick) and -9 dB(A) (snare, hats)
-//   several voices in one role share it (each drops by 5 log10 n).
+//   several voices in one role share it (each drops by 5 log10 n); no voice's peak may exceed the
+//   melody's by more than 4 dB (bass 3, drums 1); role 'fx' is left at the sequence's level.
 // The track gain then puts the full mix at the track's target RMS (see TRACKS in midi2ct.py).
 const fs = require('fs');
 const path = require('path');
@@ -38,15 +39,18 @@ for (const rep of report) {
       for (const v of rep.voices) count[v.role] = (count[v.role] || 0) + 1;
       for (const v of rep.voices) {
         const s = vs[v.name];
-        if (!s || v.role === 'lead' || s.activePct < 1) continue;
+        if (!s || v.role === 'lead' || v.role === 'fx' || s.activePct < 1) continue;   // 'fx': keep the sequence's own level
         const share = -5 * Math.log10(count[v.role]);
         let diff;
         if (A_REL[v.role] != null) diff = LdBA + A_REL[v.role] + share - (s.dBA - act(s));
         else if (v.role === 'drums') diff = 0.5 * (Lrms + U_REL.drums - s.activeRmsDb) + 0.5 * (LdBA + DRUMS_A - (s.dBA - act(s)));
         else diff = Lrms + U_REL[v.role] + share - s.activeRmsDb;
+        // peaks: nothing may tower over the melody (percussive parts get some room)
+        const cap = L.peakDb + (v.role === 'drums' ? 1 : v.role === 'bass' || v.role === 'perc' ? 3 : 4);
+        if (s.peakDb + diff > cap) diff = cap - s.peakDb;
         const old = m.v[v.name] || 1;
-        // stay within +-12 dB of the level the sequence asked for
-        m.v[v.name] = +clamp(old * Math.pow(10, diff / 20), 0.25, 4).toFixed(3);
+        // stay within about +-9 dB of the level the sequence asked for
+        m.v[v.name] = +clamp(old * Math.pow(10, diff / 20), 0.3, 2.8).toFixed(3);
       }
     }
   }

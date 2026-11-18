@@ -746,11 +746,15 @@
         trail.unshift({ x: leader.x, y: leader.y });
         fs.forEach((f, i) => {
           const p = trail[i + 1];
-          if (!p || (f.x === p.x && f.y === p.y)) return;
+          if (!p || f.catchingUp || (f.x === p.x && f.y === p.y)) return;
           if (Math.abs(f.x - p.x) + Math.abs(f.y - p.y) > 1) {
-            // Someone who just joined (or was left behind by a cutscene) catches up along a real path.
+            // Someone who just joined (or was left behind by a cutscene) catches up along a real
+            // path, and is left alone until they arrive (no second walk on top of the first).
             const path = this.path(f, p, false);
-            if (path) this.walk(f, path, 110);
+            if (path) {
+              f.catchingUp = true;
+              this.walk(f, path, 110).then(() => (f.catchingUp = false));
+            }
             return;
           }
           this.walk(f, [{ x: f.x, y: f.y }, p], 150);
@@ -789,8 +793,19 @@
         showPrompt();
         return null;
       };
+      // A door that will not open is tried, not walked through: the leader turns to it, the
+      // `locked` script plays, and nobody has to shuffle back off the threshold.
+      const lockedExit = (x, y) => exits.find((ex) => live(ex) && inZone(ex.zone, x, y) && ex.requires && !this.cond(ex.requires));
       const walkPath = async (path) => {
         for (let i = 1; i < path.length; i++) {
+          const shut = lockedExit(path[i].x, path[i].y);
+          if (shut) {
+            leader.face = CT.dirTo(leader.x, leader.y, path[i].x, path[i].y);
+            UI.prompt('');
+            if (shut.locked) await this.run(shut.locked);
+            else UI.banner('The way is closed.');
+            return null;
+          }
           const prevPos = { x: leader.x, y: leader.y };
           await this.walk(leader, [prevPos, path[i]], 170);
           followStep();

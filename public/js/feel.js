@@ -1000,10 +1000,14 @@
     };
     const run = Math.floor(now / 70) % (n * 4 + 6); // a bright bead runs the trail
     const dot = (x, y, lit) => {
+      // A white stud with a dark rim, readable on any tile; the running bead is gold and larger.
+      const s = lit ? 2 : 1;
       ctx.fillStyle = INK;
-      ctx.fillRect(x - 1, y, 3, 2);
-      ctx.fillStyle = lit ? '#ffffff' : '#8cc0f0';
-      ctx.fillRect(x - 1, y - 1, 3, 2);
+      ctx.fillRect(x - s - 1, y - s, s * 2 + 3, s * 2 + 1);
+      ctx.fillRect(x - s, y - s - 1, s * 2 + 1, s * 2 + 3);
+      ctx.fillStyle = lit ? '#fce068' : '#ffffff';
+      ctx.fillRect(x - s, y - s, s * 2 + 1, s * 2 + 1);
+      if (lit) { ctx.fillStyle = '#ffffff'; ctx.fillRect(x - 1, y - 1, 2, 2); }
     };
     // Half a segment toward each neighbour, so the trail is never cut by the next tile.
     for (const [j, half] of [[i - 1, 0], [i + 1, 1]]) {
@@ -1114,7 +1118,6 @@
 
   // ---- Wipes: the last picture breaks up over the new one ------------------------------------
   // 'shatter' (into battle): the picture cracks along white lines and the shards fall away.
-  // 'warp' (era jumps): the picture ripples in waves and is drawn off in blue scanlines.
   P.wipe = function (kind, ms = 600) {
     const snap = CT.PX.canvas(this.W, this.H, (g) => g.drawImage(this.screen, 0, 0));
     const w = { kind, ms, t0: performance.now(), snap, seed: (Math.random() * 999) | 0 };
@@ -1171,22 +1174,6 @@
           for (let e = 0; e < 3; e++) PXD.line(ctx, t.p[e][0] + ox, t.p[e][1] + oy, t.p[(e + 1) % 3][0] + ox, t.p[(e + 1) % 3][1] + oy, 1);
         }
       }
-      return;
-    }
-    if (w.kind === 'warp') {
-      // Rows of the old picture sway harder and harder, thinning out line by line.
-      const st = Math.floor((now - w.t0) / STEP);
-      for (let y = 0; y < H; y++) {
-        const gone = hashI(y, 3, w.seed) < (k - 0.25) * 1.5 || ((y + st) % 4 < Math.floor(k * 5));
-        if (gone) continue;
-        const off = Math.round(Math.sin(y / 9 + (now - w.t0) / 90) * (2 + k * 26) * (y % 2 ? 1 : -1));
-        ctx.drawImage(w.snap, 0, y, W, 1, off, y, W, 1);
-      }
-      ctx.fillStyle = '#c4e4ff';
-      for (let i = 0; i < 26; i++) {
-        const y = (hashI(i, 1, w.seed) * H + st * (3 + (i % 4))) % H;
-        ctx.fillRect(Math.round(hashI(i, 2, w.seed) * W), Math.round(y), 10 + (i % 5) * 8, 1);
-      }
     }
   };
 
@@ -1236,6 +1223,8 @@
       // Concentric blue rings rush inward as the dark closes; the heart of the Gate glows.
       const cx = W >> 1, cy = H >> 1;
       const st = Math.floor(now / STEP);
+      // Time travel: the picture itself sways in waves, harder as the tunnel closes.
+      if (f > 0.04 && f < 0.97 && FEEL.POST) FEEL.POST.wave.call(this, { amp: f * 12, len: 13, speed: 70, a: 0, r: 0 }, 0.5, now);
       ctx.fillStyle = `rgba(16,24,58,${Math.min(1, Math.ceil(f * 6) / 6)})`;
       ctx.fillRect(0, 0, W, H);
       const B = ['#c4e4ff', '#8cc0f0', '#5c90dc', '#3c64b4', '#2c4488'];
@@ -1485,7 +1474,7 @@
     if (off > 0) { d.set(tmp.subarray(0, w - off), a + off); d.fill(tmp[0], a, a + off); }
     else { d.set(tmp.subarray(-off), a); d.fill(tmp[w - 1], a + w + off, a + w); }
   };
-  const POST = {
+  const POST = (FEEL.POST = {
     shimmer(p, k, now) {
       const [x, y, w, h] = region(this, p.sx - p.w / 2, p.sy - p.h, p.w, p.h);
       const im = this.ctx.getImageData(x, y, w, h);
@@ -1572,7 +1561,7 @@
       ctx.fillRect(0, 0, this.W, this.H);
       ctx.restore();
     },
-  };
+  });
   P.drawPost = function (now) {
     if (this.posts && this.posts.length) {
       this.posts = this.posts.filter((p) => now - p.t0 < p.ms);

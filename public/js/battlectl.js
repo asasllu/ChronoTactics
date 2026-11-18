@@ -926,7 +926,7 @@
         u.rh = h0 + (h1 - h0) * k + (mv.push || mv.fall ? 0 : Math.sin(k * Math.PI) * 2);
         if (!CT.FAST && !mv.fall && Math.floor(k * 5) !== trail && k < 0.9) {
           trail = Math.floor(k * 5);
-          this.r.ghost(u, { ms: 170, alpha: 0.4 });
+          this.r.ghost(u, { ms: 170, alpha: 0.5, hex: '#c4e4ff' });
         }
       });
       u.rx = u.x;
@@ -1545,7 +1545,7 @@
       if (result === 'victory') {
         if (window.TEST_LOG) window.TEST_LOG.push({ battle: def.name, result: 'victory', round: ctl.b.round, lv: g.avgLevel(), hp: ctl.b.party().map((u) => Math.round((u.hp / u.maxHp) * 100)) });
         if (CT.audio && !def.noFanfare) CT.audio.playMusic('mus_victory');
-        if (!def.noFanfare && !opts.noRewards && !CT.FAST && scene.r.victory) await ctl.victoryMoment();
+        if (!def.noFanfare && !CT.FAST && scene.r.victory) await ctl.victoryMoment();
         g.syncFromBattle(ctl.b);
         // Everyone walks away from a won battle at full HP and MP (KO'd members too).
         g.fullHeal();
@@ -1567,6 +1567,8 @@
           if (rw.key) g.addKey(rw.key);
           await (CT.FEEL && CT.FEEL.results ? CT.FEEL.results : UI.results)({ xp, gold, items: rw.items, key: rw.key, ups });
         }
+        // results dismissed: the fanfare hands back to the field theme the battle interrupted
+        if (CT.audio && CT.audio.afterFanfare) CT.audio.afterFanfare();
         if (scene.r.victory) scene.r.victory(false);
         // Everyone gets back on their feet after a win.
         for (const m of Object.values(g.members)) if (m.hp < 1) m.hp = 1;

@@ -336,7 +336,7 @@
     epiano: { h: arr([1, 0.25, 0.08, 0.03]), hb: (k) => (k >= 5 && k <= 9 ? 1 / (1 + Math.abs(k - 7)) : 0), be: [0.9, 0.07, 0], v: [[-2, 1], [2, 1]], A: 0.4, L: 0.5,
       e: [0.003, 1.6, 0, 0.12], kd: 0.5, echo: 0.35 },
     celesta: { pt: [[1, 1, 0], [2, 0.12, 0.25, 0.3], [4.02, 0.4, 0.12, 0.2], [6.3, 0.12, 0.05, 0.1]], A: 0.6, L: 0.2, e: [0.002, 0.9, 0, 0.6], ring: 1, kd: 0.5, echo: 0.5 },
-    musicbox: { pt: [[1, 1, 0], [3, 0.18, 0.3, 0.35], [5.42, 0.35, 0.09, 0.15], [8.6, 0.2, 0.04, 0.05], [11.3, 0.1, 0.025]], A: 0.7, L: 0.2, e: [0.001, 0.85, 0, 0.7], ring: 1, kd: 0.4, echo: 0.55 },
+    musicbox: { pt: [[1, 1, 0], [3, 0.3, 0.3, 0.4], [5.42, 0.4, 0.12, 0.18], [8.6, 0.2, 0.04, 0.06], [11.3, 0.1, 0.025]], A: 0.7, L: 0.2, e: [0.001, 0.85, 0, 0.7], ring: 1, kd: 0.4, echo: 0.55 },
     glock: { pt: [[1, 1, 0], [2.76, 0.3, 0.25, 0.3], [5.4, 0.2, 0.08, 0.1], [8.93, 0.1, 0.04]], A: 0.6, L: 0.2, e: [0.001, 1.0, 0, 0.8], ring: 1, kd: 0.4, echo: 0.5 },
     vibes: { pt: [[1, 1, 0], [4, 0.25, 0.4, 0.3], [10, 0.08, 0.06, 0.05]], A: 0.9, L: 0.2, e: [0.003, 2.0, 0, 0.5], kd: 0.3, echo: 0.5 },
     marimba: { pt: [[1, 1, 0], [3.9, 0.3, 0.05, 0.15], [9.2, 0.1, 0.015]], ck: [0.3, 0.004, 1500], A: 0.2, L: 0.2, e: [0.002, 0.38, 0, 0.25], kd: 0.7, echo: 0.35 },
@@ -936,7 +936,7 @@
     return (compiled[id] = {
       id, bpm: def.bpm, meter: def.meter, bars: def.bars, barSec: (barT / PPQ) * spb, len, loopStart: tLoop, loopIdx,
       oneShot: !!def.oneShot, events, voices: Object.keys(def.v).length, lens, expectTicks: lenT, vdef, bends,
-      kind: def.kind || 'field', maxLoops: def.maxLoops || 0, skip: sec(def.skip || 0), gain: def.gain != null ? def.gain : 1, lead: def.lead || null,
+      kind: def.kind || 'field', maxLoops: def.maxLoops || 0, skip: sec(def.skip || 0), gain: def.gain != null ? def.gain : 0.4, lead: def.lead || null,   // 0.4: hand-written defs without a measured gain
       barAt: (t) => { let b = 0; while (b < def.bars && sec((b + 1) * barT) <= t + 1e-6) b++; return sec(b * barT); },
       echo: { time: Math.min(1.5, Math.max(0.03, ec[0] * spb)), fb: ec[1], wet: ec[2], lp: ec[3] || 2800, spread: ec[4] != null ? ec[4] : 0.6 },
     });
@@ -960,7 +960,7 @@
     const len = off - CREDITS.gap + 1;
     return {
       id: 'mus_credits', bpm: 0, meter: null, bars: 0, barSec: 0, len, loopStart: 0, loopIdx: 0, oneShot: true,
-      events, voices, lens: {}, expectTicks: 0, vdef, bends, kind: 'field', maxLoops: 0, skip: 0, gain: 1, lead: null, barAt: (t) => t,
+      events, voices, lens: {}, expectTicks: 0, vdef, bends, kind: 'field', maxLoops: 0, skip: 0, gain: 0.4, lead: null, barAt: (t) => t,
       echo: { time: CREDITS.echo[0], fb: CREDITS.echo[1], wet: CREDITS.echo[2], lp: 2800, spread: 0.6 },
     };
   }
@@ -1097,7 +1097,12 @@
   function buildZone(P, root) {
     const rnd = rng(hashStr(P.name) + root * 7919);
     const f0n = 440 * Math.pow(2, (root - 69) / 12);
-    const K = Math.max(4, Math.round(f0n * (P.L || 0.4))), N = Math.round((K * BSR) / f0n), f0 = (K * BSR) / N;
+    // The loop holds a whole number of cycles of every detuned copy, so the finest detune is one
+    // cycle per loop: low notes of chorused patches get a longer loop (up to 2 s) to keep it small.
+    const fine = (P.v || []).map((x) => Math.abs(x[0])).filter((c) => c > 0 && c < 100);
+    let K = Math.max(4, Math.round(f0n * (P.L || 0.4)));
+    if (fine.length) K = Math.max(K, Math.min(Math.ceil(0.6 / (Math.pow(2, Math.min.apply(null, fine) / 1200) - 1)), Math.round(f0n * 2)));
+    const N = Math.round((K * BSR) / f0n), f0 = (K * BSR) / N;
     const A = Math.max(64, Math.round((P.A != null ? P.A : 0.2) * BSR)), n = A + N + GUARD, Asec = A / BSR;
     const out = new Float32Array(n);
     if (P.h) {
@@ -1108,7 +1113,11 @@
       for (const [cents, amp] of P.v || [[0, 1]]) {
         const ratio = Math.pow(2, cents / 1200);
         let cyc = Math.round(K * ratio);
-        if (cents !== 0 && cyc === K) cyc += cents > 0 ? 1 : -1;
+        if (cents !== 0 && Math.abs(cents) < 100) {
+          if (cyc === K) cyc += cents > 0 ? 1 : -1;
+          // a copy that cannot be tuned this finely at this pitch is left out rather than played sour
+          if (Math.abs(1200 * Math.log2(cyc / K)) > 2.5 * Math.abs(cents) + 2) continue;
+        }
         if (cyc < 1) continue;
         // detuned copies share one table; octave-stacked copies get their own (band limit)
         const oc = Math.round(cents / 400), fv = f0 * Math.pow(2, oc / 3), hmax = Math.floor(13500 / fv);
@@ -1223,9 +1232,9 @@
     40: [0.36, 0.82, 'c', (o, r) => { dTone(o, 210, 360, 0.01, 0.6, 0.055); dNoise(o, r, 'bp', 2800, 0.5, 1, 0.09); dNoise(o, r, 'hp', 6000, 0.7, 0.5, 0.07); }],
     41: [0.7, 0.8, 'r', tom(80, 0.26)], 43: [0.65, 0.8, 'r', tom(98, 0.24)], 45: [0.6, 0.78, 'c', tom(122, 0.21)],
     47: [0.55, 0.78, 'c', tom(147, 0.19)], 48: [0.5, 0.76, 'l', tom(176, 0.17)], 50: [0.45, 0.76, 'l', tom(208, 0.15)],
-    42: [0.12, 0.36, 'r', (o, r) => { dMetal(o, r, 22, 4200, 13000, 1, 0.03); dNoise(o, r, 'hp', 7000, 0.7, 0.6, 0.025); }, 'choke'],
-    44: [0.1, 0.3, 'r', (o, r) => { dMetal(o, r, 22, 4200, 13000, 1, 0.018); dNoise(o, r, 'hp', 6500, 0.7, 0.5, 0.016); }, 'choke'],
-    46: [0.7, 0.38, 'r', (o, r) => { dMetal(o, r, 26, 3800, 13000, 1, 0.24); dNoise(o, r, 'hp', 6000, 0.7, 0.6, 0.2); }, 'open'],
+    42: [0.12, 0.36, 'r', (o, r) => { dMetal(o, r, 40, 4200, 13000, 0.8, 0.03); dNoise(o, r, 'hp', 7000, 0.7, 0.9, 0.025); }, 'choke'],
+    44: [0.1, 0.3, 'r', (o, r) => { dMetal(o, r, 40, 4200, 13000, 0.8, 0.018); dNoise(o, r, 'hp', 6500, 0.7, 0.8, 0.016); }, 'choke'],
+    46: [0.7, 0.38, 'r', (o, r) => { dMetal(o, r, 44, 3800, 13000, 0.9, 0.24); dNoise(o, r, 'hp', 6000, 0.7, 0.8, 0.2); }, 'open'],
     49: [2.2, 0.5, 'l', cym(56, 1700, 13000, 0.85, 0.6, 0.8)], 57: [2.0, 0.48, 'r', cym(56, 1500, 12500, 0.75, 0.6, 0.8)],
     52: [1.2, 0.48, 'r', cym(40, 1200, 11000, 0.4, 0.8, 1)], 55: [0.9, 0.42, 'l', cym(36, 3200, 13500, 0.3, 0.5, 0.7)],
     51: [1.3, 0.36, 'r', (o, r) => { dMetal(o, r, 30, 3000, 12000, 0.7, 0.5, 0.3); dPart(o, [[2910, 0.25], [4120, 0.2], [5340, 0.12]], 0.2); dNoise(o, r, 'hp', 8000, 0.7, 0.2, 0.05); }],
@@ -1306,14 +1315,14 @@
   function zoneFor(ac, P, midi) {
     const root = rootOf(P, midi), key = P.name + ':' + root;
     let z = BANK[key];
-    if (!z) { z = BANK[key] = buildZone(P, root); z.buf = mkBuffer(ac, z.data); }
+    if (!z) { z = BANK[key] = buildZone(P, root); z.buf = mkBuffer(ac, z.data); z.data = null; }
     return z;
   }
   function drumZone(ac, key) {
     let k = KITDEF[key] ? key : DRUM_ALIAS[key];
     if (!k) { k = 37; let best = 99; for (const c of Object.keys(KITDEF)) { const dd = Math.abs(+c - key); if (dd < best) { best = dd; k = +c; } } }
     let z = BANK['d' + k];
-    if (!z) { z = BANK['d' + k] = buildDrum(k); z.buf = mkBuffer(ac, z.data); }
+    if (!z) { z = BANK['d' + k] = buildDrum(k); z.buf = mkBuffer(ac, z.data); z.data = null; }
     return z;
   }
 
@@ -2053,6 +2062,18 @@
       if (st.song) { fadeOutSong(st.song, fadeMs || 0); st.song = null; }
     } catch (e) { /* ignore */ }
   }
+  // The battle screen calls this when the victory results are dismissed: the fanfare makes way for
+  // the field theme it interrupted (which picks up where it was), or fades out if there is none.
+  function afterFanfare() {
+    try {
+      const S = st.song;
+      if (!S || S.trk.kind !== 'jingle' || st.current !== S.trk.id) return;
+      const m = st.memo;
+      st.memo = null;
+      if (m) { st.current = m.id; startSong(m.id, RESUME_FADE, m.pos, 1200); }
+      else { st.current = null; fadeOutSong(S, 1500); st.song = null; }
+    } catch (e) { /* ignore */ }
+  }
   function sfx(id) {
     try {
       const fn = SFX[id];
@@ -2128,7 +2149,7 @@
     if (TRACK_IDS.indexOf(id) < 0) TRACK_IDS.push(id);
   }
   const api = {
-    unlock, playMusic, stopMusic, sfx, setVolume, define,
+    unlock, playMusic, stopMusic, afterFanfare, sfx, setVolume, define,
     tracks: () => TRACK_IDS.slice(),
     sfxList: () => Object.keys(SFX),
     _renderOffline: renderOffline,

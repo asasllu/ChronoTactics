@@ -39,7 +39,9 @@
   //     casterFx: 'fx_...',    played on the caster when the blow lands / the spell releases
   //     proj: 'fx_...',        flies from caster to target (looping frames) before fx
   //     stagger: 40,           ms between tiles of an area
-  //     charge: false }        skip the charge-up (instant techs)
+  //     charge: false,         skip the charge-up (instant techs)
+  //     beam: 'prism'|'laser', one beam from the caster through the whole line (feel.js)
+  //     ret: true }            the projectile flies back to the caster after the hit
   CT.TECH_FX = CT.TECH_FX || {};
   CT.techFx = (id, spec) => { CT.TECH_FX[id] = spec; };
 
