@@ -1970,9 +1970,9 @@
   };
   // The singularity itself (staged by fx_black_hole): accretion disc, lens, collapse.
   BIG.singularity = function (b, ctx, t, k, st, cx, cy, once) {
-    once('lens', () => this.post('pinch', { sx: cx, sy: cy, r: 86, amt: 0.6, ms: b.ms * 0.88, env: (q) => (q < 0.15 ? 0.5 + (q / 0.15) * 0.5 : q > 0.8 ? (1 - q) / 0.2 : 1) }));
+    once('lens', () => this.post('pinch', { sx: cx, sy: cy, r: 104, amt: 0.6, ms: b.ms * 0.88, env: (q) => (q < 0.15 ? 0.5 + (q / 0.15) * 0.5 : q > 0.8 ? (1 - q) / 0.2 : 1) }));
     const e = k < 0.15 ? k / 0.15 : k > 0.82 ? Math.max(0, (1 - k) / 0.18) : 1;
-    const R0 = 44 * e;
+    const R0 = 56 * e; // the spiral spans the whole 3x3
     // Matter torn off the field spirals in along three arms.
     for (let arm = 0; arm < 3; arm++)
       for (let j = 0; j < 30; j++) {
