@@ -38,7 +38,7 @@ This document is organized so it can be implemented top-down:
 
 - **Title:** Chrono Trigger: The Hollow Future
 - **Genre:** Story-driven JRPG with FFT-style (Final Fantasy Tactics) grid-based tactical battles. Exploration is top-down 2D (Chrono Trigger style). Battles happen **on the same map the player is standing on** — the field transitions into a grid overlay (homage to CT's seamless battles) but with full tactics rules (movement range, turn order by speed, elevation, ranged attacks).
-- **Length:** ~4–6 hours. 1 prologue, 4 chapters, 1 epilogue. 10 battles total (6 story battles, 4 bosses).
+- **Length:** about an hour. 1 prologue, 4 chapters, 1 epilogue. 7 story battles (B0, B1, B2, B3, B4A, B4B, B5) plus the optional Spekkio fight.
 - **Party:** The core four: **Crono, Frog, Ayla, Magus.** Crono and Frog from the start; Ayla joins in Chapter 2, Magus in Chapter 3. Guests: Marle, Lucca and Robo fight beside Crono and Frog in the Prologue tutorial battle; Sir Cyrus fights beside the party in Chapter 4.
 - **Recommended engine:** Godot 4 (GDScript) or Phaser 3 (TypeScript). Pick whichever you're most fluent in; everything below is engine-agnostic. Data (characters, techs, maps, dialogue, triggers) should live in JSON files so the script can be edited without touching code.
 - **Resolution:** Internal render 256×224 (SNES), integer-scaled to window. Tiles are **32×32** (two SNES 16px tiles per logical tile) to give tactics grids more readability; sprites are **32×48**.
@@ -686,6 +686,7 @@ FROG (sad): Denadoro. I buried him at the foot of this trail. I have not climbed
 - WALK-ON — zone `APPROACH`: the field ends and the scene continues.
 
 MUSIC → `mus_frog_theme`.
+*(Nobody is on the pass until the party starts the climb.)*
 *(The first thing he says to his squire in ten years is the thing he always said.)*
 CYRUS (neutral): Stand up straight, Glenn. You climb like a sack of turnips.
 FROG (surprised): That voice.

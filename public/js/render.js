@@ -1616,7 +1616,7 @@
       this.sheetFx.push(e);
       const d = fx.def;
       if (d.shake && !opts.noShake) setTimeout(() => this.shake(d.shake), (opts.delay || 0) + (d.shakeAt != null ? fx.frames.slice(0, d.shakeAt).reduce((a, f) => a + f.ms, 0) : 0));
-      if (d.flash && !opts.noShake) setTimeout(() => this.flashScreen(CT.PAL.hex(d.flash).join(','), 140, 0.6), (opts.delay || 0) + (d.flashAt != null ? fx.frames.slice(0, d.flashAt).reduce((a, f) => a + f.ms, 0) : 0));
+      if (d.flash && !opts.noShake) setTimeout(() => this.flashScreen(CT.PAL.hex(d.flash).join(','), 140, 0.38), (opts.delay || 0) + (d.flashAt != null ? fx.frames.slice(0, d.flashAt).reduce((a, f) => a + f.ms, 0) : 0));
       const st = CT.FX_STAGE && CT.FX_STAGE[key];
       if (st && !e.travel) this.stageFx(key, st, fx, x, y, h, opts);
       else if (st && e.travel && st.trail) e.trail = st;

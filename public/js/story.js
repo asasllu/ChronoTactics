@@ -663,9 +663,9 @@
     actors: [
       { id: 'crono', at: '@party_start', face: 'N' },
       { id: 'frog', at: [8, 14], face: 'N' },
-      { id: 'iselle', sprite: 'cyrus', at: '@iselle', face: 'N' },
-      { id: 'sb1', sprite: 'stone_imp', at: '@seed_a', face: 'N' },
-      { id: 'sb2', sprite: 'stone_imp', at: '@seed_b', face: 'N' },
+      { id: 'iselle', sprite: 'cyrus', at: '@iselle', face: 'N', hidden: true },
+      { id: 'sb1', sprite: 'stone_imp', at: '@seed_a', face: 'N', hidden: true },
+      { id: 'sb2', sprite: 'stone_imp', at: '@seed_b', face: 'N', hidden: true },
     ],
     script: [
       ['fade', 'in', 600],
@@ -718,6 +718,8 @@
       ['move', 'frog', 'crono'],
       ['face', 'frog', 'N'],
       ['music', 'mus_frog_theme'],
+      // Nobody is on the pass until the party starts the climb.
+      ['show', 'sb1'], ['show', 'sb2'], ['show', 'iselle'],
       ['camera', '@seed_a', 2200],
       ['sfx', 'sfx_seed_pulse'],
       ['camera', '@shrine', 1600],

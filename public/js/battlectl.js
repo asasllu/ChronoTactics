@@ -995,10 +995,12 @@
           r.zoomPunch(zx, zy - 14);
           r.shake(5, 220);
         }
+        // Only the first two frames are solid white: the frozen hurt pose stays readable.
+        setTimeout(() => { for (const res of out.results) if (res.dmg && res.target.flash === 1) res.target.flash = 0.5; }, 40);
         await new Promise((done) => setTimeout(done, ms));
       }
       await tween(CT.FAST ? 5 : 200, (k) => {
-        for (const res of out.results) if (res.dmg) res.target.flash = k < 0.22 ? 1 : Math.floor(k * 6) % 2 ? 0 : 0.5;
+        for (const res of out.results) if (res.dmg) res.target.flash = k < 0.15 && !heavy ? 1 : Math.floor(k * 6) % 2 ? 0 : 0.5;
       });
       for (const res of out.results) if (res.target) res.target.flash = 0;
       const kos = [...new Set(out.results.filter((res) => res.ko || (res.target && !res.target.alive && res.dmg != null)).map((res) => res.target))];

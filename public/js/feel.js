@@ -1599,14 +1599,14 @@
   // Luminaire's dome of light, baked once: a bright shell that thins toward the heart so the
   // units inside stay readable; later frames break up into dither as it spends itself.
   let domeCv = null;
-  const DOME_R = 86;
+  const DOME_R = 112; // clears the corners of the 5x5 (160 px across) with room to spare
   function domeFrames() {
     if (domeCv) return domeCv;
     const G = ['#ffffff', '#fff4b0', '#fce068', '#f8bc3c', '#e88c28'].map((h) => CT.PAL.hex(h));
     const E = [0.16, 0.36, 0.58, 0.78, 0.92, 1.0, 1.03, 1.05, 1.06, 1.07];
     const F = [1, 1, 1, 1, 0.9, 0.75, 0.55, 0.38, 0.22, 0.1];
     domeCv = E.map((e, fi) => {
-      const rx = Math.round(DOME_R * e), ry = rx >> 1, rz = Math.round(rx * 0.68);
+      const rx = Math.round(DOME_R * e), ry = rx >> 1, rz = Math.round(rx * 0.64);
       const w = rx * 2 + 3, h = ry + rz + 3;
       const cv = CT.PX.canvas(w, h);
       const g = cv.getContext('2d');
@@ -1659,11 +1659,11 @@
       if (i >= 3 && k < 0.7) {
         // Lightning crawls down the shell from the crown.
         const st = Math.floor(now / STEP);
-        for (let a = 0; a < 4; a++) {
-          const ang = ((a + hashI(a, st >> 2, 3)) / 4) * TAU;
+        for (let a = 0; a < 6; a++) {
+          const ang = ((a + hashI(a, st >> 2, 3)) / 6) * TAU;
           const pts = [];
-          for (let s = 0; s <= 7; s++) {
-            const u = s / 7; // 0 crown -> 1 rim
+          for (let s = 0; s <= 9; s++) {
+            const u = s / 9; // 0 crown -> 1 rim
             const el = (1 - u) * (Math.PI / 2);
             const rr = Math.cos(el);
             const jx = (hashI(a, s, st >> 1) - 0.5) * 7, jy = (hashI(a, s + 20, st >> 1) - 0.5) * 4;
@@ -1891,22 +1891,47 @@
     const caster = b.at && b.at.caster;
     const [gx, gy] = caster ? this.unitScreenPos(caster) : [cx, cy + 18];
     once('dome', () => {
+      const T0 = performance.now();
       this.mid('dome', { sx: Math.round(gx), sy: Math.round(gy), ms: b.ms - tg + 80 });
-      this.post('wave', { ms: 300, amp: 3, len: 7, speed: 40, a: 0.05, r: 0.8 });
-      this.rings.push({ x: Math.round(gx), y: Math.round(gy), t0: performance.now(), ms: 520, r: 150, ramp: G, flat: true, th: 6 });
-      // Glitter is all that is left when the dome lets go.
-      for (let i = 0; i < 34; i++) {
-        const a = (i / 34) * TAU;
-        this.addBit({ k: 'sparkle', x: gx + Math.cos(a) * 80 * (0.5 + Math.random() * 0.5), y: gy + Math.sin(a) * 40 * (0.5 + Math.random() * 0.5) - 20 - Math.random() * 30, vx: 0, vy: 0.2 + Math.random() * 0.25, life: 700 + Math.random() * 500, ramp: G, ph: Math.random() * 100, t0: performance.now() + 620 + Math.random() * 300 });
+      // The whole screen takes the blow: a white-out, the picture shudders, and three bands
+      // of light sweep out past the screen edges.
+      this.flashScreen('255,250,220', 320, 1);
+      this.shake(10, 620);
+      this.post('wave', { ms: 420, amp: 4, len: 7, speed: 40, a: 0.05, r: 0.8 });
+      for (let i = 0; i < 3; i++) this.rings.push({ x: Math.round(gx), y: Math.round(gy), t0: T0 + i * 150, ms: 760, r: 340, ramp: G, flat: true, th: 9 - i * 2 });
+      // Glitter is all that is left: off the dome first, then settling over the whole field.
+      for (let i = 0; i < 40; i++) {
+        const a = (i / 40) * TAU;
+        this.addBit({ k: 'sparkle', x: gx + Math.cos(a) * 104 * (0.5 + Math.random() * 0.5), y: gy + Math.sin(a) * 52 * (0.5 + Math.random() * 0.5) - 20 - Math.random() * 40, vx: 0, vy: 0.2 + Math.random() * 0.25, life: 700 + Math.random() * 500, ramp: G, ph: Math.random() * 100, t0: T0 + 620 + Math.random() * 300 });
+      }
+      for (let i = 0; i < 80; i++) {
+        this.addBit({ k: 'sparkle', x: Math.random() * W, y: Math.random() * H * 0.9 - 20, vx: 0, vy: 0.25 + Math.random() * 0.35, life: 800 + Math.random() * 700, ramp: G, ph: Math.random() * 100, t0: T0 + 260 + Math.random() * 900 });
       }
     });
     const d = t - tg;
     if (d < 130) {
       // Impact frames: the core blows out white.
-      const rr = 10 + (d / 130) * 46;
+      const rr = 14 + (d / 130) * 70;
       ctx.fillStyle = d < 66 ? '#ffffff' : G[0];
       PXD.ellipse(ctx, cx, cy + 6, Math.round(rr), Math.round(rr * 0.72));
-      star(ctx, cx, cy + 6, rr + 30, 5, '#ffffff', G[0]);
+      star(ctx, cx, cy + 6, rr + 60, 7, '#ffffff', G[0]);
+    }
+    if (d < 520) {
+      // Rays of light stab out to the screen edges, turning slowly, and strobe away.
+      const q = d / 520;
+      if (!(q > 0.6 && st % 2)) {
+        const reach = Math.min(1, q / 0.18);
+        for (let i = 0; i < 18; i++) {
+          const a = (i / 18) * TAU + q * 0.35 + hashI(i, b.seed) * 0.12;
+          const L = (i % 2 ? 250 : 330) * reach;
+          const c = Math.cos(a), s2 = Math.sin(a) * 0.62;
+          // A wedge: fat at the root, a thread at the tip.
+          for (const [u0, u1, w, col] of [[0.06, 0.4, q < 0.4 ? 5 : 3, G[2]], [0.4, 0.75, 3, G[2]], [0.75, 1, 1, G[3]], [0.06, 0.55, q < 0.4 ? 3 : 1, '#ffffff']]) {
+            ctx.fillStyle = col;
+            PXD.line(ctx, cx + c * L * u0, cy + 6 + s2 * L * u0, cx + c * L * u1, cy + 6 + s2 * L * u1, w);
+          }
+        }
+      }
     }
     // Stars come out over the darkened field while the dome hangs.
     const s = d / (b.ms - tg);
@@ -1975,7 +2000,8 @@
       // Collapse: everything folds to a point and lets go.
       star(ctx, cx, cy, Math.round(((1 - k) / 0.14) * 50) + 5, 3, '#ffffff', V[0]);
       once('boom', () => {
-        this.rings.push({ x: cx, y: cy + 8, t0: performance.now(), ms: 460, r: 120, ramp: V, flat: true, th: 6 });
+        for (let i = 0; i < 2; i++) this.rings.push({ x: cx, y: cy + 8, t0: performance.now() + i * 140, ms: 620, r: 300 - i * 60, ramp: V, flat: true, th: 8 - i * 3 });
+        this.post('wave', { ms: 360, amp: 3, len: 6, speed: 35, a: 0.05, r: 0.85 });
         sfx('sfx_impact');
       });
     }
@@ -2063,13 +2089,13 @@
         }
       }
     }
-    const cr = k < 0.22 ? 6 + (k / 0.22) * 24 : Math.max(0, 30 * (1 - (k - 0.22) / 0.5));
+    const cr = k < 0.22 ? 8 + (k / 0.22) * 40 : Math.max(0, 48 * (1 - (k - 0.22) / 0.5));
     if (cr > 1) {
       bandRing(ctx, cx, cy + 2, Math.round(cr) + 3, Math.round(cr * 0.8) + 3, 3, '#ffffff', V[0], V[2], st);
       ctx.fillStyle = INK;
       PXD.ellipse(ctx, cx, cy + 2, Math.round(cr), Math.round(cr * 0.8));
     }
-    if (k > 0.2) once('wave', () => this.rings.push({ x: cx, y: gy, t0: performance.now(), ms: 560, r: 160, ramp: V, flat: true, th: 7 }));
+    if (k > 0.2) once('wave', () => { for (let i = 0; i < 2; i++) this.rings.push({ x: cx, y: gy, t0: performance.now() + i * 160, ms: 720, r: 340 - i * 70, ramp: V, flat: true, th: 9 - i * 3 }); });
   };
 
   // ---- Eclipse Blade ------------------------------------------------------------------------------
@@ -2085,7 +2111,7 @@
     // Corona: short flickering rays that leap out at totality.
     for (let i = 0; i < 18; i++) {
       const a = (i / 18) * TAU + st * 0.03;
-      const L = (total ? 15 : 6) + ((i * 7 + st) % 4) * (total ? 5 : 2);
+      const L = (total ? (i % 3 === 0 ? 70 : 26) : 6) + ((i * 7 + st) % 4) * (total ? 7 : 2);
       ctx.fillStyle = total ? (i % 2 ? '#ffffff' : G[0]) : i % 2 ? G[1] : G[2];
       PXD.line(ctx, sx + Math.cos(a) * (SR + 1), sy + Math.sin(a) * (SR + 1), sx + Math.cos(a) * (SR + L), sy + Math.sin(a) * (SR + L), i % 3 === 0 ? 2 : 1);
     }
@@ -2122,8 +2148,10 @@
       else if (t < 1900 && st % 2 === 0) { ctx.fillStyle = V[1]; PXD.line(ctx, L[0], L[1], L[2], L[3], 1); }
     }
     if (t >= CUT) once('cut', () => {
-      this.post('cut', { lines: [A, B2], gap: 7, ms: 420 });
+      this.post('cut', { lines: [A, B2], gap: 9, ms: 460 });
       sfx('sfx_sword_hit');
+      // The cut lets go as two bands of violet light rolling off both edges of the screen.
+      for (let i = 0; i < 2; i++) this.rings.push({ x: W >> 1, y: (H >> 1) + 10, t0: performance.now() + i * 150, ms: 700, r: 340 - i * 70, ramp: V, flat: true, th: 8 - i * 3 });
     });
   };
 
@@ -2204,7 +2232,7 @@
     const local = b.at && b.at.key === 'fx_deaccession';
     if (local) {
       // Deaccession: one exhibit struck from the record.
-      once('mos', () => this.post('mosaic', { sx: cx, sy: cy - 6, w: 60, h: 76, ms: b.ms, size: (q) => 1 + Math.round(Math.sin(q * Math.PI) * 7) }));
+      once('mos', () => this.post('mosaic', { sx: cx, sy: cy - 4, w: 44, h: 56, ms: b.ms * 0.6, size: (q) => 1 + Math.round(Math.sin(q * Math.PI) * 3) }));
       const y = cy - 44 + Math.round(k * 80);
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(cx - 32, y, 64, 2);
@@ -2257,8 +2285,8 @@
   // Flash / shake cues follow the new beats.
   const T = CT.BIG_FX;
   if (T) {
-    T.luminaire.flash = ['255,250,220', 180, 0.27];
-    T.luminaire.shake = [7, 460, 0.28];
+    delete T.luminaire.flash; // the white-out and the shake are fired with the dome itself
+    delete T.luminaire.shake;
     T.luminaire.dim = ['#4a2a16', 0.6, 500];
     T.eclipse.flash = ['255,255,255', 180, 0.545];
     T.eclipse.shake = [7, 520, 0.55];
